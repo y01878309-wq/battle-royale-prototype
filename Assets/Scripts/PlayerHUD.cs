@@ -6,13 +6,44 @@ public class PlayerHUD : MonoBehaviour
     public Health playerHealth;
     public Text healthText;
     public Text enemiesLeftText;
+    public Text weaponText;
+    public Text ammoText;
 
     void Update()
     {
-        if (playerHealth == null) return;
+        if (playerHealth != null)
+        {
+            if (healthText != null)
+            {
+                healthText.text = "Health: " + Mathf.Ceil(playerHealth.CurrentHealth);
+            }
+        }
 
-        healthText.text = "Health: " + Mathf.Ceil(playerHealth.CurrentHealth);
-        enemiesLeftText.text = "Enemies Left: " + CountAliveEnemies();
+        if (enemiesLeftText != null)
+        {
+            enemiesLeftText.text = "Enemies Left: " + CountAliveEnemies();
+        }
+
+        if (weaponText != null || ammoText != null)
+        {
+            WeaponController weaponController = FindObjectOfType<WeaponController>();
+            if (weaponController != null)
+            {
+                WeaponDefinition currentWeapon = weaponController.GetCurrentWeapon();
+                if (currentWeapon != null)
+                {
+                    if (weaponText != null)
+                    {
+                        weaponText.text = currentWeapon.weaponName;
+                    }
+
+                    if (ammoText != null)
+                    {
+                        ammoText.text = currentWeapon.currentAmmo + " / " + currentWeapon.reserveAmmo;
+                    }
+                }
+            }
+        }
     }
 
     int CountAliveEnemies()

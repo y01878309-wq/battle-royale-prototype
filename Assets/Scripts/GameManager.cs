@@ -24,16 +24,21 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if (gameOver) return;
+        if (gameOver)
+        {
+            return;
+        }
 
         bool playerAlive = false;
         bool enemyAlive = false;
 
         Health[] allHealth = FindObjectsOfType<Health>();
-
         foreach (Health h in allHealth)
         {
-            if (h == null) continue;
+            if (h == null)
+            {
+                continue;
+            }
 
             if (h.gameObject.CompareTag("Player") && h.IsAlive)
             {
@@ -61,10 +66,14 @@ public class GameManager : MonoBehaviour
         gameOver = true;
 
         if (winPanel != null)
+        {
             winPanel.SetActive(playerWon);
+        }
 
         if (losePanel != null)
+        {
             losePanel.SetActive(!playerWon);
+        }
 
         Time.timeScale = 0f;
     }
