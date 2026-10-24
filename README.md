@@ -1,41 +1,35 @@
 # Battle Royale Prototype
 
-This is a simple Unity 3D battle royale starter project inspired by PUBG.
+This project is a lightweight, playable battle royale prototype inspired by PUBG. It is designed as a learning starter and a foundation you can expand into a larger game.
 
 ## Features
-- Player movement (WASD, sprint, jump)
-- FPS camera with mouse look
+- Third-person or FPS-style movement using CharacterController
+- Mouse-look camera
 - Shooting with raycast hit detection
-- Enemy AI chasing and attacking
+- Enemy AI that chases and attacks the player
 - Safe zone shrinking over time
-- Loot pickup for healing
-- HUD for health and remaining enemies
-- Win/lose condition
-
-## How to use
-1. Open Unity Hub.
-2. Create a new 3D project.
-3. Copy all scripts into `Assets/Scripts`.
-4. Build the scene in Unity as described in the project notes.
-5. Press Play to test.
+- Heal pickups / loot pickups
+- Health system with win/lose conditions
+- HUD with health and enemy count
 
 ## Controls
-- WASD: Move
-- Shift: Sprint
+- W/A/S/D: Move
+- Left Shift: Sprint
 - Space: Jump
 - Mouse: Look around
 - Left Click: Shoot
 
-## Files
-- `Assets/Scripts/PlayerMovement.cs`
-- `Assets/Scripts/CameraController.cs`
-- `Assets/Scripts/WeaponController.cs`
-- `Assets/Scripts/Health.cs`
-- `Assets/Scripts/EnemyAI.cs`
-- `Assets/Scripts/SafeZone.cs`
-- `Assets/Scripts/LootPickup.cs`
-- `Assets/Scripts/GameManager.cs`
-- `Assets/Scripts/PlayerHUD.cs`
+## Unity setup
+1. Create a new 3D project in Unity.
+2. Copy the scripts from `Assets/Scripts` into your Unity project.
+3. Create a Ground cube and a Player capsule.
+4. Add `CharacterController`, `PlayerMovement`, `Health`, and `WeaponController` to the Player.
+5. Add a Camera as a child of the Player and attach `CameraController`.
+6. Create an enemy capsule and attach `Health`, `EnemyAI`, and `NavMeshAgent`.
+7. Create a SafeZone object with `SafeZone` attached and a trigger collider.
+8. Create loot pickups and attach `LootPickup`.
+9. Use `Window > AI > Navigation` to bake a NavMesh.
+10. Press Play.
 
 ## Notes
-This is a lightweight playable prototype, not a full PUBG clone. It is intended as a starter project for learning and expanding.
+This is not a full PUBG clone; it is a functional prototype inspired by the gameplay loop of PUBG. It is intentionally compact so it is easy to extend.
