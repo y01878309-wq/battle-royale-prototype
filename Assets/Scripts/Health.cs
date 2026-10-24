@@ -10,26 +10,26 @@ public class Health : MonoBehaviour
     public float CurrentHealth => currentHealth;
     public bool IsAlive => currentHealth > 0f;
 
-    void Start()
+    private void Start()
     {
         currentHealth = maxHealth;
     }
 
     public void TakeDamage(float amount)
     {
-        if (!IsAlive) return;
+        if (!IsAlive)
+            return;
 
         currentHealth = Mathf.Max(0f, currentHealth - amount);
 
         if (currentHealth <= 0f)
-        {
             Die();
-        }
     }
 
     public void Heal(float amount)
     {
-        if (!IsAlive) return;
+        if (!IsAlive)
+            return;
 
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
     }
@@ -37,8 +37,6 @@ public class Health : MonoBehaviour
     private void Die()
     {
         if (destroyOnDeath)
-        {
             Destroy(gameObject);
-        }
     }
 }

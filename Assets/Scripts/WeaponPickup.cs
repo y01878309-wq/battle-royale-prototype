@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class WeaponPickup : MonoBehaviour
 {
-    [Header("Pickup Settings")]
+    [Header("Weapon Config")]
     public string weaponName = "Shotgun";
     public float damage = 18f;
     public float range = 35f;
@@ -11,24 +11,20 @@ public class WeaponPickup : MonoBehaviour
     public int reserveAmmo = 32;
     public int pellets = 6;
     public float spread = 0.08f;
-    public bool isAutomatic = false;
+    public bool automatic = false;
 
-    void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other)
     {
         if (other == null)
-        {
             return;
-        }
 
         WeaponController weaponController = other.GetComponentInChildren<WeaponController>();
         if (weaponController == null)
-        {
             weaponController = other.GetComponent<WeaponController>();
-        }
 
         if (weaponController != null)
         {
-            weaponController.AddWeapon(weaponName, damage, range, fireRate, magazineSize, reserveAmmo, pellets, spread, isAutomatic);
+            weaponController.AddWeapon(weaponName, damage, range, fireRate, magazineSize, reserveAmmo, pellets, spread, automatic);
             Destroy(gameObject);
         }
     }

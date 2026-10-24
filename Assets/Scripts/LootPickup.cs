@@ -4,7 +4,7 @@ public class LootPickup : MonoBehaviour
 {
     public float healAmount = 25f;
 
-    void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other)
     {
         if (!other.CompareTag("Player"))
             return;

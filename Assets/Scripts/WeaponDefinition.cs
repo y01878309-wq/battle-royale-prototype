@@ -18,11 +18,10 @@ public class WeaponDefinition
     public bool isUnlocked = true;
     public KeyCode hotkey = KeyCode.Alpha1;
 
-    public WeaponDefinition()
-    {
-    }
+    public WeaponDefinition() { }
 
-    public WeaponDefinition(string name, float damageValue, float rangeValue, float fireRateValue, int magazineValue, int reserveValue, int pelletCount, float spreadValue, bool autoFire)
+    public WeaponDefinition(string name, float damageValue, float rangeValue, float fireRateValue,
+        int magazineValue, int reserveValue, int pelletCount, float spreadValue, bool autoFire)
     {
         weaponName = name;
         damage = damageValue;

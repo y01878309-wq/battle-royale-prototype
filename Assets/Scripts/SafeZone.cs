@@ -9,24 +9,25 @@ public class SafeZone : MonoBehaviour
 
     private float currentSize;
 
-    void Start()
+    private void Start()
     {
         currentSize = startSize;
         transform.localScale = Vector3.one * currentSize;
     }
 
-    void Update()
+    private void Update()
     {
         currentSize = Mathf.Max(minSize, currentSize - shrinkRate * Time.deltaTime);
         transform.localScale = Vector3.one * currentSize;
     }
 
-    void OnTriggerStay(Collider other)
+    private void OnTriggerStay(Collider other)
     {
-        Health health = other.GetComponent<Health>();
-        if (health != null && other.CompareTag("Player"))
+        if (other.CompareTag("Player"))
         {
-            health.TakeDamage(damagePerSecond * Time.deltaTime);
+            Health health = other.GetComponent<Health>();
+            if (health != null)
+                health.TakeDamage(damagePerSecond * Time.deltaTime);
         }
     }
 }

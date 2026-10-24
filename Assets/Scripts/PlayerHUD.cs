@@ -5,57 +5,58 @@ public class PlayerHUD : MonoBehaviour
 {
     public Health playerHealth;
     public Text healthText;
-    public Text enemiesLeftText;
+    public Text enemiesText;
     public Text weaponText;
     public Text ammoText;
+    public Text killsText;
 
-    void Update()
+    private WeaponController weaponController;
+
+    private void Start()
     {
-        if (playerHealth != null)
-        {
-            if (healthText != null)
-            {
-                healthText.text = "Health: " + Mathf.Ceil(playerHealth.CurrentHealth);
-            }
-        }
-
-        if (enemiesLeftText != null)
-        {
-            enemiesLeftText.text = "Enemies Left: " + CountAliveEnemies();
-        }
-
-        if (weaponText != null || ammoText != null)
-        {
-            WeaponController weaponController = FindObjectOfType<WeaponController>();
-            if (weaponController != null)
-            {
-                WeaponDefinition currentWeapon = weaponController.GetCurrentWeapon();
-                if (currentWeapon != null)
-                {
-                    if (weaponText != null)
-                    {
-                        weaponText.text = currentWeapon.weaponName;
-                    }
-
-                    if (ammoText != null)
-                    {
-                        ammoText.text = currentWeapon.currentAmmo + " / " + currentWeapon.reserveAmmo;
-                    }
-                }
-            }
-        }
+        weaponController = FindObjectOfType<WeaponController>();
     }
 
-    int CountAliveEnemies()
+    private void Update()
+    {
+        if (playerHealth != null && healthText != null)
+            healthText.text = "Health: " + Mathf.Ceil(playerHealth.CurrentHealth);
+
+        if (enemiesText != null)
+            enemiesText.text = "Enemies Left: " + CountAliveEnemies();
+
+        if (weaponController == null)
+            weaponController = FindObjectOfType<WeaponController>();
+
+        if (weaponController != null)
+        {
+            WeaponDefinition currentWeapon = weaponController.GetCurrentWeapon();
+            if (currentWeapon != null)
+            {
+                if (weaponText != null)
+                    weaponText.text = currentWeapon.weaponName;
+
+                if (ammoText != null)
+                    ammoText.text = currentWeapon.currentAmmo + " / " + currentWeapon.reserveAmmo;
+            }
+        }
+
+        if (killsText != null)
+            killsText.text = "Kills: " + GameManager.Instance.totalKills;
+    }
+
+    private int CountAliveEnemies()
     {
         int count = 0;
-        Health[] allHealth = FindObjectsOfType<Health>();
+        GameObject[] allObjects = FindObjectsOfType<GameObject>();
 
-        foreach (Health h in allHealth)
+        foreach (GameObject obj in allObjects)
         {
-            if (h != null && h.gameObject.CompareTag("Enemy") && h.IsAlive)
+            if (obj.CompareTag("Enemy"))
             {
-                count++;
+                Health health = obj.GetComponent<Health>();
+                if (health != null && health.IsAlive)
+                    count++;
             }
         }
 

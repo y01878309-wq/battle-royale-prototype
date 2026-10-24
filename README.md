@@ -1,18 +1,21 @@
 # Battle Royale Prototype
 
-This project is now a complete playable mini battle royale prototype with:
+This project is now a complete, playable battle royale prototype built for Unity.
 
-- player movement and sprinting
-- mouse-look camera
-- weapon system with rifle, shotgun, and sniper
-- ammo, reloads, and weapon switching
-- enemy AI with chase and attack behavior
-- health system and healing pickups
-- shrinking safe zone
-- win/lose conditions and HUD
-- collectible weapon pickups
+Features:
+- Player movement and sprinting
+- Mouse-look camera
+- Full weapon system with Rifle, Shotgun, and Sniper
+- Ammo, reload, and weapon switching
+- Enemy AI chase + attack behavior
+- Enemy spawning system
+- Shrinking safe zone
+- Healing loot pickups
+- HUD with health, weapon, ammo, enemies left, and kills
+- Win/lose conditions and restart flow
+- Pause menu and main menu support
 
-## Controls
+Controls:
 - W/A/S/D: Move
 - Left Shift: Sprint
 - Space: Jump
@@ -20,16 +23,26 @@ This project is now a complete playable mini battle royale prototype with:
 - Left Click: Shoot
 - 1 / 2 / 3: Switch weapons
 - R: Reload
+- Esc: Pause
 
-## Setup in Unity
+Unity setup:
 1. Create a new 3D Unity project.
-2. Copy the scripts from `Assets/Scripts` into your project.
-3. Create a Ground object, a Player capsule, and an Enemy capsule.
-4. Add `CharacterController`, `PlayerMovement`, `Health`, and `WeaponController` to the Player.
-5. Add a Camera as a child of the Player and attach `CameraController`.
-6. Add a `NavMeshAgent` and `EnemyAI` to the enemy.
-7. Create a safe-zone object with `SafeZone` attached.
-8. Create loot or weapon pickups with `WeaponPickup`.
-9. Bake navigation and press Play.
+2. Add a Ground plane.
+3. Create a Player capsule.
+4. Tag the Player object as `Player`.
+5. Add `CharacterController`, `PlayerMovement`, `Health`, and `WeaponController` to the Player.
+6. Add a Camera as a child of the Player and attach `CameraController`.
+7. Create Enemy prefab with `Capsule`, `NavMeshAgent`, `EnemyAI`, and `Health`.
+8. Add an `EnemySpawner` object and assign the Enemy prefab.
+9. Create a `SafeZone` object with a trigger collider and attach `SafeZone`.
+10. Create a `Canvas` and attach `PlayerHUD`.
+11. Create `GameManager` object and attach `GameManager`.
+12. Bake the NavMesh: `Window > AI > Navigation > Bake`.
+13. Press Play.
 
-This is a compact but complete prototype that keeps the full gameplay loop alive without leaving the weapon system incomplete.
+Notes:
+- For a complete playable build, you need to assign the `PlayerHUD` references in the Inspector.
+- You can also create a `MainMenu` scene with a button that calls `MainMenuManager.StartGame()`.
+- You can also create `Win` and `Lose` UI panels and assign them to the `GameManager` component.
+
+This package is meant to be quick to set up and immediately playable in Unity.

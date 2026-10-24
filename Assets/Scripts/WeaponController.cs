@@ -8,21 +8,19 @@ public class WeaponController : MonoBehaviour
     public ParticleSystem muzzleFlash;
     public GameObject hitEffect;
     public List<WeaponDefinition> weapons = new List<WeaponDefinition>();
-    public int currentWeaponIndex = 0;
 
     [Header("Audio")]
     public AudioSource shootAudioSource;
 
+    private int currentWeaponIndex = 0;
     private float nextFireTime = 0f;
     private bool isReloading = false;
     private float reloadTimer = 0f;
 
-    void Start()
+    private void Start()
     {
         if (playerCamera == null)
-        {
             playerCamera = Camera.main;
-        }
 
         if (weapons.Count == 0)
         {
@@ -30,66 +28,43 @@ public class WeaponController : MonoBehaviour
             AddWeapon("Shotgun", 18f, 35f, 2.1f, 8, 32, 6, 0.08f, false);
             AddWeapon("Sniper", 65f, 180f, 1.2f, 5, 20, 1, 0.01f, false);
         }
-
-        for (int i = 0; i < weapons.Count; i++)
-        {
-            weapons[i].currentAmmo = Mathf.Min(weapons[i].currentAmmo, weapons[i].magazineSize);
-            if (weapons[i].currentAmmo <= 0 && weapons[i].reserveAmmo > 0)
-            {
-                ReloadCurrentWeapon();
-            }
-        }
-
-        if (weapons.Count > 0)
-        {
-            weapons[0].isUnlocked = true;
-        }
     }
 
-    void Update()
+    public void HandleInput()
     {
+        if (weapons.Count == 0)
+            return;
+
         if (isReloading)
         {
             reloadTimer -= Time.deltaTime;
             if (reloadTimer <= 0f)
-            {
                 FinishReload();
-            }
+            return;
         }
 
-        if (Input.GetKeyDown(KeyCode.R) && !isReloading)
-        {
+        if (Input.GetKeyDown(KeyCode.R))
             ReloadCurrentWeapon();
-        }
 
         for (int i = 0; i < weapons.Count; i++)
         {
             if (Input.GetKeyDown(weapons[i].hotkey))
-            {
                 SwitchWeapon(i);
-            }
         }
 
         if (Input.GetAxis("Mouse ScrollWheel") > 0f)
-        {
             SwitchWeapon((currentWeaponIndex + 1) % weapons.Count);
-        }
-        else if (Input.GetAxis("Mouse ScrollWheel") < 0f)
-        {
+
+        if (Input.GetAxis("Mouse ScrollWheel") < 0f)
             SwitchWeapon((currentWeaponIndex - 1 + weapons.Count) % weapons.Count);
-        }
 
-        if (weapons.Count == 0 || isReloading)
-        {
-            return;
-        }
+        WeaponDefinition currentWeapon = weapons[currentWeaponIndex];
 
-        WeaponDefinition activeWeapon = weapons[currentWeaponIndex];
-        if (activeWeapon.automatic)
+        if (currentWeapon.automatic)
         {
             if (Input.GetButton("Fire1") && Time.time >= nextFireTime)
             {
-                nextFireTime = Time.time + 1f / activeWeapon.fireRate;
+                nextFireTime = Time.time + 1f / currentWeapon.fireRate;
                 TryShoot();
             }
         }
@@ -97,27 +72,29 @@ public class WeaponController : MonoBehaviour
         {
             if (Input.GetButtonDown("Fire1") && Time.time >= nextFireTime)
             {
-                nextFireTime = Time.time + 1f / activeWeapon.fireRate;
+                nextFireTime = Time.time + 1f / currentWeapon.fireRate;
                 TryShoot();
             }
         }
     }
 
-    public void AddWeapon(string name, float damage, float range, float fireRate, int magazineSize, int reserveAmmo, int pellets, float spread, bool automatic)
+    public void AddWeapon(string name, float damage, float range, float fireRate,
+        int magazineSize, int reserveAmmo, int pellets, float spread, bool automatic)
     {
-        for (int i = 0; i < weapons.Count; i++)
+        foreach (WeaponDefinition weapon in weapons)
         {
-            if (weapons[i].weaponName == name)
+            if (weapon.weaponName == name)
             {
-                weapons[i].reserveAmmo += reserveAmmo;
-                weapons[i].isUnlocked = true;
-                SwitchWeapon(i);
+                weapon.reserveAmmo += reserveAmmo;
+                weapon.isUnlocked = true;
+                SwitchWeaponByName(name);
                 return;
             }
         }
 
-        WeaponDefinition newWeapon = new WeaponDefinition(name, damage, range, fireRate, magazineSize, reserveAmmo, pellets, spread, automatic);
-        newWeapon.isUnlocked = true;
+        WeaponDefinition newWeapon = new WeaponDefinition(
+            name, damage, range, fireRate, magazineSize, reserveAmmo, pellets, spread, automatic);
+
         weapons.Add(newWeapon);
         currentWeaponIndex = weapons.Count - 1;
     }
@@ -125,23 +102,27 @@ public class WeaponController : MonoBehaviour
     public void SwitchWeapon(int index)
     {
         if (weapons.Count == 0)
-        {
             return;
-        }
 
         currentWeaponIndex = Mathf.Clamp(index, 0, weapons.Count - 1);
-        if (!weapons[currentWeaponIndex].isUnlocked)
+    }
+
+    public void SwitchWeaponByName(string weaponName)
+    {
+        for (int i = 0; i < weapons.Count; i++)
         {
-            currentWeaponIndex = 0;
+            if (weapons[i].weaponName == weaponName)
+            {
+                SwitchWeapon(i);
+                return;
+            }
         }
     }
 
     public void TryShoot()
     {
         if (weapons.Count == 0)
-        {
             return;
-        }
 
         WeaponDefinition weapon = weapons[currentWeaponIndex];
 
@@ -153,7 +134,7 @@ public class WeaponController : MonoBehaviour
 
         if (playerCamera == null)
         {
-            Debug.LogWarning("WeaponController: No camera assigned.");
+            Debug.LogWarning("No camera assigned to WeaponController.");
             return;
         }
 
@@ -172,9 +153,7 @@ public class WeaponController : MonoBehaviour
             {
                 Health targetHealth = hit.collider.GetComponentInParent<Health>();
                 if (targetHealth != null)
-                {
                     targetHealth.TakeDamage(weapon.damage);
-                }
 
                 if (hitEffect != null)
                 {
@@ -185,42 +164,30 @@ public class WeaponController : MonoBehaviour
         }
 
         if (muzzleFlash != null)
-        {
             muzzleFlash.Play();
-        }
 
-        if (shootAudioSource != null)
-        {
-            if (!shootAudioSource.isPlaying)
-            {
-                shootAudioSource.Play();
-            }
-        }
+        if (shootAudioSource != null && !shootAudioSource.isPlaying)
+            shootAudioSource.Play();
 
         if (weapon.currentAmmo <= 0 && weapon.reserveAmmo > 0)
-        {
             ReloadCurrentWeapon();
-        }
     }
 
     public void ReloadCurrentWeapon()
     {
         if (weapons.Count == 0 || isReloading)
-        {
             return;
-        }
 
         WeaponDefinition weapon = weapons[currentWeaponIndex];
+
         if (weapon.currentAmmo >= weapon.magazineSize || weapon.reserveAmmo <= 0)
-        {
             return;
-        }
 
         isReloading = true;
         reloadTimer = weapon.reloadTime;
     }
 
-    private void FinishReload()
+    public void FinishReload()
     {
         WeaponDefinition weapon = weapons[currentWeaponIndex];
         int ammoNeeded = weapon.magazineSize - weapon.currentAmmo;
@@ -228,6 +195,7 @@ public class WeaponController : MonoBehaviour
 
         weapon.currentAmmo += ammoToLoad;
         weapon.reserveAmmo -= ammoToLoad;
+
         isReloading = false;
         reloadTimer = 0f;
     }
@@ -235,9 +203,7 @@ public class WeaponController : MonoBehaviour
     public WeaponDefinition GetCurrentWeapon()
     {
         if (weapons.Count == 0)
-        {
             return null;
-        }
 
         return weapons[currentWeaponIndex];
     }

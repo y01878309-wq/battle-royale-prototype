@@ -9,23 +9,34 @@ public class PlayerMovement : MonoBehaviour
     public float jumpForce = 5f;
     public float gravity = -20f;
 
+    [Header("References")]
+    public Camera playerCamera;
+    public WeaponController weaponController;
+
     private CharacterController controller;
     private Vector3 velocity;
     private bool isGrounded;
 
-    void Start()
+    private void Start()
     {
         controller = GetComponent<CharacterController>();
+
+        if (playerCamera == null)
+            playerCamera = Camera.main;
+
+        if (weaponController == null)
+            weaponController = GetComponent<WeaponController>();
     }
 
-    void Update()
+    private void Update()
     {
+        if (controller == null)
+            return;
+
         isGrounded = controller.isGrounded;
 
-        if (isGrounded && velocity.y < 0)
-        {
+        if (isGrounded && velocity.y < 0f)
             velocity.y = -2f;
-        }
 
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
@@ -37,11 +48,12 @@ public class PlayerMovement : MonoBehaviour
         controller.Move(move * speed * Time.deltaTime);
 
         if (Input.GetButtonDown("Jump") && isGrounded)
-        {
             velocity.y = jumpForce;
-        }
 
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+
+        if (weaponController != null)
+            weaponController.HandleInput();
     }
 }

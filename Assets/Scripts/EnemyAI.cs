@@ -12,17 +12,19 @@ public class EnemyAI : MonoBehaviour
     private NavMeshAgent agent;
     private float nextAttackTime;
 
-    void Start()
+    private void Start()
     {
         agent = GetComponent<NavMeshAgent>();
+        target = GameObject.FindGameObjectWithTag("Player")?.transform;
     }
 
-    void Update()
+    private void Update()
     {
         if (target == null)
         {
             target = GameObject.FindGameObjectWithTag("Player")?.transform;
-            if (target == null) return;
+            if (target == null)
+                return;
         }
 
         float distance = Vector3.Distance(transform.position, target.position);
@@ -42,9 +44,7 @@ public class EnemyAI : MonoBehaviour
 
                 Health targetHealth = target.GetComponent<Health>();
                 if (targetHealth != null)
-                {
                     targetHealth.TakeDamage(attackDamage);
-                }
             }
         }
     }
