@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>قطارات مصر - لعبة محاكاة القطارات المصرية</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- 1. شاشة البداية وقائمة اللعبة الرئيسية -->
+    <div id="main-menu" class="screen active">
+        <div class="overlay">
+            <div class="header-logo">
+                <h1>🚆 قطارات مصر 🇪🇬</h1>
+                <p>أقوى وأحدث محاكي لسكك حديد مصر</p>
+            </div>
+
+            <div class="menu-buttons">
+                <button class="btn btn-primary" onclick="startGame()">▶️ ابدأ الرحلة (العب الآن)</button>
+                <button class="btn" onclick="openModal('jobs-modal')">📋 جدول الوظائف (30 مهمة)</button>
+                <button class="btn" onclick="openModal('store-modal')">🛒 متجر القطارات والجرارات</button>
+                <button class="btn" onclick="openModal('leaderboard-modal')">🏆 لوحة الشرف والمسابقات</button>
+                <button class="btn" onclick="openModal('settings-modal')">⚙️ الإعدادات والصوت</button>
+            </div>
+
+            <div class="user-bar">
+                <span>👤 السائق: <strong>يوسف فرج</strong></span> | 
+                <span>💰 الرصيد: <strong id="user-money">15,750</strong> ج.م</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. واجهة كابينة القيادة داخل اللعبة -->
+    <div id="game-screen" class="screen">
+        
+        <!-- اللوحة العلوية: معلومات الرحلة والمحطة القادمة -->
+        <div class="top-hud">
+            <div class="hud-box station-box">
+                <span class="hud-title">المحطة القادمة</span>
+                <h2 id="next-station-name">⬅️ بنها</h2>
+                <span id="next-station-dist">الوصول خلال: 1.9 كم</span>
+            </div>
+            
+            <div class="hud-box timer-box">
+                <span id="game-clock">الساعة 06:42</span>
+                <span id="train-status" class="status-on-time">في ميعادك</span>
+            </div>
+
+            <div class="hud-box route-tracker">
+                <span class="hud-title">قطار 1205 ثالثة مكيفة (القاهرة - الإسكندرية)</span>
+                <div class="route-line">
+                    <span class="station-dot done">رمسيس</span> —— 
+                    <span class="station-dot active">شبرا</span> —— 
+                    <span class="station-dot">قليوب</span> —— 
+                    <span class="station-dot">بنها</span> —— 
+                    <span class="station-dot">طنطا</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- نافذة الركاب أثناء التوقف في المحطة -->
+        <div id="passenger-modal" class="passenger-hud hidden">
+            <h3>🚉 محطة رمسيس</h3>
+            <div class="passenger-stats">
+                <span>👥 طالعين: <strong id="boarding-count">37</strong></span> | 
+                <span>👥 نازلين: <strong id="alighting-count">0</strong></span>
+            </div>
+            <div class="countdown-bar">القيام بعد <span id="depart-timer">25</span> ثانية</div>
+        </div>
+
+        <!-- مكان عرض الجرافيك والقطار -->
+        <div id="canvas-container">
+            <div class="viewport-placeholder">
+                <div class="cab-window-frame">
+                    <div class="track-view">
+                        <div class="scenery-tag">💡 كابينة المحاكاة التفاعلية (جاهزة للربط مع المحرك الثلاثي الأبعاد)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- اللوحة السفلى: لوحة التحكم والكابينة -->
+        <div class="cab-controls">
+            <!-- عداد السرعة الواقعي -->
+            <div class="speedometer-container">
+                <div class="speed-dial">
+                    <span id="speed-num">0</span>
+                    <small>كم / س</small>
+                </div>
+                <div class="speed-limit">الحد: <strong>60</strong></div>
+            </div>
+
+            <!-- أزرار التحكم التفاعلية -->
+            <div class="dashboard-buttons">
+                <button class="cab-btn btn-door" onclick="toggleDoors()">🚪 الأبواب <br><small id="door-state">(مقفولة)</small></button>
+                <button class="cab-btn btn-horn" onclick="playHorn()">🎺 الكلاكس / زمارة</button>
+                <button class="cab-btn btn-sand" onclick="useSand()">⏳ رمل للسكة</button>
+                <button class="cab-btn btn-emergency" onclick="emergencyBrake()">🚨 طوارئ</button>
+            </div>
+
+            <!-- عصا السرعة والفرامل -->
+            <div class="levers-container">
+                <div class="lever-group">
+                    <label>الفرملة</label>
+                    <input type="range" id="brake-lever" min="0" max="100" value="0" oninput="updateBrake(this.value)">
+                </div>
+                <div class="lever-group">
+                    <label>عصا السرعة (Power)</label>
+                    <input type="range" id="throttle-lever" min="0" max="100" value="0" oninput="updateThrottle(this.value)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. نافذة متجر القطارات والجرارات (40ج) -->
+    <div id="store-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('store-modal')">&times;</span>
+            <h2>🛒 متجر القطارات المصرية</h2>
+            <p class="store-subtitle">دفع فودافون كاش أو إنستا باي على: <strong>01065751305</strong></p>
+            
+            <div class="train-grid">
+                <div class="train-card unlocked">
+                    <div class="train-badge">مجاني</div>
+                    <h4>الجرار الجنرال GE (ركاب)</h4>
+                    <span class="price-tag free">مفتوح مجاناً</span>
+                    <button class="btn-select">اختيار</button>
+                </div>
+
+                <div class="train-card locked">
+                    <div class="train-badge locked-badge">🔒 40 ج.م</div>
+                    <h4>قطار تالجو الفاخر (PRL)</h4>
+                    <span class="price-tag">40 ج.م</span>
+                    <button class="btn-buy" onclick="buyTrain('Talgo')">شراء القطر</button>
+                </div>
+
+                <div class="train-card locked">
+                    <div class="train-badge locked-badge">🔒 40 ج.م</div>
+                    <h4>الجرار الكندي الأزرق (G22)</h4>
+                    <span class="price-tag">40 ج.م</span>
+                    <button class="btn-buy" onclick="buyTrain('Canadian')">شراء القطر</button>
+                </div>
+
+                <div class="train-card locked">
+                    <div class="train-badge locked-badge">🔒 40 ج.م</div>
+                    <h4>القطار التوربيني (أحمر وأبيض)</h4>
+                    <span class="price-tag">40 ج.م</span>
+                    <button class="btn-buy" onclick="buyTrain('Turbini')">شراء القطر</button>
+                </div>
+
+                <div class="train-card locked">
+                    <div class="train-badge locked-badge">🔒 50 ج.م</div>
+                    <h4>قطار الفوسفات (أبو طرطور)</h4>
+                    <span class="price-tag">50 ج.م</span>
+                    <button class="btn-buy" onclick="buyTrain('Phosphate')">شراء القطر</button>
+                </div>
+
+                <div class="train-card locked">
+                    <div class="train-badge locked-badge">🔒 30 ج.م</div>
+                    <h4>جرار أدترانز الألماني (الخنافس)</h4>
+                    <span class="price-tag">30 ج.م</span>
+                    <button class="btn-buy" onclick="buyTrain('Adtranz')">شراء القطر</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. نافذة الـ 30 شغلانة ومهمة -->
+    <div id="jobs-modal" class="modal">
+        <div class="modal-content large-modal">
+            <span class="close-btn" onclick="closeModal('jobs-modal')">&times;</span>
+            <h2>📋 جدول رحلات ووظائف السائقين (30 مهمة)</h2>
+            <div class="jobs-list" id="jobs-container">
+                <!-- سيتم ملؤها تلقائياً بالـ 30 مهمة عن طريق الجافاسكريبت -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. نافذة لوحة الشرف والمسابقات -->
+    <div id="leaderboard-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('leaderboard-modal')">&times;</span>
+            <h2>🏆 لوحة شرف سواقين القطارات والمترو</h2>
+            <div class="leaderboard-table">
+                <div class="lb-row gold"><span>1️⃣ سواق 9578</span><span>18 رحلة</span></div>
+                <div class="lb-row silver"><span>2️⃣ دِيشا</span><span>14 رحلة</span></div>
+                <div class="lb-row bronze"><span>3️⃣ مَلاك</span><span>12 رحلة</span></div>
+                <div class="lb-row"><span>4️⃣ أحمد</span><span>11 رحلة</span></div>
+                <div class="lb-row user-rank"><span>⭐ أنت (يوسف فرج)</span><span>0 رحلة</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. نافذة الإعدادات والصوت -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('settings-modal')">&times;</span>
+            <h2>⚙️ إعدادات اللعبة</h2>
+            <div class="setting-item">
+                <label>🔊 صوت المحرك والكلاكس</label>
+                <input type="range" min="0" max="100" value="80">
+            </div>
+            <div class="setting-item">
+                <label>🎮 جودة الجرافيك</label>
+                <select>
+                    <option>عالي (High 60FPS)</option>
+                    <option selected>متوسط (Balanced)</option>
+                    <option>منخفض (Performance)</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label>🌐 السيرفر الأونلاين (Render)</label>
+                <input type="text" value="wss://qitar-online-server.onrender.com" readonly>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
