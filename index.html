@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#14110d">
+<title>قطر الصعيد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<div id="loading">
+  <div class="load-title">قطر الصعيد</div>
+  <div class="load-bar"><i id="loadFill"></i></div>
+  <div id="loadMsg">جاري تجهيز السكة…</div>
+</div>
+
+<div id="menu" hidden>
+  <div class="menu-card">
+    <div class="eyebrow">محاكي القطار المصري</div>
+    <h1>قطر الصعيد</h1>
+    <div class="opts">
+      <label for="optLine">الخط</label>
+      <select id="optLine"></select>
+      <label for="optTrain">القطر</label>
+      <select id="optTrain"></select>
+      <div></div><p id="trainDesc" class="desc"></p>
+      <label for="optTime">الوقت</label>
+      <select id="optTime">
+        <option value="morning" selected>الصبح</option>
+        <option value="noon">الضهر</option>
+        <option value="overcast">غيم</option>
+        <option value="sunset">الغروب</option>
+        <option value="night">الليل</option>
+      </select>
+      <label for="optQuality">الجودة</label>
+      <select id="optQuality">
+        <option value="high">عالية</option>
+        <option value="medium" selected>متوسطة</option>
+        <option value="low">منخفضة</option>
+      </select>
+    </div>
+    <p class="note">المسافات بين المحطات مضغوطة عشان الرحلة تبقى ممكنة في اللعب. أسماء المحطات والمسافات تقريبية.</p>
+    <button id="startBtn" class="primary">ابدأ الرحلة</button>
+  </div>
+</div>
+
+<div id="hud" hidden>
+  <div class="top">
+    <div class="next">
+      <div class="next-label" id="nextLabel">المحطة الجاية</div>
+      <div class="next-name" id="nextName">—</div>
+      <div class="next-dist" id="nextDist">0 م</div>
+    </div>
+    <div class="toolbar">
+      <div class="stat"><small>النقاط</small><b id="score">0</b></div>
+      <div class="stat"><small>الوقت</small><b id="clock">00:00</b></div>
+      <button id="camBtn" class="chip" aria-label="تغيير الكاميرا">كاميرا</button>
+      <button id="muteBtn" class="chip" aria-label="كتم الصوت">صوت</button>
+      <button id="helpBtn" class="chip" aria-label="المفاتيح">؟</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <div class="bottom">
+    <section class="gauge" aria-label="السرعة">
+      <div class="speed"><b id="speedNum">0</b><small>كم/س</small></div>
+      <div class="limit" id="limitSign"><b id="limitNum">110</b></div>
+      <div class="bar"><i id="speedBar"></i><u id="limitMark"></u></div>
+      <div class="doors" id="doorState">الأبواب مقفولة</div>
+    </section>
+
+    <section class="controls" aria-label="التحكم">
+      <div class="lever">
+        <div class="lever-head"><small>القوة</small>
+          <span class="step"><button id="btnDown" aria-label="تقليل القوة">−</button><button id="btnUp" aria-label="زيادة القوة">+</button></span>
+        </div>
+        <div class="notches" id="notches"></div>
+      </div>
+      <div class="lever">
+        <div class="lever-head"><small>الفرامل</small></div>
+        <div class="brakebar"><i id="brakeFill"></i></div>
+      </div>
+      <div class="actions">
+        <button id="btnBrake" class="act brake">فرامل</button>
+        <button id="btnHorn" class="act horn">زمارة</button>
+        <button id="btnEmerg" class="act emerg">طوارئ</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="help" hidden>
+  <div class="menu-card">
+    <h1>التحكم</h1>
+    <table class="keytable">
+      <tr><td><b>W / S</b> أو الأسهم</td><td>زيادة / تقليل القوة</td></tr>
+      <tr><td><b>مسافة</b></td><td>فرامل (اضغط واستمر)</td></tr>
+      <tr><td><b>E</b></td><td>فرملة طوارئ</td></tr>
+      <tr><td><b>H</b></td><td>الزمارة</td></tr>
+      <tr><td><b>C</b> أو <b>1 – 5</b></td><td>تغيير الكاميرا</td></tr>
+      <tr><td>اسحب بالماوس أو الإصبع</td><td>لف الكاميرا</td></tr>
+      <tr><td>عجلة الماوس أو قرصة</td><td>تقريب وتبعيد</td></tr>
+      <tr><td><b>V</b></td><td>رجّع الكاميرا</td></tr>
+      <tr><td><b>P</b> / <b>M</b></td><td>إيقاف مؤقت / كتم الصوت</td></tr>
+    </table>
+    <button id="helpClose" class="primary">تمام</button>
+  </div>
+</div>
+
+<div id="result" hidden>
+  <div class="menu-card">
+    <div class="eyebrow" id="resEyebrow">وصلنا</div>
+    <h1 id="resTitle">الرحلة خلصت</h1>
+    <table id="resTable"></table>
+    <div class="grade" id="resGrade"></div>
+    <button id="againBtn" class="primary">رحلة جديدة</button>
+  </div>
+</div>
+
+<div id="pause" hidden><div class="menu-card"><h1>متوقف</h1><p class="lead">دوس P للمتابعة</p></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="document.write('<script src=&quot;vendor/three.min.js&quot;><\/script>')"></script>
+<script src="util.js"></script>
+<script src="textures.js"></script>
+<script src="data.js"></script>
+<script src="route.js"></script>
+<script src="track.js"></script>
+<script src="sky.js"></script>
+<script src="world.js"></script>
+<script src="scenery.js"></script>
+<script src="train.js"></script>
+<script src="stations.js"></script>
+<script src="game.js"></script>
+<script src="audio.js"></script>
+<script src="ui.js"></script>
+<script src="main.js"></script>
+<script>if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { /* offline cache is optional */ }); });
+}
+</script>
+</body>
+</html>
