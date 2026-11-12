@@ -1,0 +1,14 @@
+{
+  "name": "qitar-el-saeed",
+  "version": "0.1.0",
+  "description": "قطارات مصر - محاكي قطار مصري ثلاثي الأبعاد",
+  "private": true,
+  "scripts": {
+    "vendor": "mkdir -p vendor && cp node_modules/three/build/three.min.js vendor/three.min.js",
+    "postinstall": "npm run vendor",
+    "start": "npx serve ."
+  },
+  "dependencies": {
+    "three": "0.128.0"
+  }
+}

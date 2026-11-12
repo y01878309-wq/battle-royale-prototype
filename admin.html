@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>لوحة الأدمن · قطارات مصر</title>
+<style>
+:root{--bg:#10131a;--card:#181d28;--line:#2b3345;--ink:#eef1f7;--dim:#9aa4b8;--gold:#f6c23e;--red:#e5534b;--green:#3fb950}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Tahoma,Arial,sans-serif;padding:14px 14px 60px;max-width:720px;margin-inline:auto}
+h1{font-size:22px;margin:6px 0 14px}h2{font-size:17px;margin:0 0 10px;color:var(--gold)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+label{display:block;color:var(--dim);font-size:14px;margin:8px 0 4px}
+input,select{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#0d1017;color:var(--ink);font:inherit}
+input[dir=ltr]{text-align:left}
+button{padding:11px 16px;border:0;border-radius:10px;background:var(--gold);color:#1a1408;font:700 16px/1 Tahoma,Arial;cursor:pointer;margin-top:10px}
+button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
+.row{display:flex;gap:8px}.row>*{flex:1}
+#out{white-space:pre-wrap;font:14px/1.7 Tahoma,Arial;background:#0b0e14;border:1px solid var(--line);border-radius:10px;padding:10px;min-height:48px}
+.ok{color:var(--green)}.bad{color:var(--red)}.dim{color:var(--dim);font-size:14px}
+#panel{display:none}
+</style>
+</head>
+<body>
+<h1>🚆 لوحة الأدمن · قطارات مصر</h1>
+
+<div class="card" id="login">
+  <h2>الدخول</h2>
+  <p class="dim">ادخل بحساب جوجل بتاعك (نفس الإيميل اللي كتبته في قواعد Firestore). الصفحة دي بتشتغل بحساب منفصل عن اللعبة، فمش هتأثر على حسابك كلاعب.</p>
+  <button id="btnLogin">الدخول بحساب جوجل</button>
+  <p id="who" class="dim"></p>
+</div>
+
+<div id="panel">
+  <div class="card">
+    <h2>شحن لاعب بالـ ID</h2>
+    <label>الـ ID بتاع اللاعب (6 أرقام)</label>
+    <input id="pid" inputmode="numeric" maxlength="6" dir="ltr" placeholder="123456">
+    <div class="row"><button class="alt" id="btnFind">اعرض اللاعب</button></div>
+    <label>المبلغ (جنيه لعبة). اكتب رقم سالب لو عايز تخصم</label>
+    <input id="amt" inputmode="numeric" dir="ltr" placeholder="100">
+    <label>ملاحظة (اختياري: رقم العملية أو الاسم)</label>
+    <input id="note" placeholder="فودافون كاش 50 جنيه">
+    <button id="btnCredit">اشحن</button>
+  </div>
+
+  <div class="card">
+    <h2>كود هدية</h2>
+    <label>الكود (حروف إنجليزي وأرقام). سيبه فاضي لو عايز كود عشوائي</label>
+    <input id="gcode" dir="ltr" maxlength="24" placeholder="WELCOME">
+    <div class="row"><div><label>جنيه لعبة</label><input id="gcoins" inputmode="numeric" dir="ltr" value="50"></div><div><label>أقصى عدد استخدامات</label><input id="gmax" inputmode="numeric" dir="ltr" value="1"></div></div>
+    <button id="btnGift">اعمل الكود</button>
+  </div>
+
+  <div class="card">
+    <h2>صرف جوايز المسابقات</h2>
+    <p class="dim">اضغط مرة واحدة بعد ما المسابقة تخلص (اليومية بعد 12 بالليل، والأسبوعية بعد نهاية الأسبوع). بيدفع جوايز أول 25 ويسجّل النتيجة، ومبيدفعش مرتين.</p>
+    <select id="settleSel"></select>
+    <button id="btnSettle">اصرف الجوايز</button>
+  </div>
+
+  <div class="card">
+    <h2>الكتالوج (أسعار القطارات ومكافآت المهام)</h2>
+    <p class="dim">لازم تضغط الزرار ده مرة واحدة على الأقل، ومرة تاني كل ما تتغير الأسعار. من غيره الشراء واستلام المكافآت مش هيشتغلوا.</p>
+    <button class="alt" id="btnCatalog">انشر الكتالوج</button>
+  </div>
+
+  <div class="card"><h2>النتيجة</h2><div id="out">—</div></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id), out = $('out');
+const log = (m, cls) => { out.className = cls || ''; out.textContent = m; };
+const TZ = 7200000, dayIdx = () => Math.floor((Date.now() + TZ) / 86400000), weekIdx = () => Math.floor(dayIdx() / 7);
+const PRIZES = { top: [300, 200, 100], r10: 50, r25: 25 };
+const prizeOf = (i) => (i < 3 ? PRIZES.top[i] : i < 10 ? PRIZES.r10 : i < 25 ? PRIZES.r25 : 0);
+let app, auth, db, email = '';
+try { app = firebase.initializeApp(window.QS_FIREBASE, 'admin'); auth = app.auth(); db = app.firestore(); } catch (e) { log('مقدرتش أشغّل Firebase: ' + e.message, 'bad'); }
+const ts = () => firebase.firestore.FieldValue.serverTimestamp(), inc = (n) => firebase.firestore.FieldValue.increment(n);
+const why = (e) => (e && e.code === 'permission-denied') ? 'مرفوض: الإيميل ده مش الأدمن في القواعد (راجع الإيميل في firestore.rules)، أو لازم تنشر الكتالوج' : (e && e.message) || String(e);
+
+if (auth) {
+  auth.getRedirectResult().catch((e) => log('فشل الدخول: ' + e.message, 'bad'));
+  auth.onAuthStateChanged((u) => {
+    if (u && !u.isAnonymous) { email = u.email || ''; $('panel').style.display = 'block'; $('who').textContent = 'داخل بـ ' + email; $('btnLogin').textContent = 'تغيير الحساب'; fillSettle(); }
+    else { $('panel').style.display = 'none'; $('who').textContent = ''; }
+  });
+  $('btnLogin').onclick = async () => {
+    const pr = new firebase.auth.GoogleAuthProvider();
+    try { await auth.signInWithPopup(pr); } catch (e) { if (/popup|cancel/i.test(e.code || '')) { try { await auth.signInWithRedirect(pr); } catch (x) { log('فشل الدخول: ' + x.message, 'bad'); } } else log('فشل الدخول: ' + e.message + '\nتأكد إن Google مفعّل في Authentication وإن الدومين مضاف في Authorized domains.', 'bad'); }
+  };
+}
+
+const player = (id) => db.collection('players').doc(String(id).trim());
+$('btnFind').onclick = async () => {
+  try {
+    const s = await player($('pid').value).get(); if (!s.exists) return log('مفيش لاعب بالـ ID ده', 'bad');
+    const d = s.data(); log('الاسم: ' + d.name + '\nالرصيد: ' + d.coins + ' جنيه لعبة\nالقطارات المشتراة: ' + (d.owned || []).length + '\nالتواصل: ' + (d.contact || '—') + '\nالخبرة: ' + (d.xp || 0));
+  } catch (e) { log(why(e), 'bad'); }
+};
+$('btnCredit').onclick = async () => {
+  const id = $('pid').value.trim(), amt = parseInt($('amt').value, 10);
+  if (!/^\d{6}$/.test(id) || !amt) return log('اكتب ID من 6 أرقام ومبلغ صحيح', 'bad');
+  $('btnCredit').disabled = true;
+  try {
+    let res = null;
+    await db.runTransaction(async (tx) => {
+      const ref = player(id), s = await tx.get(ref); if (!s.exists) throw new Error('مفيش لاعب بالـ ID ده');
+      const c = s.data().coins + amt; if (c < 0) throw new Error('الرصيد مش كفاية للخصم (' + s.data().coins + ')');
+      tx.update(ref, { coins: c }); tx.set(db.collection('logs').doc(), { at: ts(), admin: email, id, amt, note: $('note').value.slice(0, 80), name: s.data().name }); res = { name: s.data().name, c };
+    });
+    log('تم ✔\n' + res.name + ' رصيده بقى ' + res.c + ' جنيه لعبة', 'ok'); $('amt').value = '';
+  } catch (e) { log(why(e), 'bad'); } finally { $('btnCredit').disabled = false; }
+};
+$('btnGift').onclick = async () => {
+  let code = $('gcode').value.trim().toUpperCase(); const coins = parseInt($('gcoins').value, 10), max = parseInt($('gmax').value, 10);
+  if (!code) { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; code = ''; for (let i = 0; i < 8; i++) code += A[Math.floor(Math.random() * A.length)]; }
+  if (!/^[A-Z0-9_-]{3,24}$/.test(code) || !(coins > 0) || !(max > 0)) return log('الكود 3 لـ 24 حرف إنجليزي أو أرقام، والفلوس وعدد الاستخدامات أرقام أكبر من صفر', 'bad');
+  try { const ref = db.collection('gifts').doc(code); if ((await ref.get()).exists) return log('الكود ده موجود قبل كده', 'bad'); await ref.set({ coins, max, used: [], at: ts() }); log('اتعمل الكود: ' + code + '\n' + coins + ' جنيه لعبة · ' + max + ' استخدام', 'ok'); } catch (e) { log(why(e), 'bad'); }
+};
+$('btnCatalog').onclick = async () => {
+  try { const j = await (await fetch('catalog.json', { cache: 'no-store' })).json(); await db.collection('config').doc('catalog').set(j); log('اتنشر الكتالوج ✔\n' + Object.keys(j.prices).length + ' قطر · ' + Object.keys(j.rewards).length + ' مكافأة', 'ok'); } catch (e) { log(why(e), 'bad'); }
+};
+
+function fillSettle() {
+  const d = dayIdx(), w = weekIdx(), s = $('settleSel'); if (s.options.length) return;
+  for (const [id, key, name] of [['daily', 'daily-' + (d - 1), 'ملوك الإيراد (إمبارح)'], ['score', 'score-' + (d - 1), 'بطولة أفضل رحلة (إمبارح)'], ['marathon', 'marathon-' + (w - 1), 'ماراثون الأسبوع (الأسبوع اللي فات)']]) s.add(new Option(name, id + '|' + key));
+}
+$('btnSettle').onclick = async () => {
+  const [id, key] = $('settleSel').value.split('|'); $('btnSettle').disabled = true;
+  try {
+    if ((await db.collection('settled').doc(key).get()).exists) return log('الجوايز دي اتصرفت قبل كده', 'bad');
+    const rows = (await db.collection('board').doc(key).collection('rows').orderBy('v', 'desc').limit(25).get()).docs.map((d) => ({ pid: d.id, n: d.data().n, v: Math.round(d.data().v) }));
+    if (!rows.length) return log('مفيش حد دخل المسابقة دي', 'bad');
+    const live = await Promise.all(rows.map((r) => player(r.pid).get())), b = db.batch(); let paid = 0, lines = [];
+    rows.forEach((r, i) => { const p = prizeOf(i); r.prize = p; if (p && live[i].exists) { b.update(player(r.pid), { coins: inc(p) }); paid += p; } lines.push((i + 1) + '. ' + r.n + ' · ' + r.v + (p ? ' · +' + p : '')); });
+    b.set(db.collection('results').doc(id), { key, at: ts(), rows: rows.slice(0, 10).map((r) => ({ n: r.n, v: r.v, prize: r.prize })) });
+    b.set(db.collection('settled').doc(key), { at: ts(), paid, admin: email }); await b.commit();
+    log('اتصرفت الجوايز ✔ (إجمالي ' + paid + ')\n' + lines.join('\n'), 'ok');
+  } catch (e) { log(why(e), 'bad'); } finally { $('btnSettle').disabled = false; }
+};
+</script>
+</body>
+</html>

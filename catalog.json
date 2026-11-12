@@ -1,0 +1,34 @@
+{
+  "prices": {
+    "train:vip": 0,
+    "train:orange": 40,
+    "train:hitachi": 60,
+    "train:velaro": 100,
+    "train:talgo": 60,
+    "train:sleeper": 40,
+    "train:tahsin": 40,
+    "train:third": 0,
+    "train:dmu": 0,
+    "train:bluecom": 80,
+    "train:emuyellow": 50,
+    "train:freight": 60,
+    "train:cargo-cont": 80,
+    "train:cargo-phos": 80
+  },
+  "rewards": {
+    "d_trip": 15,
+    "d_stops": 40,
+    "d_perfect": 25,
+    "d_ontime": 25,
+    "d_clean": 30,
+    "d_freight": 35,
+    "a_first": 20,
+    "a_trips10": 100,
+    "a_trips50": 400,
+    "a_stops100": 200,
+    "a_perfect50": 150,
+    "a_ontime50": 150,
+    "a_clean10": 150,
+    "a_freight10": 150
+  }
+}
