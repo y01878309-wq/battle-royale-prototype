@@ -30,5 +30,12 @@
     "a_ontime50": 150,
     "a_clean10": 150,
     "a_freight10": 150
+  },
+  "gems": {
+    "train:gold-ge": 30,
+    "train:black-velaro": 60,
+    "train:royal": 50,
+    "train:silver-emu": 40,
+    "train:heavy-gold": 35
   }
 }

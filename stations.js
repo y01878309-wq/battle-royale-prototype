@@ -178,14 +178,14 @@ class Stations {
       }
       const cone = this.mesh(new THREE.ConeGeometry(4.6, 6, 4), roofMat, root, bx, 27, z0); cone.rotation.y = Math.PI / 4;
     }
-    if (big) {
+    if (big || (st.type === 'town' && st.name.length % 2 === 0)) {
       // footbridge over both platforms and the track
-      const fz = -34, w2 = 19 + TRACK_SP, cx = -TRACK_SP / 2, deck = new THREE.MeshStandardMaterial({ color: 0x5c6670, roughness: 0.6, metalness: 0.5 });
+      const fz = -34, w2 = 19 + TX(), cx = -TX() / 2, deck = new THREE.MeshStandardMaterial({ color: 0x5c6670, roughness: 0.6, metalness: 0.5 });
       this.mesh(new THREE.BoxGeometry(w2, 0.3, 2.6), deck, root, cx, 6.8, fz);
       this.mesh(new THREE.BoxGeometry(w2 + 0.4, 0.16, 3.4), M.roofGrey, root, cx, 8.7, fz);
       for (const sx of [-1, 1]) {
-        this.mesh(new THREE.BoxGeometry(2.6, 6.8, 2.8), M.concrete, root, sx * 8.9 + (sx < 0 ? -TRACK_SP : 0), 3.4, fz);
-        for (const e of [-1, 1]) this.mesh(new THREE.BoxGeometry(0.14, 1.9, 0.14), M.metal, root, sx * 8.9 + (sx < 0 ? -TRACK_SP : 0), 7.8, fz + e * 1.5);
+        this.mesh(new THREE.BoxGeometry(2.6, 6.8, 2.8), M.concrete, root, sx * 8.9 + (sx < 0 ? -TX() : 0), 3.4, fz);
+        for (const e of [-1, 1]) this.mesh(new THREE.BoxGeometry(0.14, 1.9, 0.14), M.metal, root, sx * 8.9 + (sx < 0 ? -TX() : 0), 7.8, fz + e * 1.5);
       }
       for (const e of [-1, 1]) this.mesh(new THREE.BoxGeometry(w2, 0.08, 0.08), M.metal, root, cx, 7.5, fz + e * 1.25);
     }
@@ -200,7 +200,7 @@ class Stations {
 
   /* Big glazed barrel vault with steel arch ribs over the tracks and platforms of a terminal (Ramses style). */
   buildVault(root, st) {
-    const M = this.mats, cl = st.pl - 30, a = 7.9 + TRACK_SP / 2, b = 6.0, y0 = 5.2, vx = -TRACK_SP / 2;
+    const M = this.mats, cl = st.pl - 30, a = 7.9 + TX() / 2, b = 6.0, y0 = 5.2, vx = -TX() / 2;
     const g = new THREE.CylinderGeometry(1, 1, cl, 32, 1, true, -Math.PI / 2, Math.PI); g.rotateX(-Math.PI / 2);
     const glass = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xa9bcc6, roughness: 0.3, metalness: 0.2, transparent: true, opacity: 0.38, side: THREE.DoubleSide, depthWrite: false }));
     glass.scale.set(a, b, 1); glass.position.set(vx, y0, 0); root.add(glass);
@@ -217,7 +217,7 @@ class Stations {
     const half = st.pl / 2, ph = st.type === 'halt' ? 0.6 : 1.0;
     const canopy = { terminal: 1, major: 0.7, town: 0.4, halt: 0 }[st.type];
     for (const side of [-1, 1]) {
-      const off = side < 0 ? -TRACK_SP : 0, x = side * 4.5 + off;   // double track: the left-hand platform stands beyond the second track
+      const off = side < 0 ? -TX() : 0, x = side * 4.5 + off;   // double track: the left-hand platform stands beyond the second track
       this.mesh(new THREE.BoxGeometry(5.4, ph, st.pl), M.concrete, root, x, ph / 2, 0);
       { const tm = new THREE.Mesh(new THREE.PlaneGeometry(0.7, st.pl), M.tactile); tm.rotation.x = -Math.PI / 2; tm.position.set(side * 2.2 + off, ph + 0.014, 0); tm.receiveShadow = true; const g2 = tm.geometry, uv = g2.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.7 / 1.0, uv.getY(i) * st.pl / 1.0); root.add(tm); }
       if (st.type !== 'halt') {   // terracotta tile surface

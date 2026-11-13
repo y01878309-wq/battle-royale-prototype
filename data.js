@@ -56,6 +56,9 @@ const EN_NAMES = { 'شبرا': 'Shubra', 'بشتيل': 'Bashteel', 'ببا': 'Bi
  * price: cost in game coins to unlock the train (0 = free from the start). Coins are earned by finishing trips (see wallet in main.js).
  * snd.horn lists the chime pitches in Hz. The GE profile is measured from a recording (five chimes); the others are estimates. */
 const GE_HORN = [320, 382, 439, 498, 643];
+/* tag helpers: a train is free (no price), bought with game coins (price) or only with gems (gems, topped up by the owner) */
+const isFree = (t) => !t.price && !t.gems;
+const priceTag = (t) => (t.gems ? '💎 ' + t.gems : '🪙 ' + t.price);
 const TRAIN_TYPES = [
   { id: 'vip', price: 0, name: 'الجنرال GE (ركاب مكيّف)', desc: 'جرار GE أحمر وفضي مع سبع عربيات مكيّفة. سريع ومريح.',
     loco: { kind: 'ge', len: 19.9, top: 0xc4161c, low: 0xbfc4c8, trim: 0xe9e9e4, num: '٢٦١٢' },
@@ -123,6 +126,31 @@ const TRAIN_TYPES = [
     coach: { style: 'std', body: 0x6b4a35, band: 0x3a3a38, trim: 0xe8c43a }, consist: Array(16).fill('cont'),
     locoMass: 110, vehMass: 58, fmax: 330, power: 2.7, vmax: 90, brake: 0.65,
     snd: { base: 26, span: 18, horn: GE_HORN, turbo: 0.05 } },
+  { id: 'gold-ge', gems: 30, name: '💎 الجنرال الذهبي (VIP)', desc: 'جرار GE أسود بخطوط ذهبية وست عربيات فاخرة. أسرع جرار ديزل في اللعبة. بالماس فقط.',
+    loco: { kind: 'ge', len: 19.9, top: 0x16161a, low: 0xc9a227, trim: 0xf0d77a, num: '٩٠١' },
+    coach: { style: 'std', body: 0xf0ecdf, band: 0xc9a227, trim: 0x16161a }, consist: Array(7).fill('coach'),
+    locoMass: 92, vehMass: 44, fmax: 380, power: 4.4, vmax: 170, brake: 1.3,
+    snd: { base: 30, span: 18, horn: [262, 330, 392, 523, 659], turbo: 0.08 } },
+  { id: 'black-velaro', gems: 60, name: '💎 فيلارو الأسود (إكسبرس)', desc: 'قطار كهربائي أسود لامع بخطوط حمرا. الأسرع في اللعبة. بالماس فقط.',
+    loco: { kind: 'velaro', len: 25.6, top: 0x1b1d22, low: 0x1b1d22, trim: 0xd22a2a, num: '٣٠٠٩' },
+    coach: { style: 'velaro', body: 0x1b1d22, band: 0xd22a2a, trim: 0xd22a2a }, consist: ['vcoach', 'vcoach', 'vcoach', 'vcoach', 'vcoach', 'vcoach', 'vcoach', 'cab'],
+    locoMass: 60, vehMass: 50, fmax: 420, power: 10, vmax: 280, brake: 1.5,
+    snd: { base: 42, span: 24, horn: [415, 523], turbo: 0.12 } },
+  { id: 'royal', gems: 50, name: '💎 القطر الملكي', desc: 'أخضر داكن بذهبي مع عربيات سلون فاخرة. بالماس فقط.',
+    loco: { kind: 'ge', len: 19.9, top: 0x0f4a33, low: 0xd7c07a, trim: 0xe2c14a, num: '١' },
+    coach: { style: 'std', body: 0x0f4a33, band: 0xe2c14a, trim: 0xd7c07a }, consist: Array(8).fill('coach'),
+    locoMass: 95, vehMass: 46, fmax: 360, power: 4.0, vmax: 160, brake: 1.25,
+    snd: { base: 28, span: 17, horn: [220, 277, 330, 415, 523], turbo: 0.07 } },
+  { id: 'silver-emu', gems: 40, name: '💎 الفضي الكهربائي (ضواحي سريع)', desc: 'وحدة كهربائية فضية بخط أزرق، تسارع قوي. بالماس فقط.',
+    loco: { kind: 'dmu', len: 22, top: 0xc9ccd0, low: 0xe9e6dc, trim: 0x1f6fd0, num: '٥٠٠' },
+    coach: { style: 'std', body: 0xdfe2e4, band: 0x1f6fd0, trim: 0xc9ccd0 }, consist: ['coach', 'coach', 'coach', 'cab'],
+    locoMass: 48, vehMass: 38, fmax: 300, power: 3.2, vmax: 170, brake: 1.35,
+    snd: { base: 38, span: 22, horn: [392, 494, 587], turbo: 0.1 } },
+  { id: 'heavy-gold', gems: 35, name: '💎 شحن ثقيل (الجنرال الأسود)', desc: 'قاطرة سوداء وعشرين حاوية. قوة سحب كبيرة وسرعة أعلى من الشحن العادي. بالماس فقط.',
+    loco: { kind: 'ge', len: 19.9, top: 0x1c1c1e, low: 0x2e2e2c, trim: 0xc9a227, num: '٣٠٠٠' },
+    coach: { style: 'std', body: 0x6b4a35, band: 0x3a3a38, trim: 0xe8c43a }, consist: Array(20).fill('cont'),
+    locoMass: 120, vehMass: 55, fmax: 420, power: 4.6, vmax: 110, brake: 0.8,
+    snd: { base: 25, span: 18, horn: [147, 185, 220, 277], turbo: 0.05 } },
   { id: 'cargo-phos', price: 80, name: 'شحن: فوسفات وحبوب', desc: 'عربيات مفتوحة من فوق (هوبر). ثقيلة جدًا.',
     loco: { kind: 'box', len: 17.6, top: 0x2f6a3e, low: 0x2f6a3e, trim: 0xe9dfb8, num: '٢٠٩٨' },
     coach: { style: 'std', body: 0x6b4a35, band: 0x3a3a38, trim: 0xe8c43a }, consist: Array(18).fill('hopper'),

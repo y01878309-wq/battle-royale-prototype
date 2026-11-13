@@ -265,10 +265,10 @@ class Scenery {
   buildTraffic() {
     const tr = this.track, runs = this.runs || [], HW = 24, LAT = -22;
     this.cars = [];
-    const roadM = new THREE.MeshStandardMaterial({ map: Tex.road(), roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const roadM = new THREE.MeshStandardMaterial({ map: Tex.road(), roughness: 0.95, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
     for (const [a, b] of runs) {
       const a2 = a - 60, b2 = b + 60, n = Math.ceil((b2 - a2) / 10), pos = [], uv = [], idx = [];
-      for (let k = 0; k <= n; k++) { const s = a2 + (b2 - a2) * k / n; for (const sd of [-1, 1]) { const w = tr.at(s, LAT + sd * HW / 2, 0.06); pos.push(w.x, w.y, w.z); uv.push(sd < 0 ? 0 : 1, (s - a2) / 12); } }
+      for (let k = 0; k <= n; k++) { const s = a2 + (b2 - a2) * k / n; for (const sd of [-1, 1]) { const w = tr.at(s, LAT + sd * HW / 2, 0.32); pos.push(w.x, w.y, w.z); uv.push(sd < 0 ? 0 : 1, (s - a2) / 12); } }
       for (let k = 0; k < n; k++) { const i = k * 2; idx.push(i, i + 2, i + 1, i + 1, i + 2, i + 3); }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
       const m = new THREE.Mesh(g, roadM); m.receiveShadow = true; this.scene.add(m);
@@ -277,27 +277,59 @@ class Scenery {
     for (const [a, b] of runs) { const cnt = Math.min(14, Math.floor((b - a) / 60 * q)); for (let i = 0; i < cnt; i++) this.cars.push({ kind: 'road', a: a - 60, b: b + 60, s: a + R() * (b - a), dir: R() < 0.5 ? 1 : -1, v: 10 + R() * 12, k: Math.floor(R() * 5) }); }
     for (let ci = 0; ci < this.crossings.length; ci++) for (let i = 0; i < 3; i++) this.cars.push({ kind: 'x', c: this.crossings[ci], lat: (i - 1) * 30 + R() * 10, dir: i % 2 ? 1 : -1, v: 6 + R() * 3, k: Math.floor(R() * 5), cur: 0 });
     if (!this.cars.length) return;
-    // body + cabin as two instanced meshes; kind decides colour and size
-    const spec = [[0xf0c020, 4.4, 1.5], [0xf2f2ee, 5.2, 2.0], [0x1d1d1d, 2.7, 1.7], [0xc43a2e, 4.3, 1.4], [0x3a6ac4, 4.5, 1.5]], n = this.cars.length;
-    const body = new THREE.InstancedMesh(new THREE.BoxGeometry(1.9, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }), n);
-    const cab = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, 0.7, 0.55), new THREE.MeshStandardMaterial({ color: 0x1a2630, roughness: 0.3 }), n);
-    this.carSpec = spec; this.carBody = body; this.carCab = cab; const c = new THREE.Color();
-    this.cars.forEach((car, i) => { body.setColorAt(i, c.setHex(spec[car.k][0])); });
-    body.instanceColor.needsUpdate = true; body.frustumCulled = cab.frustumCulled = false; this.scene.add(body, cab);
-    this._o = new THREE.Object3D(); this._p = new THREE.Vector3(); this._p2 = new THREE.Vector3();
+    // three vehicle classes (sedan / pickup / bus), each a body that takes the paint colour plus fixed glass, wheels and lights
+    const mk = (parts) => {
+      const pos = [], nor = [], col = [], idx = []; let off = 0; const c = new THREE.Color();
+      for (const [g, hex, mat] of parts) {
+        c.setHex(hex); const p = g.attributes.position, n = g.attributes.normal;
+        for (let i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); nor.push(n.getX(i), n.getY(i), n.getZ(i)); col.push(c.r, c.g, c.b); }
+        if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(g.index.getX(i) + off); else for (let i = 0; i < p.count; i++) idx.push(i + off);
+        off += p.count;
+      }
+      const o = new THREE.BufferGeometry(); o.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); o.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); o.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); o.setIndex(idx); return o;
+    };
+    const box = (w, h, l, x, y, z) => { const g = new THREE.BoxGeometry(w, h, l); g.translate(x, y, z); return g; };
+    const wheel = (x, y, z, r) => { const g = new THREE.CylinderGeometry(r, r, 0.26, 14); g.rotateZ(Math.PI / 2); g.translate(x, y, z); return g; };
+    // cabin with sloped windscreen and rear window (a tapered box)
+    const cabin = (wB, wT, h, lB, lT, y, z) => {
+      const g = new THREE.BufferGeometry(), a = [[-wB / 2, 0, -lB / 2], [wB / 2, 0, -lB / 2], [wB / 2, 0, lB / 2], [-wB / 2, 0, lB / 2], [-wT / 2, h, -lT / 2], [wT / 2, h, -lT / 2], [wT / 2, h, lT / 2], [-wT / 2, h, lT / 2]];
+      const f = [[0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [4, 5, 6, 7], [3, 2, 1, 0]], pos = [], idx = [];
+      f.forEach((q) => { const b = pos.length / 3; q.forEach((i) => pos.push(a[i][0], a[i][1] + y, a[i][2] + z)); idx.push(b, b + 2, b + 1, b, b + 3, b + 2); });
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
+    };
+    const glass = 0x16222c, tire = 0x141414, hl = 0xfff1c0, tl = 0xc01818;
+    const sedan = mk([[box(1.8, 0.55, 4.3, 0, 0.62, 0), 0xffffff], [cabin(1.64, 1.46, 0.55, 2.3, 1.35, 0.9, -0.1), glass], [cabin(1.6, 1.42, 0.5, 2.2, 1.25, 0.94, -0.1), 0xffffff],
+      [wheel(-0.86, 0.33, 1.4, 0.33), tire], [wheel(0.86, 0.33, 1.4, 0.33), tire], [wheel(-0.86, 0.33, -1.4, 0.33), tire], [wheel(0.86, 0.33, -1.4, 0.33), tire],
+      [box(0.4, 0.14, 0.05, -0.62, 0.74, 2.16), hl], [box(0.4, 0.14, 0.05, 0.62, 0.74, 2.16), hl], [box(0.4, 0.14, 0.05, -0.62, 0.78, -2.16), tl], [box(0.4, 0.14, 0.05, 0.62, 0.78, -2.16), tl], [box(1.7, 0.18, 0.2, 0, 0.36, 2.15), 0x222222], [box(1.7, 0.18, 0.2, 0, 0.36, -2.15), 0x222222]]);
+    const pick = mk([[box(1.9, 0.6, 5.0, 0, 0.7, 0), 0xffffff], [cabin(1.72, 1.55, 0.62, 1.9, 1.2, 1.0, 0.85), 0xffffff], [cabin(1.74, 1.57, 0.4, 1.88, 1.1, 1.05, 0.85), glass], [box(1.8, 0.45, 2.1, 0, 1.15, -1.45), 0xb9bcc0],
+      [wheel(-0.9, 0.38, 1.6, 0.38), tire], [wheel(0.9, 0.38, 1.6, 0.38), tire], [wheel(-0.9, 0.38, -1.5, 0.38), tire], [wheel(0.9, 0.38, -1.5, 0.38), tire],
+      [box(0.4, 0.16, 0.05, -0.65, 0.85, 2.52), hl], [box(0.4, 0.16, 0.05, 0.65, 0.85, 2.52), hl], [box(0.3, 0.16, 0.05, -0.7, 0.85, -2.52), tl], [box(0.3, 0.16, 0.05, 0.7, 0.85, -2.52), tl]]);
+    const bus = mk([[box(2.5, 2.5, 11, 0, 1.55, 0), 0xffffff], [box(2.54, 0.9, 9.6, 0, 1.95, -0.1), glass], [box(2.3, 0.9, 0.05, 0, 1.95, 5.52), glass], [box(2.56, 0.12, 11.02, 0, 1.15, 0), 0x2a7a3a],
+      [wheel(-1.2, 0.5, 3.5, 0.5), tire], [wheel(1.2, 0.5, 3.5, 0.5), tire], [wheel(-1.2, 0.5, -3.2, 0.5), tire], [wheel(1.2, 0.5, -3.2, 0.5), tire], [wheel(-1.2, 0.5, -4.4, 0.5), tire], [wheel(1.2, 0.5, -4.4, 0.5), tire],
+      [box(0.5, 0.2, 0.05, -0.9, 0.9, 5.52), hl], [box(0.5, 0.2, 0.05, 0.9, 0.9, 5.52), hl], [box(0.4, 0.2, 0.05, -1.0, 0.9, -5.52), tl], [box(0.4, 0.2, 0.05, 1.0, 0.9, -5.52), tl]]);
+    // paint is applied by instance colour to white vertices only: glass/tires stay dark because they multiply by their own vertex colour
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38, metalness: 0.35, envMapIntensity: 1.1 });
+    const paints = [0xf0c020, 0xf2f2ee, 0x2a2a2d, 0xc43a2e, 0x3a6ac4, 0x8a9096, 0x2f7a4a];
+    const classOf = (k) => (k === 1 ? 1 : k === 5 ? 2 : 0), geos = [sedan, pick, bus], cnt = [0, 0, 0];
+    this.cars.forEach((car) => { if (car.kind === 'road' && car.k % 7 === 6) car.k = 5; car.cls = classOf(car.k); car.ci = cnt[car.cls]++; });
+    this.carMesh = geos.map((g, i) => { const m = new THREE.InstancedMesh(g, mat, Math.max(1, cnt[i])); m.count = cnt[i]; m.frustumCulled = false; m.castShadow = true; return m; });
+    const c = new THREE.Color();
+    this.cars.forEach((car) => { const m = this.carMesh[car.cls]; m.setColorAt(car.ci, c.setHex(car.k === 5 ? 0xf2f2ee : paints[car.k % 5])); });
+    this.carMesh.forEach((m) => { if (m.instanceColor) m.instanceColor.needsUpdate = true; this.scene.add(m); });
+    this.carH = [0, 0, 0]; this._o = new THREE.Object3D(); this._p = new THREE.Vector3(); this._p2 = new THREE.Vector3();
   }
 
   updateTraffic(dt) {
-    if (!this.cars || !this.cars.length) return;
+    if (!this.cars || !this.cars.length || !this.carMesh) return;
     const tr = this.track, o = this._o, p = this._p, p2 = this._p2;
     this.cars.forEach((car, i) => {
-      const sp = this.carSpec[car.k]; let yaw;
+      let yaw;
       if (car.kind === 'road') {
         car.s += car.dir * car.v * dt; if (car.s > car.b) car.s = car.a; else if (car.s < car.a) car.s = car.b;
-        const lat = (-22) + car.dir * 3.2; tr.at(car.s, lat, 0.06, p); tr.at(car.s + car.dir, lat, 0.06, p2); yaw = Math.atan2(p2.x - p.x, p2.z - p.z);
+        const lat = (-22) + car.dir * 3.2; tr.at(car.s, lat, 0.32, p); tr.at(car.s + car.dir, lat, 0.32, p2); yaw = Math.atan2(p2.x - p.x, p2.z - p.z);
       } else {
         const gate = car.c, stopAt = 10; let v = car.v;
-        if (gate.closed) { const sr = stopAt + TRACK_SP;   // right-hand queue waits beyond the second track
+        if (gate.closed) { const sr = stopAt + TX();   // right-hand queue waits beyond the second track
           if (car.dir > 0 && car.lat < -stopAt - 2 && car.lat > -stopAt - 14 && -stopAt - car.lat < 5) v = 0;
           else if (car.dir < 0 && car.lat > sr + 2 && car.lat < sr + 14 && car.lat - sr < 5) v = 0; }
         car.lat += car.dir * v * dt; if (car.lat > 55) car.lat = -55; else if (car.lat < -55) car.lat = 55;
@@ -305,10 +337,9 @@ class Scenery {
         p.copy(fr.pos).addScaledVector(fr.right, car.lat).setY(0.5 + 0.06); yaw = Math.atan2(fr.right.x, fr.right.z) + (car.dir > 0 ? 0 : Math.PI);
         p.addScaledVector(fr.fwd, car.dir > 0 ? 1.6 : -1.6);
       }
-      o.position.copy(p); o.position.y += sp[2] * 0.5 + 0.3; o.rotation.set(0, yaw, 0); o.scale.set(1, sp[2], sp[1]); o.updateMatrix(); this.carBody.setMatrixAt(i, o.matrix);
-      o.position.y += sp[2] * 0.5 + 0.2; o.scale.set(1, 1, sp[1] * 0.55); o.updateMatrix(); this.carCab.setMatrixAt(i, o.matrix);
+      o.position.copy(p); o.position.y = p.y; o.rotation.set(0, yaw, 0); o.scale.set(1, 1, 1); o.updateMatrix(); this.carMesh[car.cls].setMatrixAt(car.ci, o.matrix);
     });
-    this.carBody.instanceMatrix.needsUpdate = true; this.carCab.instanceMatrix.needsUpdate = true;
+    this.carMesh.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
   }
 
   buildPoles() {
@@ -357,7 +388,7 @@ class Scenery {
       slab.position.set(fr.pos.x, 0.43, fr.pos.z); slab.quaternion.copy(q); slab.receiveShadow = true; this.scene.add(slab);
       const lamps = [], arms = [];
       for (const side of [-1, 1]) {
-        const p = new THREE.Vector3().copy(fr.pos).addScaledVector(fr.right, side * 5.2 + (side > 0 ? TRACK_SP : 0));
+        const p = new THREE.Vector3().copy(fr.pos).addScaledVector(fr.right, side * 5.2 + (side > 0 ? TX() : 0));
         const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 3.4, 8), postM); post.position.set(p.x, 1.7, p.z); post.castShadow = true; this.scene.add(post);
         const grp = new THREE.Group(); grp.position.set(p.x, 1.1, p.z).addScaledVector(fr.fwd, -3.2); grp.quaternion.copy(q);
         const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 6.4), armM); arm.position.z = 3.2; arm.castShadow = true;

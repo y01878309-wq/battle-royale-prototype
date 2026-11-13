@@ -67,16 +67,17 @@ const Menu = {
     if (!Account.d) return this.askName();
     this.modal('المتجر', (b) => {
       const a = Account.d, pay = window.QS_PAY || {};
-      b.appendChild(this.el('div', 'wallet', `رصيدك: <b>💰 ${a.coins}</b> جنيه لعبة`));
+      b.appendChild(this.el('div', 'wallet', `رصيدك: <b>🪙 ${a.coins}</b> جنيه لعبة · <b>💎 ${a.gems || 0}</b> ماسة`));
+      const tb = this.el('button', 'mbtn', '💎 اشحن ماس'); tb.type = 'button'; tb.onclick = () => this.topup(); b.appendChild(tb);
       const grid = this.el('div', 'shop');
       for (const t of TRAIN_TYPES) {
         const own = Account.owns(t), c = this.el('div', 'item' + (own ? ' own' : ''));
-        c.innerHTML = `<b>${this.esc(t.name)}</b><small>${this.esc(t.desc || '')}</small><span>${own ? '✔ معاك' : '🔒 ' + t.price + ' ج'}</span>`;
+        c.innerHTML = `<b>${this.esc(t.name)}</b><small>${this.esc(t.desc || '')}</small><span>${own ? '✔ معاك' : '🔒 ' + priceTag(t) + (t.gems ? ' (شحن فقط)' : '')}</span>`;
         const btn = this.el('button', 'mbtn ' + (own ? '' : 'primary'), own ? 'اختار' : 'اشتري'); btn.type = 'button';
         btn.onclick = async () => {
           if (own) { document.getElementById('optTrain').value = t.id; this.close(); this.onChange(); return; }
           btn.disabled = true; const r = await Account.buy(t);
-          if (r === 'ok') { this.refresh(); this.shop(); this.onChange(); } else { btn.disabled = false; btn.textContent = r === 'coins' ? 'رصيدك مش كفاية' : 'مفيش اتصال بالإنترنت'; }
+          if (r === 'ok') { this.refresh(); this.shop(); this.onChange(); } else if (r === 'coins' || r === 'gems') { btn.disabled = false; btn.textContent = 'رصيدك مش كفاية'; this.noFunds(r, t); } else { btn.disabled = false; btn.textContent = 'مفيش اتصال بالإنترنت'; }
         };
         c.appendChild(btn); grid.appendChild(c);
       }
@@ -84,11 +85,27 @@ const Menu = {
     });
   },
 
+  /* "رصيدك خلص": shown when a buy fails for lack of coins/gems, with the number to top up and the player's ID */
+  noFunds(kind, t) {
+    if (!Account.d) return;
+    this.modal('رصيدك خلص 💔', (b) => {
+      const a = Account.d, pay = window.QS_PAY || {}, gem = kind === 'gems', need = gem ? t.gems : t.price, have = gem ? (a.gems || 0) : a.coins;
+      b.appendChild(this.el('div', 'wallet', `${this.esc(t.name)} سعره <b>${gem ? '💎 ' + need + ' ماسة' : '🪙 ' + need + ' جنيه لعبة'}</b> ورصيدك <b>${have}</b> بس.`));
+      const top = this.el('div', 'topup');
+      top.innerHTML = `<h4>يرجى شحن رصيد</h4><p>ابعت المبلغ على فودافون كاش على الرقم ده، وابعت الـ ID بتاعك، وهنشحنلك الرصيد في أقرب وقت.</p>
+        <div class="row"><span>فودافون كاش</span><b dir="ltr">${this.esc(pay.vodafone || '')}</b><button type="button" class="mbtn" data-c="${this.esc(pay.vodafone || '')}">نسخ</button></div>
+        <div class="row"><span>الـ ID بتاعك</span><b dir="ltr">${this.esc(a.id)}</b><button type="button" class="mbtn" data-c="${this.esc(a.id)}">نسخ</button></div>
+        <p><a class="mbtn primary" target="_blank" rel="noopener" href="https://wa.me/2${this.esc(pay.vodafone || '')}?text=${encodeURIComponent('عايز أشحن رصيد في لعبة قطارات مصر. الـ ID: ' + a.id)}">كلّمنا على واتساب</a></p>`;
+      top.querySelectorAll('button[data-c]').forEach((x) => { x.onclick = () => this.copy(x.dataset.c); });
+      b.appendChild(top);
+    });
+  },
+
   topup() {
     if (!Account.d) return this.askName();
     this.modal('المتجر والشحن', (b) => {
       const a = Account.d, pay = window.QS_PAY || {};
-      b.appendChild(this.el('div', 'wallet', `رصيدك: <b>💰 ${a.coins}</b> جنيه لعبة`));
+      b.appendChild(this.el('div', 'wallet', `رصيدك: <b>🪙 ${a.coins}</b> جنيه لعبة · <b>💎 ${a.gems || 0}</b> ماسة`));
       const top = this.el('div', 'topup');
       top.innerHTML = `<h4>شحن الرصيد</h4><p>${this.esc(pay.note || '')}</p>
         <div class="row"><span>فودافون كاش</span><b dir="ltr">${this.esc(pay.vodafone || '')}</b><button type="button" class="mbtn" data-c="${this.esc(pay.vodafone || '')}">نسخ</button></div>

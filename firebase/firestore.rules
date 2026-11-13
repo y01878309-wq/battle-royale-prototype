@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== حط هنا الـ UID بتاع الأدمن (بيظهر في صفحة admin.html بعد الدخول) =====
+    function isAdmin() {
+      return request.auth != null && request.auth.uid in ['PUT-ADMIN-UID-HERE'];
+    }
+    function signed() { return request.auth != null; }
+    function catalog() { return get(/databases/$(database)/documents/config/catalog).data; }
+
+    match /players/{pid} {
+      allow read: if isAdmin() || (signed() && resource.data.owner == request.auth.uid);
+      allow create: if signed() && pid.matches('[0-9]{6}')
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.coins == 50 && request.resource.data.get('gems', 0) == 0
+        && request.resource.data.xp == 0 && request.resource.data.owned.size() == 0
+        && request.resource.data.claimed.size() == 0
+        && request.resource.data.name is string && request.resource.data.name.size() <= 16;
+
+      allow delete: if signed() && resource.data.owner == request.auth.uid
+        && resource.data.coins <= 50 && resource.data.xp == 0;
+
+      allow update: if isAdmin()
+        || (signed() && resource.data.owner == request.auth.uid
+            && (nameOk() || contactOk() || buyOk() || tripOk() || claimOk() || giftOk()))
+        || xferOk();
+
+      function d() { return request.resource.data; }
+      function o() { return resource.data; }
+      function only(keys) { return d().diff(o()).affectedKeys().hasOnly(keys); }
+      function nameOk() { return only(['name']) && d().name is string && d().name.size() > 0 && d().name.size() <= 16; }
+      function contactOk() { return only(['contact']) && d().contact is string && d().contact.size() <= 60; }
+
+      // شراء قطر: بجنيه اللعبة أو بالماس، والسعر من الكتالوج
+      function buyOk() {
+        return only(['coins', 'gems', 'owned'])
+          && d().owned.size() == o().owned.size() + 1 && d().owned.hasAll(o().owned)
+          && ((catalog().prices.get(d().owned[o().owned.size()], -1) >= 0
+                && d().coins == o().coins - catalog().prices[d().owned[o().owned.size()]] && d().get('gems', 0) == o().get('gems', 0))
+           || (catalog().gems.get(d().owned[o().owned.size()], -1) > 0
+                && d().get('gems', 0) == o().get('gems', 0) - catalog().gems[d().owned[o().owned.size()]] && d().coins == o().coins))
+          && d().coins >= 0 && d().get('gems', 0) >= 0;
+      }
+      // أرباح رحلة (حد أقصى للرحلة والمدة بين الرحلات واليوم)
+      function tripOk() {
+        return only(['coins', 'xp', 'earnedDay', 'earnedSum', 'lastEarn'])
+          && d().get('gems', 0) == o().get('gems', 0)
+          && d().coins >= o().coins && d().coins - o().coins <= 400
+          && d().xp >= o().xp && d().xp - o().xp <= 500
+          && d().earnedSum <= 3000
+          && d().lastEarn == request.time && request.time > o().lastEarn + duration.value(20, 's');
+      }
+      // مكافأة مهمة أو إنجاز
+      function claimOk() {
+        return only(['coins', 'claimed']) && d().get('gems', 0) == o().get('gems', 0)
+          && d().claimed.size() == o().claimed.size() + 1 && d().claimed.hasAll(o().claimed)
+          && catalog().rewards.get(d().claimed[o().claimed.size()].split('@')[0], -1) >= 0
+          && d().coins == o().coins + catalog().rewards[d().claimed[o().claimed.size()].split('@')[0]];
+      }
+      // كود هدية
+      function giftOk() {
+        return only(['coins', 'lastGift']) && d().get('gems', 0) == o().get('gems', 0)
+          && exists(/databases/$(database)/documents/gifts/$(d().lastGift))
+          && d().coins - o().coins == get(/databases/$(database)/documents/gifts/$(d().lastGift)).data.coins;
+      }
+      // استرجاع الحساب بكود الاسترجاع
+      function xferOk() {
+        return signed() && only(['owner', 'xfer', 'rec']) && d().owner == request.auth.uid
+          && get(/databases/$(database)/documents/recov/$(d().xfer)).data.pid == pid;
+      }
+    }
+
+    match /recov/{code} {
+      allow create: if signed();
+      allow delete: if signed();
+    }
+
+    match /gifts/{code} {
+      allow read: if signed();
+      allow create, delete: if isAdmin();
+      allow update: if signed() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used'])
+        && request.resource.data.used.size() == resource.data.used.size() + 1
+        && request.resource.data.used.size() <= resource.data.max;
+    }
+
+    match /config/{doc} {
+      allow read: if signed();
+      allow write: if isAdmin();
+    }
+
+    match /board/{key}/rows/{pid} {
+      allow read: if signed();
+      allow write: if signed() && request.resource.data.owner == request.auth.uid
+        && request.resource.data.v is number && request.resource.data.v <= 6000;
+    }
+
+    match /results/{id} { allow read: if signed(); allow write: if isAdmin(); }
+    match /settled/{key} { allow read: if signed(); allow write: if isAdmin(); }
+    match /logs/{id} { allow read, write: if isAdmin(); }
+  }
+}

@@ -16,7 +16,7 @@ const Account = {
   code10(rec) { return String(rec || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); },
   take(j) {
     const d = this.d;
-    Object.assign(d, { name: j.name, coins: j.coins || 0, owned: j.owned || [], xp: j.xp || 0, claimed: j.claimed || [], rec: j.rec || d.rec || '', contact: j.contact || '', earnedDay: j.earnedDay || 0, earnedSum: j.earnedSum || 0 });
+    Object.assign(d, { name: j.name, coins: j.coins || 0, gems: j.gems || 0, owned: j.owned || [], xp: j.xp || 0, claimed: j.claimed || [], rec: j.rec || d.rec || '', contact: j.contact || '', earnedDay: j.earnedDay || 0, earnedSum: j.earnedSum || 0 });
     this.save();
   },
   /* Reload the player's document from Firestore. */
@@ -45,14 +45,14 @@ const Account = {
     if (await FB.init()) {
       for (let i = 0; i < 8; i++) {
         const id = String(Math.floor(100000 + Math.random() * 900000)), rec = this.makeRec(), pref = this.pref(id), rrf = this.col('recov').doc(this.code10(rec));
-        const doc = { owner: FB.uid, name, coins: 50, xp: 0, owned: [], claimed: [], rec, contact: '', earnedDay: 0, earnedSum: 0, lastEarn: FB.now() };
+        const doc = { owner: FB.uid, name, coins: 50, gems: 0, xp: 0, owned: [], claimed: [], rec, contact: '', earnedDay: 0, earnedSum: 0, lastEarn: FB.now() };
         try {
           await FB.db.runTransaction(async (tx) => { const s = await tx.get(pref); if (s.exists) throw new Error('taken'); tx.set(pref, doc); tx.set(rrf, { pid: id }); });
-          this.d = { id, local: false }; this.take({ name, coins: 50, xp: 0, owned: [], claimed: [], rec, contact: '', earnedDay: 0, earnedSum: 0 }); this.error = ''; return true;
+          this.d = { id, local: false }; this.take({ name, coins: 50, gems: 0, xp: 0, owned: [], claimed: [], rec, contact: '', earnedDay: 0, earnedSum: 0 }); this.error = ''; return true;
         } catch (e) { if (!/taken/.test(String(e && e.message))) { this.error = (e && e.code) === 'permission-denied' ? 'rules' : 'offline'; break; } }
       }
     } else this.error = 'offline';
-    if (!this.d || !this.d.local) this.d = { id: 'L' + String(Math.floor(10000 + Math.random() * 90000)), name, coins: 50, owned: [], xp: 0, claimed: [], local: true, rec: Account.makeRec(), contact: '' };
+    if (!this.d || !this.d.local) this.d = { id: 'L' + String(Math.floor(10000 + Math.random() * 90000)), name, coins: 50, gems: 0, owned: [], xp: 0, claimed: [], local: true, rec: Account.makeRec(), contact: '' };
     else this.d.name = name;
     this.save(); return false;
   },
@@ -117,9 +117,9 @@ const Account = {
     } catch (e) { return { online: false, list: null }; }
   },
 
-  owns(t) { return !t.price || this.d.owned.includes('train:' + t.id); },
+  owns(t) { return isFree(t) || this.d.owned.includes('train:' + t.id); },
 
-  /* Buys a train. Returns 'ok' | 'coins' | 'offline'. */
+  /* Buys a train (game coins, or gems for the gem-only trains). Returns 'ok' | 'coins' | 'gems' | 'offline'. */
   async buy(t) {
     if (this.owns(t)) return 'ok';
     if (this.server) {
@@ -127,12 +127,14 @@ const Account = {
       try {
         const r = await FB.db.runTransaction(async (tx) => {
           const p = (await tx.get(pref)).data(); if (p.owned.includes(item)) return 'ok';
+          if (t.gems) { if ((p.gems || 0) < t.gems) return 'gems'; tx.update(pref, { gems: (p.gems || 0) - t.gems, owned: [...p.owned, item] }); return 'ok'; }
           if (p.coins < t.price) return 'coins';
           tx.update(pref, { coins: p.coins - t.price, owned: [...p.owned, item] }); return 'ok';
         });
         await this.refresh().catch(() => {}); return r;
       } catch (e) { return 'offline'; }
     }
+    if (t.gems) return (this.d.gems || 0) < t.gems ? 'gems' : 'offline';
     if (this.d.coins < t.price) return 'coins';
     this.d.coins -= t.price; this.d.owned.push('train:' + t.id); this.save(); return 'ok';
   },

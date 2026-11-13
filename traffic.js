@@ -6,7 +6,7 @@ class Traffic {
     const n = quality === 'high' ? 3 : quality === 'medium' ? 2 : 1, ids = ['orange', 'talgo', 'third', 'dmu', 'bluecom', 'emuyellow', 'freight', 'cargo-cont', 'hitachi', 'vip', 'sleeper'], R = U.rng(4242);
     for (let i = 0; i < n; i++) {
       const type = TRAIN_TYPES.find((x) => x.id === ids[Math.floor(R() * ids.length)]) || TRAIN_TYPES[0], train = new Train(scene, track, 'low', type, true);
-      train.rev = true; train.lat = TRACK_SP;
+      train.rev = true; train.lat = TRACK_SP * (1 + (NTRACKS > 2 ? i % (NTRACKS - 1) : 0));
       this.list.push({ train, s: (i + 0.5) / n * track.L, v: 16 + R() * 14, shown: true, len: train.vehicles.reduce((a, v) => a + v.len, 0) });
     }
   }
