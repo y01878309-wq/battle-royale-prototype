@@ -4,7 +4,7 @@ service cloud.firestore {
 
     // ===== حط هنا الـ UID بتاع الأدمن (بيظهر في صفحة admin.html بعد الدخول) =====
     function isAdmin() {
-      return request.auth != null && request.auth.uid in ['PUT-ADMIN-UID-HERE'];
+      return request.auth != null && request.auth.token.email == 'y01878309@gmail.com';
     }
     function signed() { return request.auth != null; }
     function catalog() { return get(/databases/$(database)/documents/config/catalog).data; }
