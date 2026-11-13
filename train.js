@@ -8,7 +8,7 @@ class Train {
     const paint = (hex, cc) => new THREE.MeshPhysicalMaterial({ color: hex, roughness: 0.38, metalness: 0.15, clearcoat: cc, clearcoatRoughness: 0.28 });
     const common = {
       glass: new THREE.MeshStandardMaterial({ color: 0x0a1319, roughness: 0.06, metalness: 0.2, envMapIntensity: 1.8 }),
-      winLit: new THREE.MeshStandardMaterial({ color: 0x0a1319, roughness: 0.08, metalness: 0.2, envMapIntensity: 1.8, emissive: 0xffd9a0, emissiveIntensity: 0 }),
+      winLit: new THREE.MeshStandardMaterial({ color: 0x0a1319, roughness: 0.08, metalness: 0.2, envMapIntensity: 1.8, emissive: 0xc89a55, emissiveIntensity: 0 }),
       dark: new THREE.MeshStandardMaterial({ color: 0x1b1a19, roughness: 0.65, metalness: 0.4 }),
       steel: new THREE.MeshStandardMaterial({ color: 0x4a4744, roughness: 0.45, metalness: 0.85 }),
       roof: new THREE.MeshStandardMaterial({ color: 0xa6a69f, roughness: 0.7, metalness: 0.2 }),
@@ -157,7 +157,7 @@ class Train {
     let eye = null, nose = null;
     if (driver) {
       this.locoHull = hull;
-      const cab = new THREE.Group(), ic = new THREE.MeshStandardMaterial({ color: 0x9a9384, roughness: 0.85 }), dk = new THREE.MeshStandardMaterial({ color: 0x242321, roughness: 0.7 });
+      const cab = new THREE.Group(), ic = new THREE.MeshStandardMaterial({ color: 0x6f6b60, roughness: 0.9 }), dk = new THREE.MeshStandardMaterial({ color: 0x242321, roughness: 0.7 });
       this.box(3.0, 0.12, 6.6, new THREE.MeshStandardMaterial({ color: 0x3b3a36, roughness: 0.9 }), 0, 1.09, 6.1, cab);
       this.box(3.0, 0.14, 5.6, ic, 0, 4.12, 5.4, cab);
       for (const sx of [-1, 1]) { this.box(0.12, 1.5, 4.2, ic, sx * 1.46, 1.9, 5.3, cab); this.box(0.12, 0.22, 4.2, ic, sx * 1.46, 3.95, 5.3, cab); this.box(0.14, 2.9, 0.16, dk, sx * 1.45, 2.65, 7.0, cab); }
@@ -179,7 +179,7 @@ class Train {
       cab.position.z = h - 9.8; cab.visible = false; body.add(cab); this.cab = cab;
       eye = new THREE.Object3D(); eye.position.set(ey.x, ey.y, ey.z + h - 9.8); eye.rotation.y = Math.PI; body.add(eye);
       nose = new THREE.Object3D(); nose.position.set(0, 1.6, h + 0.6); nose.rotation.y = Math.PI; body.add(nose);
-      this.spot = new THREE.SpotLight(0xfff0d0, 0, 400, 0.34, 0.5, 1.2); this.spot.position.set(0, 2.4, h); this.spot.target.position.set(0, 0.5, h + 50);
+      this.spot = new THREE.SpotLight(0xffe9c0, 0, 120, 0.30, 0.7, 2.6); this.spot.position.set(0, 1.5, h + 2.2); this.spot.target.position.set(0, 0.3, h + 60);
       body.add(this.spot, this.spot.target);
       this.eye = eye; this.nose = nose;
     }
@@ -227,6 +227,15 @@ class Train {
     if (style === 'std') for (let k = 0; k < 4; k++) this.box(1.4, 0.3, 2.2, M.roof, 0, 4.15, -7.5 + k * 5, body);
     if (style === 'old') for (let k = 0; k < 6; k++) { const v = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.3, 10), M.dark); v.position.set(0, hRoof + 0.2, -7 + k * 2.8); body.add(v); }
     for (const sx of [-1, 1]) for (let k = 0; k < nWin; k++) this.box(0.03, wh, ww, M.winLit, sx * 1.58, wy, wStart + k * wStep + (style === 'std' && k > 3 ? 0.4 : 0), body);
+    // realism: dark window frames, rain gutters, underframe equipment, roof ribs, coach number plate
+    for (const sx of [-1, 1]) for (let k = 0; k < nWin; k++) this.box(0.02, wh + 0.12, ww + 0.12, M.dark, sx * 1.575, wy, wStart + k * wStep + (style === 'std' && k > 3 ? 0.4 : 0), body);
+    for (const sx of [-1, 1]) {
+      this.box(0.08, 0.07, len - 0.4, M.steel, sx * 1.5, hRoof - 0.08, 0, body);
+      this.box(0.06, 0.05, len - 0.6, M.steel, sx * 1.585, wy - wh / 2 - 0.12, 0, body);
+      for (let k = 0; k < 3; k++) this.box(0.5, 0.42, 1.9, M.dark, sx * 1.1, 0.55, -len * 0.28 + k * len * 0.28, body);
+    }
+    for (let k = -2; k <= 2; k++) this.box(2.4, 0.05, 0.1, M.steel, 0, hRoof + 0.12, k * len * 0.18, body);
+    this.box(0.8, 0.07, 0.07, M.steel, 0, 0.5, 0, body);
     this.addDoors(body, M, doorZ, style === 'talgo' ? 1.85 : 2.3, style === 'talgo' ? 2.0 : 2.4);
     for (const e of [-1, 1]) this.box(2.5, hRoof - 0.9, 0.4, M.dark, 0, (hRoof + 0.6) / 2, e * (len / 2 + 0.1), body);
     this.box(2.2, 0.4, len * 0.66, M.dark, 0, 0.78, 0, body);
@@ -382,7 +391,7 @@ class Train {
     this.dials.forEach((d, i) => { const a = Math.PI * 0.75 + U.clamp(vals[i] / d.max, 0, 1) * Math.PI * 1.5; d.needle.rotation.z = Math.atan2(-Math.cos(a), -Math.sin(a)); });
   }
 
-  setNight(on) { this.lm.winLit.emissiveIntensity = on ? 1.4 : 0; this.cm.winLit.emissiveIntensity = on ? 1.4 : 0; }
+  setNight(on) { this.lm.winLit.emissiveIntensity = on ? 0.45 : 0; this.cm.winLit.emissiveIntensity = on ? 0.45 : 0; }
 
-  setHeadlights(on) { if (this.spot) this.spot.intensity = on ? 7 : 0; this.lm.lamp.emissiveIntensity = on ? 3 : 1.2; }
+  setHeadlights(on) { if (this.spot) this.spot.intensity = on ? 0.8 : 0; this.lm.lamp.emissiveIntensity = on ? 1.8 : 0.8; }
 }

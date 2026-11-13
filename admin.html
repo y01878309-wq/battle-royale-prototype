@@ -27,9 +27,12 @@ button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
 
 <div class="card" id="login">
   <h2>الدخول</h2>
-  <p class="dim">ادخل بحساب جوجل بتاعك (نفس الإيميل اللي كتبته في قواعد Firestore). الصفحة دي بتشتغل بحساب منفصل عن اللعبة، فمش هتأثر على حسابك كلاعب.</p>
-  <button id="btnLogin">الدخول بحساب جوجل</button>
+  <p class="dim">ادخل بإيميل وكلمة سر الأدمن (من Firebase ← Authentication ← Users). الصفحة دي بتشتغل بحساب منفصل عن اللعبة.</p>
+  <label>الإيميل</label><input id="em" type="email" dir="ltr" autocomplete="username" placeholder="you@gmail.com">
+  <label>كلمة السر</label><input id="pw" type="password" dir="ltr" autocomplete="current-password">
+  <div class="row"><button id="btnMail">دخول</button><button class="alt" id="btnLogin">جوجل (بنافذة)</button></div>
   <p id="who" class="dim"></p>
+  <p id="uidline" class="dim" dir="ltr"></p>
 </div>
 
 <div id="panel">
@@ -38,7 +41,8 @@ button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
     <label>الـ ID بتاع اللاعب (6 أرقام)</label>
     <input id="pid" inputmode="numeric" maxlength="6" dir="ltr" placeholder="123456">
     <div class="row"><button class="alt" id="btnFind">اعرض اللاعب</button></div>
-    <label>المبلغ (جنيه لعبة). اكتب رقم سالب لو عايز تخصم</label>
+    <label>نوع العملة</label><select id="cur"><option value="gems">💎 ماسة (للشحن فقط)</option><option value="coins">🪙 جنيه لعبة</option></select>
+    <label>المبلغ. اكتب رقم سالب لو عايز تخصم</label>
     <input id="amt" inputmode="numeric" dir="ltr" placeholder="100">
     <label>ملاحظة (اختياري: رقم العملية أو الاسم)</label>
     <input id="note" placeholder="فودافون كاش 50 جنيه">
@@ -83,25 +87,23 @@ const prizeOf = (i) => (i < 3 ? PRIZES.top[i] : i < 10 ? PRIZES.r10 : i < 25 ? P
 let app, auth, db, email = '';
 try { app = firebase.initializeApp(window.QS_FIREBASE, 'admin'); auth = app.auth(); db = app.firestore(); } catch (e) { log('مقدرتش أشغّل Firebase: ' + e.message, 'bad'); }
 const ts = () => firebase.firestore.FieldValue.serverTimestamp(), inc = (n) => firebase.firestore.FieldValue.increment(n);
-const why = (e) => (e && e.code === 'permission-denied') ? 'مرفوض: الإيميل ده مش الأدمن في القواعد (راجع الإيميل في firestore.rules)، أو لازم تنشر الكتالوج' : (e && e.message) || String(e);
+const why = (e) => (e && e.code === 'permission-denied') ? 'مرفوض: الحساب ده مش الأدمن في القواعد (حط الـ UID اللي ظاهر فوق في firestore.rules)، أو لازم تنشر الكتالوج' : (e && e.message) || String(e);
 
 if (auth) {
-  auth.getRedirectResult().catch((e) => log('فشل الدخول: ' + e.message, 'bad'));
   auth.onAuthStateChanged((u) => {
-    if (u && !u.isAnonymous) { email = u.email || ''; $('panel').style.display = 'block'; $('who').textContent = 'داخل بـ ' + email; $('btnLogin').textContent = 'تغيير الحساب'; fillSettle(); }
-    else { $('panel').style.display = 'none'; $('who').textContent = ''; }
+    if (u && !u.isAnonymous) { email = u.email || ''; $('panel').style.display = 'block'; $('who').textContent = 'داخل بـ ' + email; $('uidline').textContent = 'UID: ' + u.uid + '  (ده اللي بيتحط في القواعد)'; fillSettle(); }
+    else { $('panel').style.display = 'none'; $('who').textContent = ''; $('uidline').textContent = ''; }
   });
-  $('btnLogin').onclick = async () => {
-    const pr = new firebase.auth.GoogleAuthProvider();
-    try { await auth.signInWithPopup(pr); } catch (e) { if (/popup|cancel/i.test(e.code || '')) { try { await auth.signInWithRedirect(pr); } catch (x) { log('فشل الدخول: ' + x.message, 'bad'); } } else log('فشل الدخول: ' + e.message + '\nتأكد إن Google مفعّل في Authentication وإن الدومين مضاف في Authorized domains.', 'bad'); }
-  };
+  const errTxt = (e) => ({ 'auth/invalid-credential': 'الإيميل أو كلمة السر غلط', 'auth/wrong-password': 'كلمة السر غلط', 'auth/user-not-found': 'الإيميل ده مش متسجل في Authentication', 'auth/invalid-email': 'الإيميل مكتوب غلط', 'auth/operation-not-allowed': 'لازم تفعّل Email/Password من Authentication ← Sign-in method', 'auth/network-request-failed': 'مفيش نت', 'auth/popup-blocked': 'المتصفح منع النافذة، استخدم الإيميل وكلمة السر', 'auth/unauthorized-domain': 'ضيف الدومين في Authentication ← Settings ← Authorized domains' }[e.code] || e.message);
+  $('btnMail').onclick = async () => { log('بدخّل…'); try { await auth.signInWithEmailAndPassword($('em').value.trim(), $('pw').value); log('تم الدخول ✔', 'ok'); } catch (e) { log('فشل الدخول: ' + errTxt(e), 'bad'); } };
+  $('btnLogin').onclick = async () => { try { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); } catch (e) { log('فشل دخول جوجل: ' + errTxt(e) + '\nاستخدم الإيميل وكلمة السر.', 'bad'); } };
 }
 
 const player = (id) => db.collection('players').doc(String(id).trim());
 $('btnFind').onclick = async () => {
   try {
     const s = await player($('pid').value).get(); if (!s.exists) return log('مفيش لاعب بالـ ID ده', 'bad');
-    const d = s.data(); log('الاسم: ' + d.name + '\nالرصيد: ' + d.coins + ' جنيه لعبة\nالقطارات المشتراة: ' + (d.owned || []).length + '\nالتواصل: ' + (d.contact || '—') + '\nالخبرة: ' + (d.xp || 0));
+    const d = s.data(); log('الاسم: ' + d.name + '\nالرصيد: ' + d.coins + ' جنيه لعبة · ' + (d.gems || 0) + ' ماسة\nالقطارات المشتراة: ' + (d.owned || []).length + '\nالتواصل: ' + (d.contact || '—') + '\nالخبرة: ' + (d.xp || 0));
   } catch (e) { log(why(e), 'bad'); }
 };
 $('btnCredit').onclick = async () => {
@@ -112,10 +114,10 @@ $('btnCredit').onclick = async () => {
     let res = null;
     await db.runTransaction(async (tx) => {
       const ref = player(id), s = await tx.get(ref); if (!s.exists) throw new Error('مفيش لاعب بالـ ID ده');
-      const c = s.data().coins + amt; if (c < 0) throw new Error('الرصيد مش كفاية للخصم (' + s.data().coins + ')');
-      tx.update(ref, { coins: c }); tx.set(db.collection('logs').doc(), { at: ts(), admin: email, id, amt, note: $('note').value.slice(0, 80), name: s.data().name }); res = { name: s.data().name, c };
+      const cur = $('cur').value, c = (s.data()[cur] || 0) + amt; if (c < 0) throw new Error('الرصيد مش كفاية للخصم (' + (s.data()[cur] || 0) + ')');
+      tx.update(ref, { [cur]: c }); tx.set(db.collection('logs').doc(), { at: ts(), admin: email, id, amt, cur: $('cur').value, note: $('note').value.slice(0, 80), name: s.data().name }); res = { name: s.data().name, c };
     });
-    log('تم ✔\n' + res.name + ' رصيده بقى ' + res.c + ' جنيه لعبة', 'ok'); $('amt').value = '';
+    log('تم ✔\n' + res.name + ' رصيده بقى ' + res.c + ($('cur').value === 'gems' ? ' ماسة' : ' جنيه لعبة'), 'ok'); $('amt').value = '';
   } catch (e) { log(why(e), 'bad'); } finally { $('btnCredit').disabled = false; }
 };
 $('btnGift').onclick = async () => {

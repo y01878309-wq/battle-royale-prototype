@@ -57,7 +57,7 @@ const Hub = {
       <div class="hb-lv"><b>${lv.level}</b><div class="hb-lvt"><span>${this.esc(a.name || '')} · ${L(lv.title, 'Driver')}</span><div class="xpbar"><i style="width:${Math.round(100 * lv.into / lv.need)}%"></i></div></div><small>${lv.into} / ${lv.need}</small></div>
       <div class="hb-news"><span>📢</span><div id="hbTick"></div></div>
       <div class="hb-icons">
-        <div class="hb-coins"><b>${this.fmt(a.coins || 0)}</b><button data-a="topup" aria-label="+">+</button></div>
+        <div class="hb-coins"><b>${this.fmt(a.coins || 0)}</b><button data-a="topup" aria-label="+">+</button></div><div class="hb-coins" style="margin-inline-start:6px"><b>💎 ${this.fmt(a.gems || 0)}</b></div>
         <button class="hb-ic" data-a="compete" aria-label="🏆">🏆</button><button class="hb-ic" data-a="settings" aria-label="⚙">⚙</button>
         <button class="hb-ic" data-a="bell" aria-label="🔔">🔔${unread ? '<i class="dot">' + unread + '</i>' : ''}</button>
       </div>
@@ -153,14 +153,14 @@ const Hub = {
   BODY: [['أبيض', 0xe6e4dc], ['كريمي', 0xd8d0b5], ['رمادي فاتح', 0xb9bdc1], ['رمادي', 0x7d8186], ['سماوي فاتح', 0x8fc8ee], ['أصفر فاتح', 0xf0d98a], ['أخضر فاتح', 0xa9d6b0], ['فضي', 0xc9ccd0]],
   garage() {
     const L = (x, y) => this.L(x, y), hex = (n) => '#' + n.toString(16).padStart(6, '0');
-    const sel = this.gsel || this.api.trainId(); this.gsel = sel; const t = TRAIN_TYPES.find((x) => x.id === sel) || TRAIN_TYPES[0], own = Account.d ? Account.owns(t) : !t.price, pt = Settings.d.paint[t.id] || {};
+    const sel = this.gsel || this.api.trainId(); this.gsel = sel; const t = TRAIN_TYPES.find((x) => x.id === sel) || TRAIN_TYPES[0], own = Account.d ? Account.owns(t) : isFree(t), pt = Settings.d.paint[t.id] || {};
     const curTop = pt.top != null ? pt.top : t.loco.top, curBody = pt.body != null ? pt.body : t.loco.low;
     this.ui.innerHTML = `<div class="sc">${this.topbar(L('الجراج', 'Garage'), '🎨')}
-      <div class="gr"><div class="gr-list">${TRAIN_TYPES.map((x) => `<button data-a="t:${x.id}" class="${x.id === sel ? 'on' : ''}"><b>${this.esc(x.name)}</b><small>${(Account.d ? Account.owns(x) : !x.price) ? L('معاك', 'Owned') : '🔒 ' + x.price}</small></button>`).join('')}</div>
+      <div class="gr"><div class="gr-list">${TRAIN_TYPES.map((x) => `<button data-a="t:${x.id}" class="${x.id === sel ? 'on' : ''}"><b>${this.esc(x.name)}</b><small>${(Account.d ? Account.owns(x) : isFree(x)) ? L('معاك', 'Owned') : '🔒 ' + priceTag(x)}</small></button>`).join('')}</div>
       <div class="gr-side"><h4>${L('لون القطر', 'Main colour')}</h4><div class="sw">${this.TOP.map(([n, c]) => `<button data-a="top:${c}" class="${c === curTop ? 'on' : ''}" style="background:${hex(c)}" aria-label="${n}"></button>`).join('')}</div>
         <h4>${L('لون الجسم', 'Body colour')}</h4><div class="sw">${this.BODY.map(([n, c]) => `<button data-a="body:${c}" class="${c === curBody ? 'on' : ''}" style="background:${hex(c)}" aria-label="${n}"></button>`).join('')}</div>
         <div class="gr-btns"><button class="mbtn" data-a="reset">${L('الألوان الأصلية', 'Original colours')}</button>
-        <button class="mbtn primary" data-a="pick">${own ? L('اختار القطر ده', 'Use this train') : L('اشتريه 🔒 ' + t.price, 'Buy 🔒 ' + t.price)}</button></div></div></div></div>`;
+        <button class="mbtn primary" data-a="pick">${own ? L('اختار القطر ده', 'Use this train') : L('اشتريه 🔒 ' + priceTag(t), 'Buy 🔒 ' + priceTag(t))}</button></div></div></div></div>`;
     this.wire(this.ui, (a) => {
       if (a === 'home') return this.show('home');
       if (a.startsWith('t:')) { this.gsel = a.slice(2); return this.garage(); }
@@ -246,7 +246,7 @@ const Hub = {
 
 /* ---------- settings screen (also opened from the pause menu in the game) ---------- */
 const SetUI = {
-  TABS: [['general', 'عام', 'General', '⚙'], ['play', 'طريقة اللعب', 'Gameplay', '🎮'], ['ctl', 'طريقة التحكم', 'Controls', '🕹'], ['sound', 'الصوت', 'Sound', '🔊'], ['gfx', 'الرسوميات', 'Graphics', '🖥'], ['cam', 'الكاميرا', 'Camera', '📷'], ['ui', 'الواجهة', 'Interface', '▦'], ['credits', 'حقوق الموديلات', 'Credits', 'ℹ'], ['reset', 'إعادة تعيين', 'Reset', '↻'], ['acct', 'حسابي', 'My account', '👤']],
+  TABS: [['general', 'عام', 'General', '⚙'], ['play', 'طريقة اللعب', 'Gameplay', '🎮'], ['ctl', 'طريقة التحكم', 'Controls', '🕹'], ['sound', 'الصوت', 'Sound', '🔊'], ['gfx', 'الرسوميات', 'Graphics', '🖥'], ['cam', 'الكاميرا', 'Camera', '📷'], ['ui', 'الواجهة', 'Interface', '▦'], ['credits', 'الحقوق والشروط', 'Rights', '©'], ['reset', 'إعادة تعيين', 'Reset', '↻'], ['acct', 'حسابي', 'My account', '👤']],
   tab: 'general',
   L: (a, e) => Settings.L(a, e),
   open(onClose) {
@@ -300,6 +300,8 @@ const SetUI = {
   },
   t_play(m) {
     const L = (a, e) => this.L(a, e), c = this.card(m, L('طريقة اللعب', 'Gameplay'), '🎮');
+    this.seg(c, [[2, L('سكتين', '2 tracks'), '', ''], [3, L('٣ سكك', '3 tracks'), '', ''], [4, L('٤ سكك', '4 tracks'), '', '']], Settings.d.tracks, (v) => Settings.set('tracks', +v));
+    this.note(c, L('عدد السكك بيتطبق من الرحلة الجاية.', 'Applies from the next trip.'));
     this.toggle(c, 'route', L('إظهار خط السير', 'Show the route strip'), L('شريط المحطات الجاية فوق', 'The next stations bar'));
     this.toggle(c, 'limits', L('حدود السرعة', 'Speed limits'), L('علامة الحد والحد الجاي', 'The limit sign and next limit'));
     this.toggle(c, 'notif', L('إشعارات اللعبة', 'Game notifications'), L('رسايل الوصول والتنبيهات. الأخطاء بتظهر دايمًا', 'Arrival and tip messages. Errors always show'));
@@ -319,6 +321,7 @@ const SetUI = {
     this.slider(c, 'vMaster', L('الصوت العام', 'Master volume'), 0, 1, 0.05, pc);
     this.slider(c, 'vEngine', L('صوت المحرك', 'Engine'), 0, 1, 0.05, pc);
     this.slider(c, 'vVoice', L('التعليق وإعلانات المحطات', 'Commentary & announcements'), 0, 1, 0.05, pc);
+    this.btn(c, L('جرّب صوت الإعلان', 'Test voice'), (b) => { const ok = Sound.testVoice(); this.note(c, ok ? L('لو سمعت صوت، الكلام شغال.', 'If you hear a voice it works.') : L('جهازك مفيهوش صوت عربي: هتسمع جرس المحطة والكلام هيظهر مكتوب. نزّل «Speech Services by Google» واللغة العربية من إعدادات الجهاز. تطبيقات الـAPK ساعات بتمنع الصوت.', 'No Arabic voice on this device: only the chime and captions.')); });
   },
   t_gfx(m) {
     const L = (a, e) => this.L(a, e), c = this.card(m, L('الرسوميات', 'Graphics'), '🖥'), names = [L('واطية', 'Low'), L('متوسطة', 'Medium'), L('عالية', 'High'), L('فائقة', 'Ultra')];
@@ -343,8 +346,23 @@ const SetUI = {
     this.note(c, L('جوه اللعبة: زرار «واجهة» بيخفي ويظهر لوحة القيادة.', 'In the game the "HUD" button hides the dashboard.'));
   },
   t_credits(m) {
-    const L = (a, e) => this.L(a, e), c = this.card(m, L('حقوق الموديلات', 'Credits'), 'ℹ');
-    for (const [a, b] of [[L('القطارات والمحطات والعربيات والناس والمباني', 'Trains, stations, cars, people and buildings'), L('مرسومة بالكود جوه اللعبة نفسها', 'Drawn in code inside the game')], [L('مكتبة الرسم ثلاثي الأبعاد', '3D library'), 'Three.js (MIT)'], [L('الخطوط', 'Fonts'), 'Reem Kufi · Tajawal (OFL)'], [L('الأصوات', 'Sounds'), L('مولّدة بالكود، والكلاكس مأخوذ من تسجيل', 'Generated in code; the horn comes from a recording')], [L('أسماء المحطات والمسافات', 'Station names and distances'), L('تقريبية', 'Approximate')]]) c.appendChild(Menu.el('div', 'set-row', `<span><b>${a}</b><small>${b}</small></span>`));
+    const L = (a, e) => this.L(a, e), row = (c, a, b) => c.appendChild(Menu.el('div', 'set-row', `<span><b>${a}</b>${b ? `<small>${b}</small>` : ''}</span>`));
+    let c = this.card(m, L('حقوق النشر والطباعة', 'Copyright'), '©');
+    row(c, 'لعبة قطارات مصر', 'إعداد يوسف فرج، ومساعدة يوسف خربوش.');
+    row(c, 'حقوق النشر والطباعة محفوظة', 'حقوق النشر والطباعة ملك ليوسف فرج ويوسف خربوش. © ٢٠٢٦ جميع الحقوق محفوظة.');
+    c = this.card(m, L('ممنوع', 'Not allowed'), '⛔');
+    for (const t of ['نسخ اللعبة أو أي جزء منها (الكود أو الرسومات أو الأصوات أو النصوص).', 'إعادة نشرها أو رفعها على أي موقع أو متجر تطبيقات باسم غير اسم أصحابها.', 'تعديلها أو فك تغليفها أو استخراج ملفاتها وبيعها أو إعادة استخدامها.', 'بيع حسابات اللاعبين أو العملات أو التلاعب بالرصيد أو الغش بأي طريقة.', 'الطباعة أو التصوير لأغراض تجارية من غير إذن مكتوب.']) row(c, '✖ ' + t, '');
+    row(c, 'المخالفة', 'أي نسخ أو استغلال من غير إذن بيعرّض صاحبه للمساءلة القانونية، وبنحتفظ بحقنا في إيقاف أي حساب مخالف.');
+    c = this.card(m, L('شروط الاستخدام', 'Terms'), '📜');
+    row(c, 'اللعبة للتسلية', 'اللعبة محاكاة ترفيهية. أسماء المحطات والمسافات والمواعيد تقريبية وليست جدول السكك الحديدية الرسمي.');
+    row(c, 'العملات داخل اللعبة', '«الجنيه» عملة تتكسب باللعب. «الماسة» عملة للشحن فقط ولا تتكسب باللعب، وهي افتراضية ولا يمكن تحويلها لنقود ولا استرجاعها بعد الشراء.');
+    row(c, 'الشحن', 'الشحن يدوي: بتحوّل المبلغ على فودافون كاش ' + ((window.QS_PAY && QS_PAY.vodafone) || '01093706503') + ' وتبعت الـ ID بتاعك، وبنضيف الرصيد لحسابك.');
+    row(c, 'اللعب النظيف', 'ممنوع الشتم أو الأسماء المسيئة في اللعب الأونلاين. لو حد ضايقك بلّغنا.');
+    c = this.card(m, L('الخصوصية', 'Privacy'), '🔒');
+    row(c, 'اللي بنحفظه', 'اسمك المستعار والـ ID ورصيدك ومشترياتك ونتايج المسابقات. مبنطلبش إيميل ولا رقم موبايل ولا موقعك.');
+    row(c, 'التواصل', 'رقم التواصل اللي بتكتبه في حسابك اختياري، ومبيظهرش لأي لاعب.');
+    c = this.card(m, L('شكر ومصادر', 'Credits'), 'ℹ');
+    for (const [a, b] of [['القطارات والمحطات والعربيات والناس والمباني', 'مرسومة بالكود جوه اللعبة نفسها'], ['مكتبة الرسم ثلاثي الأبعاد', 'Three.js (MIT)'], ['الخطوط', 'Reem Kufi · Tajawal (OFL)'], ['الأصوات', 'مولّدة بالكود'], ['اللعبة مستوحاة من', 'السكك الحديدية المصرية — مع احترام كل ملاك العلامات المذكورة']]) row(c, a, b);
   },
   t_reset(m) {
     const L = (a, e) => this.L(a, e), c = this.card(m, L('إعادة تعيين', 'Reset'), '↻');

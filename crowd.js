@@ -14,7 +14,7 @@ class Crowd {
     this.o = new THREE.Object3D(); this.fr = Track.makeFrame(); this.tmp = new THREE.Vector3();
     const N = this.N, geo = (g, tx, ty, tz) => { g.translate(tx || 0, ty || 0, tz || 0); return g; };
     const mat = new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0 });
-    const shirtMat = new THREE.MeshStandardMaterial({ map: Tex.plaid(), roughness: 0.9 });
+    const shirtMat = new THREE.MeshStandardMaterial({ roughness: 0.88, metalness: 0 });
     const im = (g, cast, mt) => { const m = new THREE.InstancedMesh(g, mt || mat, N); m.frustumCulled = false; m.castShadow = !!cast; m.count = N; scene.add(m); return m; };
     this.m = {
       legL: im(geo(new THREE.CylinderGeometry(0.085, 0.07, 0.82, 8), 0, -0.41, 0), true),
@@ -26,9 +26,16 @@ class Crowd {
       shoeL: im(geo(new THREE.BoxGeometry(0.14, 0.09, 0.28), 0, 0, 0.04), false),
       shoeR: im(geo(new THREE.BoxGeometry(0.14, 0.09, 0.28), 0, 0, 0.04), false),
       neck: im(geo(new THREE.CylinderGeometry(0.05, 0.06, 0.1, 8), 0, 0, 0), false),
-      torso: im(geo(new THREE.CylinderGeometry(0.235, 0.2, 0.58, 10), 0, 0.29, 0), true, shirtMat),
-      robe: im(geo(new THREE.CylinderGeometry(0.21, 0.31, 1.28, 10), 0, 0.64, 0), true),
-      head: im(new THREE.SphereGeometry(0.115, 8, 6), true),
+      torso: im(geo(new THREE.CylinderGeometry(0.22, 0.19, 0.6, 14).scale(1.3, 1, 0.74), 0, 0.3, 0), true, shirtMat),
+      shL: im(new THREE.SphereGeometry(0.068, 8, 6), false, shirtMat),
+      shR: im(new THREE.SphereGeometry(0.068, 8, 6), false, shirtMat),
+      eyeL: im(new THREE.SphereGeometry(0.013, 6, 5), false),
+      eyeR: im(new THREE.SphereGeometry(0.013, 6, 5), false),
+      brow: im(new THREE.BoxGeometry(0.1, 0.012, 0.012), false),
+      nose: im(new THREE.SphereGeometry(0.02, 6, 5), false),
+      mouth: im(new THREE.BoxGeometry(0.044, 0.01, 0.01), false),
+      robe: im(geo(new THREE.CylinderGeometry(0.22, 0.3, 1.28, 14).scale(1.2, 1, 0.85), 0, 0.64, 0), true),
+      head: im(new THREE.SphereGeometry(0.115, 14, 10), true),
       hair: im(new THREE.SphereGeometry(0.128, 8, 6), false),
       bag: im(new THREE.BoxGeometry(1, 1, 1), false)
     };
@@ -72,7 +79,7 @@ class Crowd {
     this.agents.forEach((a, i) => {
       if (!a.vis) return;
       set('torso', i, a.top); set('armL', i, a.top); set('armR', i, a.top); set('robe', i, a.top); set('legL', i, a.leg); set('legR', i, a.leg);
-      set('head', i, a.skin); set('hair', i, a.hairC); set('bag', i, a.bagCol); set('handL', i, a.skin); set('handR', i, a.skin); set('neck', i, a.skin); set('shoeL', i, 0x1a1815); set('shoeR', i, 0x1a1815);
+      set('head', i, a.skin); set('hair', i, a.hairC); set('bag', i, a.bagCol); set('handL', i, a.skin); set('handR', i, a.skin); set('neck', i, a.skin); set('shL', i, a.robe ? a.top : a.top); set('shR', i, a.top); set('eyeL', i, 0x14110e); set('eyeR', i, 0x14110e); set('brow', i, a.woman ? 0x1a1410 : 0x241a12); set('nose', i, new THREE.Color(a.skin).multiplyScalar(0.88).getHex()); set('mouth', i, 0x7a3a34); set('shoeL', i, 0x1a1815); set('shoeR', i, 0x1a1815);
     });
     for (const k in this.m) this.m[k].instanceColor.needsUpdate = true;
     for (const a of this.agents) a.dirty = true; this.dirtyAll = true;
@@ -117,7 +124,7 @@ class Crowd {
         hairC: woman ? pick(cols.scarf) : pick(cols.hair), top: woman ? pick(cols.abaya) : robe ? pick(cols.robe) : pick(cols.shirt), leg: woman ? pick(cols.abaya) : pick(cols.trouser), face: 0, idleT: 0
       });
       const c = new THREE.Color(), i = this.agents.indexOf(a), set = (m, hex) => this.m[m].setColorAt(i, c.setHex(hex));
-      set('torso', a.top); set('armL', a.top); set('armR', a.top); set('robe', a.top); set('legL', a.leg); set('legR', a.leg); set('head', a.skin); set('hair', a.hairC); set('bag', a.bagCol); set('handL', a.skin); set('handR', a.skin); set('neck', a.skin); set('shoeL', 0x1a1815); set('shoeR', 0x1a1815); k++;
+      set('shL', a.top); set('shR', a.top); set('eyeL', 0x14110e); set('eyeR', 0x14110e); set('brow', 0x241a12); set('nose', new THREE.Color(a.skin).multiplyScalar(0.88).getHex()); set('mouth', 0x7a3a34); set('torso', a.top); set('armL', a.top); set('armR', a.top); set('robe', a.top); set('legL', a.leg); set('legR', a.leg); set('head', a.skin); set('hair', a.hairC); set('bag', a.bagCol); set('handL', a.skin); set('handR', a.skin); set('neck', a.skin); set('shoeL', 0x1a1815); set('shoeR', 0x1a1815); k++;
     }
     if (k) for (const m in this.m) this.m[m].instanceColor.needsUpdate = true;
   }
@@ -179,6 +186,8 @@ class Crowd {
       put(M.handL, -0.27, 1.4 - AL * Math.cos(sL), -AL * Math.sin(sL), 0, 1, 1, 1); put(M.handR, 0.27, 1.4 - AL * Math.cos(sR), -AL * Math.sin(sR), 0, 1, 1, 1);
       put(M.shoeL, -0.1, 0.86 - 0.82 * Math.cos(sw) + ft, -0.82 * Math.sin(sw), -sw * 0.3, 1, 1, 1); put(M.shoeR, 0.1, 0.86 - 0.82 * Math.cos(sw) + ft, 0.82 * Math.sin(sw), sw * 0.3, 1, 1, 1);
       put(M.neck, 0, 1.5, 0, 0, 1, 1, 1);
+      if (a.robe) { M.shL.setMatrixAt(i, hide); M.shR.setMatrixAt(i, hide); } else { put(M.shL, -0.29, 1.4, 0, 0, 1, 1, 1); put(M.shR, 0.29, 1.4, 0, 0, 1, 1, 1); }
+      put(M.eyeL, -0.042, 1.625, 0.102, 0, 1, 1, 1); put(M.eyeR, 0.042, 1.625, 0.102, 0, 1, 1, 1); put(M.brow, 0, 1.655, 0.1, 0, 1, 1, 1); put(M.nose, 0, 1.595, 0.115, 0, 1, 1, 1); put(M.mouth, 0, 1.558, 0.105, 0, 1, 1, 1);
       put(M.head, 0, 1.6, 0.01, 0, 1, 1.12, 1);
       if (a.woman) put(M.hair, 0, 1.61, -0.04, 0, 1.08, 1.02, 1.02); else put(M.hair, 0, 1.64, -0.03, 0, 0.98, 0.7, 1.0);
       if (a.bag === 1) put(M.bag, 0, 1.12, -0.18, 0, 0.3, 0.4, 0.14); else if (a.bag === 2) put(M.bag, 0.3, 0.52, 0.02, 0, 0.12, 0.34, 0.26); else M.bag.setMatrixAt(i, hide);

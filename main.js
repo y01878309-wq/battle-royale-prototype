@@ -8,12 +8,12 @@
   const occRay = new THREE.Raycaster(), occDir = new THREE.Vector3(), v3 = new THREE.Vector3(), v4 = new THREE.Vector3(), tgt = new THREE.Vector3(), want = new THREE.Vector3(), eq = new THREE.Quaternion(), oq = new THREE.Quaternion(), eu = new THREE.Euler(0, 0, 0, 'YXZ');
 
   /* Wallet view over the player's account (js/account.js) */
-  const wallet = { load() { return Account.d || { coins: 0, owned: [] }; }, owns(t) { return Account.d ? Account.owns(t) : !t.price; } };
+  const wallet = { load() { return Account.d || { coins: 0, owned: [] }; }, owns(t) { return Account.d ? Account.owns(t) : isFree(t); } };
   function refreshMenu() {
     const e = ui.el, x = TRAIN_TYPES.find((y) => y.id === e.optTrain.value), w = wallet.load();
-    [...e.optTrain.options].forEach((o) => { const t = TRAIN_TYPES.find((y) => y.id === o.value); o.textContent = t.name + (wallet.owns(t) ? '' : ' 🔒 ' + t.price + ' ج'); });
-    e.trainDesc.textContent = `${x.desc} السرعة القصوى ${x.vmax} كم/س. رصيدك: ${w.coins} جنيه لعبة.` + (wallet.owns(x) ? '' : ` القطر ده مقفول، سعره ${x.price} جنيه لعبة.`);
-    e.startBtn.textContent = wallet.owns(x) ? 'ابدأ الرحلة' : `افتح القطر بـ ${x.price} جنيه لعبة` + (w.coins < x.price ? ' (رصيدك مش كفاية)' : '');
+    [...e.optTrain.options].forEach((o) => { const t = TRAIN_TYPES.find((y) => y.id === o.value); o.textContent = t.name + (wallet.owns(t) ? '' : ' 🔒 ' + priceTag(t)); });
+    e.trainDesc.textContent = `${x.desc} السرعة القصوى ${x.vmax} كم/س. رصيدك: ${w.coins} جنيه لعبة · ${w.gems || 0} ماسة.` + (wallet.owns(x) ? '' : ` القطر ده مقفول، سعره ${priceTag(x)}${x.gems ? ' (بالشحن فقط)' : ''}.`);
+    e.startBtn.textContent = wallet.owns(x) ? 'ابدأ الرحلة' : `افتح القطر بـ ${priceTag(x)}` + ((x.gems ? (w.gems || 0) < x.gems : w.coins < x.price) ? ' (رصيدك مش كفاية)' : '');
   }
 
   /* The game is played in landscape: ask for fullscreen and lock the orientation (works on Android after a tap). */
@@ -67,7 +67,7 @@
     const wantOnline = e.optOnline.value === '1', pname = (Account.d && Account.d.name) || (e.optName.value || '').trim() || 'سواق';
     online = wantOnline && FB.ok;
     try { localStorage.setItem('qs-opts', JSON.stringify({ time: e.optTime.value, q: quality, line: line.id, train: type.id, online: e.optOnline.value, name: pname })); } catch (err) { /* no storage */ }
-    if (!wallet.owns(baseType)) { const r = await Account.buy(baseType); refreshMenu(); Menu.refresh(); if (r !== 'ok') Menu.shop(); return; }   // a locked train: the first press unlocks it with coins, a second press starts
+    if (!wallet.owns(baseType)) { const r = await Account.buy(baseType); refreshMenu(); Menu.refresh(); if (r === 'coins' || r === 'gems') Menu.noFunds(r, baseType); else if (r !== 'ok') Menu.shop(); return; }   // a locked train: the first press unlocks it with coins, a second press starts
     Sound.setProfile(type.snd); Sound.init(); Sound.applyVolumes();
     Hub.killBg(); Hub.hide(); e.menu.hidden = true; e.loading.hidden = false; U.setProgress(0.02, 'جاري تجهيز السكة…');
     await U.tick();
@@ -82,7 +82,7 @@
     window.addEventListener('resize', onResize); bindPointer(renderer.domElement);
 
     route = new Route(line, online ? Math.max(ONLINE_REF_LEN, Train.lengthOf(type)) : Train.lengthOf(type));   // online: everyone builds the same track
-    track = new Track(route.Ltarget); route.bind(track);
+    NTRACKS = Math.max(2, Math.min(4, +S.tracks || 3)); track = new Track(route.Ltarget); route.bind(track);
     sky = new Sky(renderer, scene); sky.setShadowQuality(Settings.shadowQ()); sky.apply(time);
     if (S.reflect <= 0) scene.environment = null;
     scene.fog.density *= Settings.fogMul(); weather = new Weather(scene, sky); weather.rebase(); weather.on = !!S.weather;
@@ -94,7 +94,7 @@
     crowd = new Crowd(scene, track, quality, stations, train.length); crowd.prepare(0);
     traffic = new Traffic(scene, track, quality);
     lightsOn = time === 'sunset' || time === 'night' || time === 'overcast'; train.setHeadlights(lightsOn); train.setNight(time === 'night'); stations.setNight(time === 'night');
-    const phys = { mass: (type.locoMass + type.vehMass * type.consist.length) * 1000, fmax: type.fmax * 1000, power: type.power * 1e6, brake: type.brake, vmax: type.vmax, tolerance: type.id.startsWith('cargo') || type.id === 'freight' ? 18 : 25 };
+    const phys = { mass: (type.locoMass + type.vehMass * type.consist.length) * 1000, fmax: type.fmax * 1350, power: type.power * 1.7e6, brake: type.brake * 1.1, vmax: Math.round(type.vmax * 1.15), tolerance: type.id.startsWith('cargo') || type.id === 'freight' ? 18 : 25 };
     game = new Game(track.L, stations.list, (s) => stations.limitAt(s), phys);
     stations.list.forEach((_, i) => stations.setSignal(i, i === 0));
     let netNote = wantOnline && !FB.ok ? 'اللعب أونلاين محتاج إنترنت. هلعب لوحدي دلوقتي' : '';

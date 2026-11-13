@@ -2,6 +2,8 @@
 /* The railway: a closed spline, sampled every metre, plus ballast, rails and sleepers. */
 const RAIL_TOP = 0.59;      // height of rail head above ground
 const GAUGE = 1.435;
+let NTRACKS = 2;           // 2, 3 or 4 parallel tracks (chosen in the game settings)
+const TX = () => (NTRACKS - 1) * 4.6;   // lateral offset of the outermost track
 const TRACK_SP = 4.6;      // distance between the two tracks (centre to centre). The player's track is lateral 0, the opposite track at +TRACK_SP
 
 class Track {
@@ -82,13 +84,14 @@ class Track {
     const group = new THREE.Group();
     const ballastTex = Tex.ballast(); ballastTex.repeat.set(1, 1);
     const ballast = new THREE.Mesh(
-      this.ribbon([[-4.6, -0.2], [-2.3, 0.30], [TRACK_SP + 2.3, 0.30], [TRACK_SP + 4.6, -0.2]], 4, false, 3),
+      this.ribbon([[-4.6, -0.2], [-2.3, 0.30], [TX() + 2.3, 0.30], [TX() + 4.6, -0.2]], 4, false, 3),
       new THREE.MeshStandardMaterial({ map: ballastTex, roughness: 1, metalness: 0 }));
     ballast.receiveShadow = true; group.add(ballast);
 
     const rp = [[-.075, 0], [.075, 0], [.075, .03], [.02, .04], [.02, .13], [.04, .15], [.04, .17], [-.04, .17], [-.04, .15], [-.02, .13], [-.02, .04], [-.075, .03]];
     const railMat = new THREE.MeshStandardMaterial({ color: 0x74665c, roughness: 0.5, metalness: 0.8, side: THREE.DoubleSide });
-    for (const side of [-1, 1, 3, 5].map((v) => v === 3 ? 1 + 2 * TRACK_SP / GAUGE : v === 5 ? -1 + 2 * TRACK_SP / GAUGE : v)) {
+    const railSides = []; for (let k = 0; k < NTRACKS; k++) for (const v of [-1, 1]) railSides.push(v + 2 * k * TRACK_SP / GAUGE);
+    for (const side of railSides) {
       const prof = rp.map(([l, y]) => [l + side * GAUGE / 2, y + RAIL_TOP - 0.17]);
       const rail = new THREE.Mesh(this.ribbon(prof, 2, true, 10), railMat);
       rail.receiveShadow = true; rail.castShadow = false; group.add(rail);
@@ -96,14 +99,14 @@ class Track {
 
     const spacing = 0.65, count = Math.floor(this.L / spacing);
     const sl = new THREE.InstancedMesh(new THREE.BoxGeometry(2.6, 0.2, 0.26),
-      new THREE.MeshStandardMaterial({ color: 0x7a6a58, roughness: 0.95 }), count * 2);
+      new THREE.MeshStandardMaterial({ color: 0x7a6a58, roughness: 0.95 }), count * NTRACKS);
     const fr = Track.makeFrame(), m = new THREE.Matrix4(), up = new THREE.Vector3(0, 1, 0), col = new THREE.Color(), R = U.rng(11);
     for (let i = 0; i < count; i++) {
       this.frame(i * spacing, fr);
       Track.basis(m, fr, up); m.setPosition(fr.pos.x, 0.32, fr.pos.z);
       sl.setMatrixAt(i, m);
       const k = 0.8 + R() * 0.3; sl.setColorAt(i, col.setRGB(k, k, k));
-      m.setPosition(fr.pos.x + fr.right.x * TRACK_SP, 0.32, fr.pos.z + fr.right.z * TRACK_SP); sl.setMatrixAt(count + i, m); sl.setColorAt(count + i, col.setRGB(k * 0.97, k * 0.97, k * 0.97));
+      for (let t = 1; t < NTRACKS; t++) { m.setPosition(fr.pos.x + fr.right.x * TRACK_SP * t, 0.32, fr.pos.z + fr.right.z * TRACK_SP * t); sl.setMatrixAt(count * t + i, m); sl.setColorAt(count * t + i, col.setRGB(k * 0.97, k * 0.97, k * 0.97)); }
     }
     sl.instanceMatrix.needsUpdate = true; sl.instanceColor.needsUpdate = true;
     sl.receiveShadow = true; group.add(sl);

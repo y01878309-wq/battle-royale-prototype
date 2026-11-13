@@ -33,10 +33,14 @@ const Sound = {
     this.wheel = noise('bandpass', 700, 0.6); this.wind = noise('highpass', 1400, 0.4); this.squeal = noise('bandpass', 2600, 12); this.hiss = noise('highpass', 4200, 0.5);
     // Horn: one saw + one slightly detuned square per chime, through a low-pass, plus a breath of noise.
     // The GE profile uses the five chime pitches measured from a recording (about 320, 382, 439, 498 and 643 Hz).
+    // small "outdoor" reverb shared by the horn and the clacks
+    const rl = Math.floor(c.sampleRate * 1.4), rb = c.createBuffer(2, rl, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const rd = rb.getChannelData(ch); for (let i = 0; i < rl; i++) rd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rl, 2.6); }
+    this.rev = c.createConvolver(); this.rev.buffer = rb; this.revG = c.createGain(); this.revG.gain.value = 0.5; this.rev.connect(this.revG); this.revG.connect(out);
     this.hornOscs = [];
     this.horns = this.prof.horn.map((fq, i) => {
-      const f = c.createBiquadFilter(), g = c.createGain(); f.type = 'lowpass'; f.frequency.value = 2400; g.gain.value = 0; f.connect(g); g.connect(out);
-      for (const [type, mul, vol] of [['sawtooth', 1, 0.55], ['square', 1.004, 0.2], ['sine', 2, 0.18]]) { const o = c.createOscillator(), og = c.createGain(); o.type = type; o.frequency.value = fq * mul; og.gain.value = vol; o.connect(og); og.connect(f); o.start(); this.hornOscs.push({ o, f: fq * mul }); }
+      const f = c.createBiquadFilter(), g = c.createGain(); f.type = 'lowpass'; f.frequency.value = 1900; f.Q.value = 0.9; g.gain.value = 0; f.connect(g); g.connect(out); g.connect(this.rev);
+      for (const [type, mul, vol] of [['sawtooth', 1, 0.5], ['sawtooth', 1.006, 0.3], ['square', 0.5, 0.12], ['sine', 2, 0.2]]) { const o = c.createOscillator(), og = c.createGain(); o.type = type; o.frequency.value = fq * mul; og.gain.value = vol; o.connect(og); og.connect(f); o.start(); this.hornOscs.push({ o, f: fq * mul }); }
       return g;
     });
     const hb = c.createBufferSource(); hb.buffer = nb; hb.loop = true; const hf = c.createBiquadFilter(); hf.type = 'bandpass'; hf.frequency.value = 1300; hf.Q.value = 0.8; this.hornBreath = c.createGain(); this.hornBreath.gain.value = 0; hb.connect(hf); hf.connect(this.hornBreath); this.hornBreath.connect(out); hb.start();
@@ -48,9 +52,13 @@ const Sound = {
   clack(vol) {
     const c = this.ctx; if (!c) return;
     if (this.buf.clack) { const s = c.createBufferSource(), g = c.createGain(); s.buffer = this.buf.clack; s.playbackRate.value = 0.92 + Math.random() * 0.16; g.gain.value = Math.min(1, vol * 3); s.connect(g); g.connect(this.master); s.start(); return; }
-    const s = c.createBufferSource(); s.buffer = this.noiseBuf; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 500 + Math.random() * 500; f.Q.value = 1.4;
-    const g = c.createGain(), t = c.currentTime; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-    s.connect(f); f.connect(g); g.connect(this.master); s.start(t, Math.random()); s.stop(t + 0.12);
+    const t = c.currentTime;
+    const s = c.createBufferSource(); s.buffer = this.noiseBuf; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900 + Math.random() * 700; f.Q.value = 1.1;
+    const g = c.createGain(); g.gain.setValueAtTime(vol * 1.4, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+    s.connect(f); f.connect(g); g.connect(this.master); s.start(t, Math.random()); s.stop(t + 0.1);
+    // low thump of the wheel dropping on the joint, and a short metallic ring
+    const th = c.createOscillator(), tg = c.createGain(); th.type = 'sine'; th.frequency.setValueAtTime(95, t); th.frequency.exponentialRampToValueAtTime(45, t + 0.12); tg.gain.setValueAtTime(vol * 1.3, t); tg.gain.exponentialRampToValueAtTime(0.001, t + 0.16); th.connect(tg); tg.connect(this.master); th.start(t); th.stop(t + 0.2);
+    const rg = c.createGain(), ro = c.createOscillator(); ro.type = 'triangle'; ro.frequency.value = 1180 + Math.random() * 200; rg.gain.setValueAtTime(vol * 0.12, t); rg.gain.exponentialRampToValueAtTime(0.001, t + 0.18); ro.connect(rg); rg.connect(this.master); ro.start(t); ro.stop(t + 0.2);
   },
 
   /* v m/s, throttle 0..1, brake 0..1, d metres moved this frame */
@@ -65,16 +73,16 @@ const Sound = {
     const ev = this.vol('vEngine'); sm(this.eng.g.gain, ev * synth * (0.16 + 0.22 * st.throttle + 0.05 * rpm), 0.2);
     if (this.engSrc) { sm(this.engSrc.src.playbackRate, 0.55 + 0.9 * rpm, 0.15); sm(this.engSrc.g.gain, ev * (0.35 + 0.55 * st.throttle), 0.2); }
     sm(this.turbo.g.gain, ev * synth * (0.012 + P.turbo * st.throttle * st.throttle), 0.3); sm(this.turbo.f.frequency, 1400 + 2200 * st.throttle, 0.3);
-    sm(this.rumble.g.gain, ev * synth * (0.22 + 0.25 * st.throttle), 0.3);
     const sp = Math.min(1, v / 38);
-    sm(this.wheel.g.gain, 0.002 + 0.1 * sp * sp, 0.2); sm(this.wheel.f.frequency, 500 + 900 * sp, 0.2);
-    sm(this.wind.g.gain, 0.12 * sp * sp * sp, 0.3);
+    sm(this.wheel.g.gain, 0.004 + 0.22 * sp * (0.4 + 0.6 * sp), 0.2); sm(this.wheel.f.frequency, 400 + 1100 * sp, 0.2);
+    sm(this.rumble.g.gain, ev * synth * (0.22 + 0.25 * st.throttle) + 0.25 * sp, 0.3);
+    sm(this.wind.g.gain, 0.05 * sp + 0.16 * sp * sp * sp, 0.3); sm(this.wind.f.frequency, 900 + 1800 * sp, 0.3);
     sm(this.squeal.g.gain, st.brake > 0.15 && v > 0.8 && v < 9 ? 0.03 * st.brake * (1 - v / 9) : 0, 0.1); sm(this.squeal.f.frequency, 2200 + v * 120, 0.1);
     const rel = this.lastBrake - st.brake; if (rel > 0.02 && st.brake < this.lastBrake) { this.hiss.g.gain.setTargetAtTime(Math.min(0.12, rel * 3), t, 0.01); this.hiss.g.gain.setTargetAtTime(0, t + 0.05, 0.25); }
     this.lastBrake = st.brake;
     // rail joints: one clack every 18 m for each bogie, two bogies close together
     this.joint += st.d;
-    while (this.joint >= 18) { this.joint -= 18; const vol = 0.05 + 0.2 * sp; this.clack(vol); setTimeout(() => this.clack(vol * 0.8), Math.max(30, 2500 / Math.max(v, 1))); }
+    while (this.joint >= 15) { this.joint -= 15; const vol = 0.08 + 0.3 * sp; this.clack(vol); setTimeout(() => this.clack(vol * 0.8), Math.max(30, 2500 / Math.max(v, 1))); }
     sm(this.bellG.gain, st.bell ? (Math.floor(t * 5) % 2 ? 0.05 : 0.0) : 0, 0.005);
     if (st.over && Math.floor(t * 3) % 2) this.beep(1100, 0.1);
   },
@@ -102,9 +110,9 @@ const Sound = {
       else if (this.hornSrc) { const h = this.hornSrc; h.g.gain.setTargetAtTime(0, t, 0.1); h.s.stop(t + 0.5); this.hornSrc = null; }
       return;
     }
-    const t = c.currentTime, n = this.horns.length, lvl = 0.42 / Math.sqrt(n);
-    if (on) for (const h of this.hornOscs) { h.o.frequency.cancelScheduledValues(t); h.o.frequency.setValueAtTime(h.f * 0.93, t); h.o.frequency.linearRampToValueAtTime(h.f, t + 0.14); }   // the blat: pitch rises into the note
-    this.horns.forEach((g, i) => { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(on ? lvl : 0, t + i * 0.012, on ? 0.05 : 0.16); });
+    const t = c.currentTime, n = this.horns.length, lvl = 0.5 / Math.sqrt(n);
+    if (on) for (const h of this.hornOscs) { h.o.frequency.cancelScheduledValues(t); h.o.frequency.setValueAtTime(h.f * 0.9, t); h.o.frequency.exponentialRampToValueAtTime(h.f, t + 0.22); }   // the blat: pitch rises into the note
+    this.horns.forEach((g, i) => { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(on ? lvl : 0, t + i * 0.02, on ? 0.07 : 0.22); });
     this.hornBreath.gain.cancelScheduledValues(t); this.hornBreath.gain.setTargetAtTime(on ? 0.05 : 0, t, on ? 0.04 : 0.12);
   },
 
@@ -134,10 +142,30 @@ const Sound = {
   vol(k) { return typeof Settings !== 'undefined' && Settings.d ? Settings.d[k] : 1; },
   applyVolumes() { if (this.master) this.master.gain.value = this.muted ? 0 : 0.8 * this.vol('vMaster'); },
 
-  speak(text) {
-    if (this.muted || this.vol('vVoice') <= 0 || !('speechSynthesis' in window)) return;
-    try { const u = new SpeechSynthesisUtterance(text); u.lang = 'ar-EG'; u.rate = 0.95; u.volume = Math.min(1, this.vol('vVoice')); window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } catch (e) { /* no voice available */ }
+  /* Station-announcement chime (ding-dong): used before the voice, and alone when the device has no Arabic voice. */
+  paChime() {
+    const c = this.ctx; if (!c) return;
+    [[784, 0], [622, 0.38]].forEach(([fq, dt]) => { const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + dt; o.type = 'sine'; o.frequency.value = fq; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.18, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 1.1); o.connect(g); g.connect(this.master); if (this.rev) g.connect(this.rev); o.start(t); o.stop(t + 1.2); });
   },
+  voice() {
+    const vs = ('speechSynthesis' in window && window.speechSynthesis.getVoices()) || [];
+    return vs.find((v) => /^ar[-_]EG/i.test(v.lang)) || vs.find((v) => /^ar/i.test(v.lang)) || null;
+  },
+  speak(text) {
+    if (this.muted || this.vol('vVoice') <= 0) return;
+    this.paChime();
+    if (!('speechSynthesis' in window)) return;
+    const ss = window.speechSynthesis, go = () => {
+      const v = this.voice(); if (!v) return;   // no Arabic voice on this device: the chime and the caption are all it can do
+      try {
+        const u = new SpeechSynthesisUtterance(text); u.voice = v; u.lang = v.lang; u.rate = 0.92; u.volume = Math.min(1, this.vol('vVoice'));
+        if (ss.speaking || ss.pending) { ss.cancel(); setTimeout(() => ss.speak(u), 120); } else ss.speak(u);
+      } catch (e) { /* no voice available */ }
+    };
+    if (!ss.getVoices().length) { let done = false; const once = () => { if (done) return; done = true; go(); }; ss.addEventListener('voiceschanged', once, { once: true }); setTimeout(once, 700); } else setTimeout(go, 900);
+  },
+  /* Settings: lets the player hear whether the device can speak Arabic. */
+  testVoice() { this.init(); this.speak('السادة الركاب، قطر قطارات مصر يصل بعد قليل. برجاء الابتعاد عن حافة الرصيف.'); return !!this.voice(); },
 
   setMuted(m) { this.muted = m; if (this.master) this.master.gain.value = m ? 0 : 0.8 * this.vol('vMaster'); if (m && 'speechSynthesis' in window) window.speechSynthesis.cancel(); }
 };
