@@ -9,7 +9,8 @@
 :root{--bg:#10131a;--card:#181d28;--line:#2b3345;--ink:#eef1f7;--dim:#9aa4b8;--gold:#f6c23e;--red:#e5534b;--green:#3fb950}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Tahoma,Arial,sans-serif;padding:14px 14px 60px;max-width:720px;margin-inline:auto}
-h1{font-size:22px;margin:6px 0 14px}h2{font-size:17px;margin:0 0 10px;color:var(--gold)}
+h1{font-size:22px;margin:6px 0 14px}
+.prow{display:grid;grid-template-columns:1fr 110px 90px;gap:6px;align-items:center;margin:4px 0;font-size:14px}.prack{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:5px;margin:4px 0}.prack input,.prow input,.prow select{width:100%;min-width:0}h3{font-size:15px;color:var(--gold);margin:14px 0 4px}h2{font-size:17px;margin:0 0 10px;color:var(--gold)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
 label{display:block;color:var(--dim);font-size:14px;margin:8px 0 4px}
 input,select{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#0d1017;color:var(--ink);font:inherit}
@@ -67,7 +68,15 @@ button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
   <div class="card">
     <h2>الكتالوج (أسعار القطارات ومكافآت المهام)</h2>
     <p class="dim">لازم تضغط الزرار ده مرة واحدة على الأقل، ومرة تاني كل ما تتغير الأسعار. من غيره الشراء واستلام المكافآت مش هيشتغلوا.</p>
-    <button class="alt" id="btnCatalog">انشر الكتالوج</button>
+    <button class="alt" id="btnCatalog">انشر الكتالوج الافتراضي</button>
+  </div>
+
+  <div class="card">
+    <h2>🏷️ محرر الأسعار</h2>
+    <p class="dim">عدّل أي سعر وانت براحتك. اختار الوحدة: جنيه لعبة أو ماسة (الماسة بالشحن فقط). السعر 0 = مجاني. بعد التعديل دوس «احفظ الأسعار» وهتظهر للاعبين فورًا.</p>
+    <button class="alt" id="btnLoadPrices">اعرض الأسعار الحالية</button>
+    <div id="priceBox"></div>
+    <button id="btnSavePrices" style="display:none">احفظ الأسعار</button>
   </div>
 
   <div class="card"><h2>النتيجة</h2><div id="out">—</div></div>
@@ -77,6 +86,7 @@ button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
+<script src="data.js"></script>
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id), out = $('out');
@@ -128,6 +138,37 @@ $('btnGift').onclick = async () => {
 };
 $('btnCatalog').onclick = async () => {
   try { const j = await (await fetch('catalog.json', { cache: 'no-store' })).json(); await db.collection('config').doc('catalog').set(j); log('اتنشر الكتالوج ✔\n' + Object.keys(j.prices).length + ' قطر · ' + Object.keys(j.rewards).length + ' مكافأة', 'ok'); } catch (e) { log(why(e), 'bad'); }
+};
+
+/* ---- price editor: trains, stickers, mission rewards and the top-up packages ---- */
+let curCat = null, curShop = null;
+const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+$('btnLoadPrices').onclick = async () => {
+  try {
+    const c = await db.collection('config').doc('catalog').get(), sh = await db.collection('config').doc('shop').get();
+    curCat = c.exists ? c.data() : { prices: {}, gems: {}, rewards: {} }; curCat.prices = curCat.prices || {}; curCat.gems = curCat.gems || {}; curCat.rewards = curCat.rewards || {};
+    curShop = sh.exists ? sh.data() : { packs: (window.QS_PAY && window.QS_PAY.packs) || [] };
+    const row = (key, name, price, gem) => `<div class="prow" data-k="${esc(key)}"><span>${esc(name)}</span><select><option value="c"${gem ? '' : ' selected'}>🪙 جنيه</option><option value="g"${gem ? ' selected' : ''}>💎 ماسة</option></select><input inputmode="numeric" dir="ltr" value="${gem || price || 0}"></div>`;
+    let h = '<h3>القطارات والمترو</h3>';
+    for (const t of TRAIN_TYPES) { const k = 'train:' + t.id, g = curCat.gems[k] > 0 ? curCat.gems[k] : (k in curCat.prices ? 0 : (t.gems || 0)), p = k in curCat.prices ? curCat.prices[k] : (t.price || 0); h += row(k, t.name.replace('💎 ', ''), p, g); }
+    h += '<h3>الملصقات</h3>';
+    for (const t of STICKERS) { const k = 'sticker:' + t.id; h += row(k, t.emoji + ' ' + t.name, k in curCat.prices ? curCat.prices[k] : t.price, 0); }
+    h += '<h3>مكافآت المهام والإنجازات (جنيه لعبة)</h3>';
+    for (const m of [...MISSIONS, ...ACHIEVEMENTS]) h += `<div class="prow" data-r="${esc(m.id)}"><span>${esc(m.name || m.title || m.id)}</span><span></span><input inputmode="numeric" dir="ltr" value="${m.id in curCat.rewards ? curCat.rewards[m.id] : m.reward}"></div>`;
+    h += '<h3>باكدجات الشحن (تظهر في المتجر)</h3><p class="dim">الاسم · ماسات · جنيهات لعبة · السعر بالجنيه المصري. امسح الاسم عشان تشيل الباكدج.</p>';
+    const packs = curShop.packs || []; for (let i = 0; i < 8; i++) { const k = packs[i] || {}; h += `<div class="prack" data-i="${i}"><input placeholder="الاسم" value="${esc(k.name || '')}"><input inputmode="numeric" dir="ltr" placeholder="ماسات" value="${k.gems || ''}"><input inputmode="numeric" dir="ltr" placeholder="جنيهات" value="${k.coins || ''}"><input inputmode="numeric" dir="ltr" placeholder="ج.م" value="${k.egp || ''}"></div>`; }
+    $('priceBox').innerHTML = h; $('btnSavePrices').style.display = 'block'; log('اتحمّلت الأسعار. عدّل واحفظ', 'ok');
+  } catch (e) { log('مقدرتش أحمّل الأسعار: ' + why(e), 'bad'); }
+};
+$('btnSavePrices').onclick = async () => {
+  try {
+    const cat = { prices: {}, gems: {}, rewards: {} };
+    document.querySelectorAll('#priceBox .prow[data-k]').forEach((r) => { const v = Math.max(0, parseInt(r.querySelector('input').value, 10) || 0), g = r.querySelector('select').value === 'g'; if (g && v > 0) cat.gems[r.dataset.k] = v; else cat.prices[r.dataset.k] = v; });
+    document.querySelectorAll('#priceBox .prow[data-r]').forEach((r) => { cat.rewards[r.dataset.r] = Math.max(0, parseInt(r.querySelector('input').value, 10) || 0); });
+    const packs = []; document.querySelectorAll('#priceBox .prack').forEach((r) => { const i = r.querySelectorAll('input'), name = i[0].value.trim(), gems = parseInt(i[1].value, 10) || 0, coins = parseInt(i[2].value, 10) || 0, egp = parseInt(i[3].value, 10) || 0; if (name && (gems || coins) && egp) packs.push(gems ? { name, gems, egp } : { name, coins, egp }); });
+    await db.collection('config').doc('catalog').set(cat); await db.collection('config').doc('shop').set({ packs });
+    log('اتحفظت الأسعار ✔\n' + Object.keys(cat.prices).length + ' سعر بالجنيه · ' + Object.keys(cat.gems).length + ' سعر بالماس · ' + packs.length + ' باكدج', 'ok');
+  } catch (e) { log('فشل الحفظ: ' + why(e), 'bad'); }
 };
 
 function fillSettle() {

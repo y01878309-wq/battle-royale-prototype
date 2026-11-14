@@ -63,6 +63,33 @@ const Menu = {
     });
   },
 
+  /* A side-view picture of the whole train (locomotive and coaches) drawn from the train's own colours, for the store. */
+  trainSVG(t) {
+    const hx = (n) => '#' + (n | 0).toString(16).padStart(6, '0'), k = t.loco.kind, W = 300, H = 74, y0 = 52;
+    const n = Math.min(4, t.consist.length), cl = [];
+    let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="tsvg"><rect width="${W}" height="${H}" rx="8" fill="#1d2636"/><rect y="${y0 + 8}" width="${W}" height="${H - y0 - 8}" fill="#2c2f33"/><rect y="${y0 + 7}" width="${W}" height="2" fill="#8d8780"/>`;
+    if (k === 'velaro' && t.id === 'monorail') svg += `<rect x="0" y="${y0 + 4}" width="${W}" height="6" fill="#6b7280"/>`;
+    const car = (x, w, o) => {   // one coach / wagon
+      const c = o.body, b = o.band, tr = o.trim, fr = o.freight;
+      let r = `<rect x="${x}" y="${y0 - 28}" width="${w}" height="26" rx="${o.rx || 3}" fill="${c}"/><rect x="${x}" y="${y0 - 9}" width="${w}" height="5" fill="${b}"/><rect x="${x}" y="${y0 - 14}" width="${w}" height="1.6" fill="${tr}"/>`;
+      if (!fr) for (let i = 0; i < Math.floor((w - 8) / 9); i++) r += `<rect x="${x + 5 + i * 9}" y="${y0 - 24}" width="6" height="7" rx="1" fill="#1b2a3a"/>`;
+      else r = `<rect x="${x}" y="${y0 - 20}" width="${w}" height="16" rx="2" fill="${c}"/><rect x="${x}" y="${y0 - 8}" width="${w}" height="3" fill="${b}"/>`;
+      r += `<circle cx="${x + 9}" cy="${y0 + 1}" r="3.6" fill="#16181b"/><circle cx="${x + w - 9}" cy="${y0 + 1}" r="3.6" fill="#16181b"/>`; return r;
+    };
+    const lw = k === 'velaro' ? 70 : k === 'dmu' ? 56 : 62, top = hx(t.loco.top), low = hx(t.loco.low), trm = hx(t.loco.trim);
+    // locomotive on the right (the train heads right)
+    let x = W - lw - 6, loco = '';
+    if (k === 'ge') loco = `<path d="M${x} ${y0 - 24} h${lw - 20} l16 8 v14 h-${lw - 4} z" fill="${low}"/><path d="M${x} ${y0 - 24} h${lw - 20} l16 8 v5 h-${lw - 4} z" fill="${top}"/><rect x="${x + lw - 26}" y="${y0 - 21}" width="12" height="8" rx="1" fill="#17222e"/><rect x="${x}" y="${y0 - 10}" width="${lw - 4}" height="3" fill="${trm}"/>`;
+    else if (k === 'hood') loco = `<rect x="${x}" y="${y0 - 18}" width="${lw - 22}" height="16" fill="${low}"/><rect x="${x + lw - 24}" y="${y0 - 30}" width="22" height="28" rx="2" fill="${top}"/><rect x="${x + lw - 20}" y="${y0 - 26}" width="13" height="9" fill="#17222e"/><rect x="${x}" y="${y0 - 8}" width="${lw - 2}" height="3" fill="${trm}"/>`;
+    else if (k === 'box') loco = `<rect x="${x}" y="${y0 - 26}" width="${lw}" height="24" rx="3" fill="${top}"/><rect x="${x}" y="${y0 - 14}" width="${lw}" height="12" fill="${low}"/><rect x="${x + lw - 17}" y="${y0 - 22}" width="13" height="9" fill="#17222e"/><rect x="${x}" y="${y0 - 14}" width="${lw}" height="2" fill="${trm}"/>`;
+    else if (k === 'dmu') loco = `<path d="M${x} ${y0 - 26} h${lw - 14} q14 4 14 18 v${6} h-${lw} z" fill="${low}"/><rect x="${x}" y="${y0 - 9}" width="${lw}" height="5" fill="${top}"/><path d="M${x + lw - 22} ${y0 - 22} h12 q6 2 8 8 h-20 z" fill="#17222e"/><rect x="${x}" y="${y0 - 14}" width="${lw}" height="1.6" fill="${trm}"/>`;
+    else loco = `<path d="M${x} ${y0 - 26} h${lw - 30} q30 2 30 22 v2 h-${lw} z" fill="${low}"/><rect x="${x}" y="${y0 - 8}" width="${lw}" height="4" fill="${trm}"/><path d="M${x + lw - 34} ${y0 - 21} h16 q10 2 12 10 h-28 z" fill="#17222e"/>`;
+    loco += `<circle cx="${x + 12}" cy="${y0 + 1}" r="3.8" fill="#16181b"/><circle cx="${x + lw - 14}" cy="${y0 + 1}" r="3.8" fill="#16181b"/>`;
+    const freight = ['tank', 'box', 'flat', 'hopper', 'gond', 'cont'].includes(t.consist[0]), cw = (W - lw - 18) / n - 3;
+    for (let i = 0; i < n; i++) cl.push(car(8 + i * (cw + 3), cw, { body: freight ? (['#6b4a35', '#4b5563', '#7a5a2a', '#3f5f4a'][i % 4]) : hx(t.coach.body), band: freight ? '#2a2a2a' : hx(t.coach.band), trim: hx(t.coach.trim), freight }));
+    return svg + cl.join('') + loco + '</svg>';
+  },
+
   /* Store: trains, metro and monorail, stickers and top-up packages. Trains are bought here only. */
   stickerEmoji() { const t = STICKERS.find((x) => x.id === this.sticker() && Account.d && Account.owns(x)); return t ? t.emoji + ' ' : ''; },
   sticker() { try { return localStorage.getItem('qs-sticker') || ''; } catch (e) { return ''; } },
@@ -91,7 +118,7 @@ const Menu = {
       if (tab === 'trains' || tab === 'metro') {
         for (const t of TRAIN_TYPES.filter((x) => (x.cat || 'train') === (tab === 'metro' ? 'metro' : 'train'))) {
           const own = Account.owns(t), c = this.el('div', 'item' + (own ? ' own' : ''));
-          const sw = `<div class="sw"><i style="background:${hex(t.loco.top)}"></i><i style="background:${hex(t.loco.low)}"></i><i style="background:${hex(t.loco.trim)}"></i><i style="background:${hex(t.coach.body)}"></i><i style="background:${hex(t.coach.band)}"></i></div>`;
+          const sw = this.trainSVG(t);
           c.innerHTML = `${sw}<b>${this.esc(t.name)}</b><small>${this.esc(t.desc || '')}</small><span>${own ? '✔ معاك' : '🔒 ' + priceTag(t) + (t.gems ? ' (شحن فقط)' : '')} · ${t.vmax} كم/س</span>`;
           buyBtn(t, own, c, own ? ['اختار', () => { document.getElementById('optTrain').value = t.id; this.close(); this.onChange(); }] : null);
           grid.appendChild(c);

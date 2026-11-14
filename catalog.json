@@ -3,7 +3,6 @@
     "train:vip": 0,
     "train:orange": 40,
     "train:hitachi": 60,
-    "train:velaro": 100,
     "train:talgo": 60,
     "train:sleeper": 40,
     "train:tahsin": 40,
@@ -20,13 +19,10 @@
     "train:es40-royal": 60,
     "train:es40-redwhite": 50,
     "train:marlboro": 50,
-    "train:turbine": 70,
     "train:de2550": 40,
-    "train:talgo-prl": 90,
     "train:metro-red": 40,
     "train:metro-line3": 40,
     "train:lrt": 50,
-    "train:monorail": 60,
     "train:tram-victoria": 40,
     "sticker:star": 20,
     "sticker:train": 25,
@@ -54,10 +50,14 @@
     "a_freight10": 150
   },
   "gems": {
+    "train:velaro": 50,
     "train:gold-ge": 30,
     "train:black-velaro": 60,
     "train:royal": 50,
     "train:silver-emu": 40,
-    "train:heavy-gold": 35
+    "train:heavy-gold": 35,
+    "train:turbine": 35,
+    "train:talgo-prl": 40,
+    "train:monorail": 30
   }
 }

@@ -265,7 +265,7 @@ class Scenery {
   buildTraffic() {
     const tr = this.track, runs = this.runs || [], HW = 24, LAT = -22;
     this.cars = [];
-    const roadM = new THREE.MeshStandardMaterial({ map: Tex.road(), roughness: 0.95, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+    const roadM = new THREE.MeshStandardMaterial({ map: Tex.road(), roughness: 0.95, side: THREE.DoubleSide });
     for (const [a, b] of runs) {
       const a2 = a - 60, b2 = b + 60, n = Math.ceil((b2 - a2) / 10), pos = [], uv = [], idx = [];
       for (let k = 0; k <= n; k++) { const s = a2 + (b2 - a2) * k / n; for (const sd of [-1, 1]) { const w = tr.at(s, LAT + sd * HW / 2, 0.32); pos.push(w.x, w.y, w.z); uv.push(sd < 0 ? 0 : 1, (s - a2) / 12); } }

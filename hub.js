@@ -68,7 +68,6 @@ const Hub = {
       ${last ? `<div class="hb-cont"><button class="hb-play" data-a="continue" aria-label="play">▶</button><div><b>${L('كمّل من آخر مكان', 'Continue where you left off')}</b><span>${this.esc(last.trainName)}: ${this.esc(last.lineName)}</span><small>${L(last.score + ' نقطة · من ' + this.ago(last.t), last.score + ' pts · ' + this.ago(last.t) + ' ago')}</small></div><button class="hb-x" data-a="hideLast" aria-label="x">✕</button></div>` : ''}
       <div class="hb-menu">
         <button class="hb-main" data-a="play"><span><b>${L('ابدأ اللعب', 'Play')}</b><small>${L('اختار الخط والقطر وانطلق', 'Pick a line and a train')}</small></span><i>▶</i></button>
-        <button class="hb-btn" data-a="trains"><i>🚆</i><span><b>${L('القطارات والمترو', 'Trains & Metro')}</b><small>${L('سوق القطارات من هنا على طول', 'Buy trains here')}</small></span></button>
         <button class="hb-btn" data-a="online"><i>🏁</i><b>${L('سباق أونلاين', 'Play online')}</b></button>
         <button class="hb-btn" data-a="garage"><i>🎨</i><b>${L('الجراج', 'Garage')}</b></button>
         <button class="hb-btn" data-a="map"><i>📍</i><b>${L('الخريطة', 'Map')}</b></button>
@@ -89,7 +88,7 @@ const Hub = {
     else if (a === 'online') A.setup(true);
     else if (a === 'continue') { const l = this.last(); if (l) A.setup(false, l); }
     else if (a === 'hideLast') { try { localStorage.removeItem('qs-last'); } catch (e) { /* */ } this.show('home'); }
-    else if (a === 'trains') Menu.shop();
+    else if (a === 'trains') Menu.shop('trains');
     else if (a === 'topup') Menu.topup();
     else if (a === 'ach') Menu.missions('m');
     else if (a === 'garage') this.show('garage');

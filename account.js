@@ -13,6 +13,24 @@ const Account = {
   save() { try { localStorage.setItem('qs-acct', JSON.stringify(this.d)); } catch (e) { /* no storage */ } },
 
   col(n) { return FB.db.collection(n); },
+
+  /* The owner's price list (admin.html) overrides the default prices and the top-up packages in the store. */
+  async applyCatalog() {
+    if (!FB.ok) return;
+    try {
+      const c = await this.col('config').doc('catalog').get();
+      if (c.exists) {
+        const d = c.data(), pr = d.prices || {}, gm = d.gems || {};
+        for (const [list, kind] of [[TRAIN_TYPES, 'train'], [STICKERS, 'sticker']]) for (const t of list) {
+          const k = kind + ':' + t.id;
+          if (gm[k] > 0) { t.gems = gm[k]; t.price = 0; } else if (k in pr) { t.price = pr[k]; t.gems = 0; }
+        }
+        if (d.rewards) for (const m of [...MISSIONS, ...ACHIEVEMENTS]) if (m.id in d.rewards) m.reward = d.rewards[m.id];
+      }
+      const s = await this.col('config').doc('shop').get();
+      if (s.exists && Array.isArray(s.data().packs) && window.QS_PAY) window.QS_PAY.packs = s.data().packs;
+    } catch (e) { /* the default prices stay */ }
+  },
   pref(id) { return FB.db.collection('players').doc(String(id || this.d.id)); },
   code10(rec) { return String(rec || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); },
   take(j) {

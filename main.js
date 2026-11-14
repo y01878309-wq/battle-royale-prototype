@@ -152,6 +152,7 @@
     t('homeBtn').onclick = () => location.reload();
     const hasAcct = await Account.init();
     if (!Gate.check()) { Gate.show(); return; }   // no internet: nobody gets in
+    await Account.applyCatalog();
     refreshMenu(); Hub.show('home');
     splash(() => { if (!hasAcct) Menu.askName(); });
     e.optTrain.addEventListener('change', () => { try { const s = JSON.parse(localStorage.getItem('qs-opts') || '{}'); s.train = e.optTrain.value; localStorage.setItem('qs-opts', JSON.stringify(s)); } catch (err) { /* */ } });
