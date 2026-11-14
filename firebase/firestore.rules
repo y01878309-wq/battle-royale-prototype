@@ -10,7 +10,7 @@ service cloud.firestore {
     function catalog() { return get(/databases/$(database)/documents/config/catalog).data; }
 
     match /players/{pid} {
-      allow read: if isAdmin() || (signed() && resource.data.owner == request.auth.uid);
+      allow read: if isAdmin() || (signed() && (resource == null || resource.data.owner == request.auth.uid));
       allow create: if signed() && pid.matches('[0-9]{6}')
         && request.resource.data.owner == request.auth.uid
         && request.resource.data.coins == 50 && request.resource.data.get('gems', 0) == 0

@@ -110,7 +110,7 @@ const Menu = {
       top.innerHTML = `<h4>شحن الرصيد</h4><p>${this.esc(pay.note || '')}</p>
         <div class="row"><span>فودافون كاش</span><b dir="ltr">${this.esc(pay.vodafone || '')}</b><button type="button" class="mbtn" data-c="${this.esc(pay.vodafone || '')}">نسخ</button></div>
         <div class="row"><span>الـ ID بتاعك</span><b dir="ltr">${this.esc(a.id)}</b><button type="button" class="mbtn" data-c="${this.esc(a.id)}">نسخ</button></div>
-        ${Account.server ? '' : '<p class="warn">الحساب ده على جهازك بس لأن مفيش إنترنت دلوقتي. الشحن بيشتغل لما تتصل بالإنترنت وتفتح اللعبة تاني.</p>'}`;
+        ${Account.server ? '' : '<p class="warn">الحساب ده على جهازك بس (' + (Account.error || '') + ' ' + (FB.error || '') + '). الشحن بيشتغل لما تتصل بالإنترنت وتفتح اللعبة تاني.</p>'}`;
       top.querySelectorAll('button[data-c]').forEach((x) => { x.onclick = () => this.copy(x.dataset.c); });
       b.appendChild(top);
     });
