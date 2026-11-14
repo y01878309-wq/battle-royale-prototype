@@ -5,7 +5,8 @@ class Train {
   constructor(scene, track, quality, type, ghost) {
     this.scene = scene; this.track = track; this.q = quality; this.type = type; this.ghost = !!ghost;   // a ghost is another player's train: no cab, dials or headlight beam
     this.vehicles = []; this.doors = []; this.cabMode = false; this.dialMax = Math.max(40, Math.ceil(type.vmax / 20) * 20);
-    const paint = (hex, cc) => new THREE.MeshPhysicalMaterial({ color: hex, roughness: 0.38, metalness: 0.15, clearcoat: cc, clearcoatRoughness: 0.28 });
+    /* MeshStandardMaterial, not Physical: the clear-coat shader fails to compile on some phones, and then the whole painted body is invisible (only its shadow shows). */
+    const paint = (hex, cc) => new THREE.MeshStandardMaterial({ color: hex, roughness: 0.4 - 0.1 * cc, metalness: 0.2 });
     const common = {
       glass: new THREE.MeshStandardMaterial({ color: 0x0a1319, roughness: 0.06, metalness: 0.2, envMapIntensity: 1.8 }),
       winLit: new THREE.MeshStandardMaterial({ color: 0x0a1319, roughness: 0.08, metalness: 0.2, envMapIntensity: 1.8, emissive: 0xc89a55, emissiveIntensity: 0 }),

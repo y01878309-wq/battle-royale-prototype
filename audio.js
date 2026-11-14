@@ -162,14 +162,17 @@ const Sound = {
     if (this.muted || this.vol('vVoice') <= 0) return;
     this.paChime();
     if (!('speechSynthesis' in window)) return;
-    const ss = window.speechSynthesis, go = () => {
-      const v = this.voice(); if (!v) return;   // no Arabic voice on this device: the chime and the caption are all it can do
+    const ss = window.speechSynthesis;
+    const go = () => {
       try {
-        const u = new SpeechSynthesisUtterance(text); u.voice = v; u.lang = v.lang; u.rate = 0.92; u.volume = Math.min(1, this.vol('vVoice'));
-        if (ss.speaking || ss.pending) { ss.cancel(); setTimeout(() => ss.speak(u), 120); } else ss.speak(u);
+        const v = this.voice(), u = new SpeechSynthesisUtterance(text);
+        if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'ar-EG';   // no Arabic voice listed: still ask for Arabic and let the browser choose
+        u.rate = 0.92; u.volume = Math.min(1, this.vol('vVoice'));
+        const talk = () => { try { ss.resume(); ss.speak(u); } catch (e) { /* no voice available */ } };
+        if (ss.speaking || ss.pending) { ss.cancel(); setTimeout(talk, 150); } else talk();
       } catch (e) { /* no voice available */ }
     };
-    if (!ss.getVoices().length) { let done = false; const once = () => { if (done) return; done = true; go(); }; ss.addEventListener('voiceschanged', once, { once: true }); setTimeout(once, 700); } else setTimeout(go, 900);
+    setTimeout(go, 900);
   },
   /* Settings: lets the player hear whether the device can speak Arabic. */
   testVoice() { this.init(); this.speak('السادة الركاب، قطر قطارات مصر يصل بعد قليل. برجاء الابتعاد عن حافة الرصيف.'); return !!this.voice(); },
