@@ -49,6 +49,10 @@ service cloud.firestore {
           && d().coins >= o().coins && d().coins - o().coins <= 400
           && d().xp >= o().xp && d().xp - o().xp <= 500
           && d().earnedSum <= 3000
+          // اليوم لازم يكون يوم السيرفر (بتوقيت القاهرة)، والزيادة في الرصيد لازم تساوي الزيادة في المكسب اليومي
+          && d().earnedDay * 86400000 <= request.time.toMillis() + 7200000
+          && request.time.toMillis() + 7200000 < (d().earnedDay + 1) * 86400000
+          && d().coins - o().coins == (o().earnedDay == d().earnedDay ? d().earnedSum - o().earnedSum : d().earnedSum)
           && d().lastEarn == request.time && request.time > o().lastEarn + duration.value(20, 's');
       }
       // مكافأة مهمة أو إنجاز
@@ -58,11 +62,14 @@ service cloud.firestore {
           && catalog().rewards.get(d().claimed[o().claimed.size()].split('@')[0], -1) >= 0
           && d().coins == o().coins + catalog().rewards[d().claimed[o().claimed.size()].split('@')[0]];
       }
-      // كود هدية
+      // كود هدية: لازم يتسجل في نفس العملية على وثيقة الكود (مرة لكل شخص أو حسب per اللي حدده الأدمن)
       function giftOk() {
         return only(['coins', 'lastGift']) && d().get('gems', 0) == o().get('gems', 0)
           && exists(/databases/$(database)/documents/gifts/$(d().lastGift))
-          && d().coins - o().coins == get(/databases/$(database)/documents/gifts/$(d().lastGift)).data.coins;
+          && d().coins - o().coins == get(/databases/$(database)/documents/gifts/$(d().lastGift)).data.coins
+          && getAfter(/databases/$(database)/documents/gifts/$(d().lastGift)).data.last == pid
+          && getAfter(/databases/$(database)/documents/gifts/$(d().lastGift)).data.n
+             == get(/databases/$(database)/documents/gifts/$(d().lastGift)).data.get('n', 0) + 1;
       }
       // استرجاع الحساب بكود الاسترجاع
       function xferOk() {
@@ -79,9 +86,14 @@ service cloud.firestore {
     match /gifts/{code} {
       allow read: if signed();
       allow create, delete: if isAdmin();
-      allow update: if signed() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used'])
-        && request.resource.data.used.size() == resource.data.used.size() + 1
-        && request.resource.data.used.size() <= resource.data.max;
+      allow update: if isAdmin() || (signed()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n', 'last', 'by'])
+        && request.resource.data.n == resource.data.get('n', 0) + 1
+        && (resource.data.get('max', 0) == 0 || request.resource.data.n <= resource.data.max)
+        && get(/databases/$(database)/documents/players/$(request.resource.data.last)).data.owner == request.auth.uid
+        && request.resource.data.by.diff(resource.data.get('by', {})).affectedKeys().hasOnly([request.resource.data.last])
+        && request.resource.data.by[request.resource.data.last] == resource.data.get('by', {}).get(request.resource.data.last, 0) + 1
+        && request.resource.data.by[request.resource.data.last] <= resource.data.get('per', 1));
     }
 
     match /config/{doc} {

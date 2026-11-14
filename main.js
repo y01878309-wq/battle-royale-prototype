@@ -12,12 +12,95 @@
   function refreshMenu() {
     const e = ui.el, x = TRAIN_TYPES.find((y) => y.id === e.optTrain.value), w = wallet.load();
     [...e.optTrain.options].forEach((o) => { const t = TRAIN_TYPES.find((y) => y.id === o.value); o.textContent = t.name + (wallet.owns(t) ? '' : ' 🔒 ' + priceTag(t)); });
-    e.trainDesc.textContent = `${x.desc} السرعة القصوى ${x.vmax} كم/س. رصيدك: ${w.coins} جنيه لعبة · ${w.gems || 0} ماسة.` + (wallet.owns(x) ? '' : ` القطر ده مقفول، سعره ${priceTag(x)}${x.gems ? ' (بالشحن فقط)' : ''}.`);
-    e.startBtn.textContent = wallet.owns(x) ? 'ابدأ الرحلة' : `افتح القطر بـ ${priceTag(x)}` + ((x.gems ? (w.gems || 0) < x.gems : w.coins < x.price) ? ' (رصيدك مش كفاية)' : '');
+    e.trainDesc.textContent = `${x.desc} السرعة القصوى ${x.vmax} كم/س. رصيدك: ${w.coins} جنيه لعبة · ${w.gems || 0} ماسة.` + (wallet.owns(x) ? '' : ` القطر ده مقفول، سعره ${priceTag(x)}${x.gems ? ' (بالشحن فقط)' : ''}. الشراء من المتجر.`);
+    e.startBtn.textContent = wallet.owns(x) ? 'ابدأ الرحلة' : '🔒 اشتريه من المتجر';
   }
 
   /* The game is played in landscape: ask for fullscreen and lock the orientation (works on Android after a tap). */
   function goLandscape() { try { const d = document.documentElement; (d.requestFullscreen ? d.requestFullscreen() : Promise.resolve()).catch(() => {}).then(() => { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }); } catch (err) { /* not supported */ } }
+  /* The first tap or key press anywhere wakes the sound engine (browsers refuse sound before that) and asks for fullscreen + landscape. */
+  function firstTouch() {
+    Sound.unlock();
+    if (!firstTouch.done) { firstTouch.done = true; goLandscape(); }
+  }
+  ['pointerdown', 'touchend', 'keydown', 'click'].forEach((ev) => window.addEventListener(ev, firstTouch, { passive: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Sound.ctx && !paused) Sound.ctx.resume().catch(() => {}); });
+
+  /* The game needs the internet: this blocking screen shows until the connection to the server works, and again if it drops. */
+  const Gate = {
+    el: null, busy: false,
+    show(msg) {
+      if (!this.el) {
+        const d = document.createElement('div'); d.id = 'netgate';
+        d.innerHTML = '<div class="ng-card"><div class="ng-ic">📡</div><h2>محتاج إنترنت</h2><p id="ngMsg"></p><button id="ngRetry" class="primary" type="button">جرّب تاني</button></div>';
+        document.body.appendChild(d); this.el = d; d.querySelector('#ngRetry').onclick = () => this.retry();
+      }
+      this.el.hidden = false; this.el.querySelector('#ngMsg').textContent = msg || 'اللعبة مش بتفتح من غير إنترنت. وصّل النت وبعدين دوس «جرّب تاني».';
+      if (started && !paused) togglePause();
+    },
+    hide() { if (this.el) this.el.hidden = true; },
+    async retry() {
+      if (this.busy) return; this.busy = true; const b = this.el.querySelector('#ngRetry'); b.disabled = true; b.textContent = 'بحاول…';
+      let ok = false; try { FB._p = null; ok = navigator.onLine !== false && await FB.init(); } catch (e) { ok = false; }
+      b.disabled = false; b.textContent = 'جرّب تاني'; this.busy = false;
+      if (ok) { this.hide(); if (!started) location.reload(); } else this.show('لسه مفيش اتصال بالسيرفر. اتأكد من النت وجرّب تاني.');
+    },
+    check() { return navigator.onLine !== false && FB.ok; }
+  };
+  window.addEventListener('offline', () => Gate.show('النت اتقطع. اللعبة بتقف لحد ما يرجع.'));
+  window.addEventListener('online', () => { if (Gate.el && !Gate.el.hidden) Gate.retry(); });
+
+  /* ---- junctions: the siding branches off before a station gap's crossing; the driver decides with the «تحويلة» button ---- */
+  let jwant = null, jbtn = null;
+  function planJunctions() {
+    track.junctions = []; jwant = null; const L = track.L, sts = route.stations, cr = route.crossings || []; let made = 0;
+    for (let i = 0; i + 1 < sts.length && made < 3; i++) {
+      const a = sts[i].s + sts[i].pl / 2, b = sts[i + 1].s - sts[i + 1].pl / 2, g = b - a;
+      if (g < 2200 || (made && i % 2)) continue;
+      const s0 = a + g * 0.12 + 150, len = Math.min(620, g * 0.28);
+      if (cr.some((c) => c > s0 - 80 && c < s0 + len + 80)) continue;
+      track.addJunction(scene, s0, len); made++;
+    }
+    if (!jbtn) {
+      jbtn = document.createElement('button'); jbtn.id = 'jbtn'; jbtn.type = 'button'; jbtn.hidden = true; document.body.appendChild(jbtn);
+      const tog = (ev) => { ev && ev.preventDefault(); toggleJunction(); };
+      jbtn.addEventListener('click', tog); window.addEventListener('keydown', (ev) => { if (ev.code === 'KeyJ' && started) toggleJunction(); });
+    }
+  }
+  function toggleJunction() {
+    if (!started || !track || !game) return;
+    const ah = track.junctionAhead(game.s, 900);
+    if (!ah && !jwant) return;
+    if (jwant) { jwant = null; ui.toast('هتكمل على السكة الأساسية', '', 1800); } else { jwant = ah.j; ui.toast('هتدخل السكة الفرعية. السرعة جوّه التحويلة 45 كم/س', 'good', 2600); }
+  }
+  /* Speed limit through the siding (and the approach to it) when the driver chose to take it. */
+  function junctionLimit(s, base) {
+    const j = (train && train.divJ) || jwant; if (!j) return base;
+    const rel = track.wrap(s - (j.s0 - 150)); return rel < j.len + 170 + 20 ? Math.min(base, 45) : base;
+  }
+  function updateJunction() {
+    if (!track.junctions || !track.junctions.length) return;
+    const L = track.L, sh = game.s;
+    if (jwant && !train.divJ) { const rel = track.wrap(sh - jwant.s0); if (rel < 40) { train.divJ = jwant; } else if (rel < L / 2) jwant = null; }
+    if (train.divJ) { const rel = track.wrap(sh - train.divJ.s0); if (rel > train.divJ.len + train.length + 20 && rel < L / 2) { train.divJ = null; jwant = null; } }
+    const ah = !train.divJ && track.junctionAhead(sh, 700);
+    if (ah) { jbtn.hidden = false; jbtn.textContent = jwant ? '✔ داخل التحويلة · ' + Math.round(ah.dist) + ' م (دوس للإلغاء)' : '↗ تحويلة بعد ' + Math.round(ah.dist) + ' م · دوس عشان تدخل'; jbtn.classList.toggle('on', !!jwant); }
+    else if (train.divJ) { jbtn.hidden = false; jbtn.textContent = '🛤️ على السكة الفرعية · 45 كم/س'; jbtn.classList.add('on'); }
+    else jbtn.hidden = true;
+  }
+
+  /* Colourful start screen: one tap unlocks sound, goes fullscreen + landscape, then shows the main menu. */
+  function splash(done) {
+    const d = document.createElement('div'); d.id = 'splash';
+    const sh = ['🚂', '🚆', '🚄', '🌴', '⭐', '🚉', '🟢', '🔶', '🔷', '🌅'], pos = [[6, 12], [20, 70], [34, 8], [48, 76], [62, 14], [76, 68], [88, 10], [12, 40], [82, 42], [52, 44]];
+    d.innerHTML = sh.map((x, i) => `<span class="sp-sh" style="left:${pos[i][0]}vw;top:${pos[i][1]}vh;animation-delay:${(i * 0.45).toFixed(2)}s">${x}</span>`).join('')
+      + [[14, 24, 30], [70, 8, 22], [88, 60, 34], [40, 62, 18]].map(([l, t, z], i) => `<span class="sp-bl" style="left:${l}vw;top:${t}vh;width:${z}vh;height:${z}vh;animation-delay:${i}s"></span>`).join('')
+      + '<div class="sp-rail"></div><div class="sp-train">🚂🚃🚃🚃🚃</div>'
+      + '<div class="sp-c"><div class="sp-logo">قطارات مصر</div><div class="sp-sub">سوّاق القطر على سكك حديد مصر 🇪🇬</div><button class="sp-go" type="button">▶ ابدأ</button><small>المس الشاشة للبدء</small></div>';
+    document.body.appendChild(d);
+    const go = () => { d.removeEventListener('click', go); Sound.unlock(); goLandscape(); try { Sound.chime(true); } catch (e) { /* */ } d.hidden = true; setTimeout(() => d.remove(), 300); done(); };
+    d.addEventListener('click', go);
+  }
   async function boot() {
     Commentary.init();
     const t = (id) => document.getElementById(id);
@@ -48,8 +131,10 @@
     t('pCine').onclick = () => { Settings.set('cine', !Settings.d.cine); pauseLabels(); };
     t('pAtc').onclick = () => { Settings.set('atc', !Settings.d.atc); pauseLabels(); };
     t('homeBtn').onclick = () => location.reload();
-    const hasAcct = await Account.init(); refreshMenu(); Hub.show('home');
-    if (!hasAcct) Menu.askName();
+    const hasAcct = await Account.init();
+    if (!Gate.check()) { Gate.show(); return; }   // no internet: nobody gets in
+    refreshMenu(); Hub.show('home');
+    splash(() => { if (!hasAcct) Menu.askName(); });
     e.optTrain.addEventListener('change', () => { try { const s = JSON.parse(localStorage.getItem('qs-opts') || '{}'); s.train = e.optTrain.value; localStorage.setItem('qs-opts', JSON.stringify(s)); } catch (err) { /* */ } });
     ui.on({
       start: startGame, restart: restart, camera: (i) => cycleCamera(i), resetCam: () => resetCam(), pause: togglePause, autoPause: () => { if (started && !paused) togglePause(); },
@@ -61,13 +146,14 @@
   }
 
   async function startGame() {
-    goLandscape();
+    Sound.unlock(); goLandscape();
+    if (!Gate.check()) { Gate.show(); return; }
     const e = ui.el, S = Settings.d, quality = Settings.quality(), time = e.optTime.value === 'auto' ? Settings.autoTime() : e.optTime.value;
     line = LINES.find((l) => l.id === e.optLine.value); const baseType = TRAIN_TYPES.find((x) => x.id === e.optTrain.value); type = Settings.paintType(baseType);
     const wantOnline = e.optOnline.value === '1', pname = (Account.d && Account.d.name) || (e.optName.value || '').trim() || 'سواق';
     online = wantOnline && FB.ok;
     try { localStorage.setItem('qs-opts', JSON.stringify({ time: e.optTime.value, q: quality, line: line.id, train: type.id, online: e.optOnline.value, name: pname })); } catch (err) { /* no storage */ }
-    if (!wallet.owns(baseType)) { const r = await Account.buy(baseType); refreshMenu(); Menu.refresh(); if (r === 'coins' || r === 'gems') Menu.noFunds(r, baseType); else if (r !== 'ok') Menu.shop(); return; }   // a locked train: the first press unlocks it with coins, a second press starts
+    if (!wallet.owns(baseType)) { ui.toast('القطر ده مقفول. اشتريه من المتجر الأول', 'bad', 3000); Menu.shop(); return; }   // trains are bought in the store only
     Sound.setProfile(type.snd); Sound.init(); Sound.applyVolumes();
     Hub.killBg(); Hub.hide(); e.menu.hidden = true; e.loading.hidden = false; U.setProgress(0.02, 'جاري تجهيز السكة…');
     await U.tick();
@@ -90,12 +176,13 @@
     world = new World(scene, track, sky, quality, route); await world.build();
     U.setProgress(0.9, 'المحطات والقطر…'); await U.tick();
     stations = new Stations(scene, track, quality, route, type.vmax, type.brake); stations.build();
+    planJunctions();
     train = new Train(scene, track, quality, type);
     crowd = new Crowd(scene, track, quality, stations, train.length); crowd.prepare(0);
     traffic = new Traffic(scene, track, quality);
     lightsOn = time === 'sunset' || time === 'night' || time === 'overcast'; train.setHeadlights(lightsOn); train.setNight(time === 'night'); stations.setNight(time === 'night');
     const phys = { mass: (type.locoMass + type.vehMass * type.consist.length) * 1000, fmax: type.fmax * 1350, power: type.power * 1.7e6, brake: type.brake * 1.1, vmax: Math.round(type.vmax * 1.15), tolerance: type.id.startsWith('cargo') || type.id === 'freight' ? 18 : 25 };
-    game = new Game(track.L, stations.list, (s) => stations.limitAt(s), phys);
+    game = new Game(track.L, stations.list, (s) => junctionLimit(s, stations.limitAt(s)), phys);
     stations.list.forEach((_, i) => stations.setSignal(i, i === 0));
     let netNote = wantOnline && !FB.ok ? 'اللعب أونلاين محتاج إنترنت. هلعب لوحدي دلوقتي' : '';
     if (online) {
@@ -131,7 +218,7 @@
   }
 
   function restart() {
-    ui.el.result.hidden = true; game.reset(); ui.input.notch = 0; ui.input.brakeHeld = false; ui.input.emergency = false;
+    ui.el.result.hidden = true; train.divJ = null; jwant = null; game.reset(); ui.input.notch = 0; ui.input.brakeHeld = false; ui.input.emergency = false;
     stations.list.forEach((st, i) => stations.setSignal(i, i === 0)); crowd.cur = -1; crowd.hideAll(); crowd.prepare(0);
     train.setDoors(0); sideS = -1e9; ui.last = {};
     ui.toast('رحلة جديدة. بالتوفيق!', '', 3000);
@@ -294,7 +381,7 @@
     if (Settings.d.cine && game.phase === 'running' && game.kmh > 25 && !game.derailed) { cineT -= dt; if (cineT <= 0) { cineT = 9 + Math.random() * 6; const c = [1, 3, 4].filter((i) => i !== camIdx); applyCamera(c[Math.floor(Math.random() * c.length)]); } }
     const ev = game.step(dt, inp);
     if (ev.length) handle(ev);
-    train.place(game.s, game.t, game.v, game.derailT); train.spin(game.d || 0); train.setDoors(game.doors);
+    updateJunction(); train.place(game.s, game.t, game.v, game.derailT); train.spin(game.d || 0); train.setDoors(game.doors);
     train.setDials(game.kmh, game.brake, game.power);
     train.setCabState({ notch: inp.notch, brake: game.brake, doors: game.doors, emerg: inp.emergency, lights: lightsOn, horn: inp.horn, kmh: game.kmh, limit: game.limit, dist: game.phase === 'dwell' ? 'واقف' : Math.round(Math.max(0, game.distToStop())) + ' م', name: (stations.list[Math.min(game.nextIdx, stations.list.length - 1)] || {}).name });
     if (weather) weather.update(dt, camera, world.scenery.sandAt(game.s));

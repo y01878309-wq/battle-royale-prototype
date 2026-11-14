@@ -6,8 +6,15 @@ const Sound = {
 
   setProfile(p) { if (p) this.prof = p; },
 
-  init() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+  /* Browsers only allow sound after a tap: the first tap anywhere creates and resumes the audio engine. */
+  unlock() {
+    try { this.init(); if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); if ('speechSynthesis' in window) window.speechSynthesis.getVoices(); } catch (e) { /* retry on the next tap */ }
+  },
+
+  init() { if (this.dead) return; try { this._init(); } catch (e) { this.dead = true; this.ctx = null; if (window.console) console.warn('sound off', e); } },
+
+  _init() {
+    if (this.ctx) { if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') this.ctx.resume().catch(() => {}); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     const c = this.ctx = new AC(), out = this.master = c.createGain(); out.gain.value = this.muted ? 0 : 0.8 * this.vol('vMaster'); out.connect(c.destination);
     const len = c.sampleRate * 2, nb = c.createBuffer(1, len, c.sampleRate), d = nb.getChannelData(0);
@@ -63,7 +70,7 @@ const Sound = {
 
   /* v m/s, throttle 0..1, brake 0..1, d metres moved this frame */
   update(st) {
-    const c = this.ctx; if (!c) return;
+    const c = this.ctx; if (!c || !this.eng || c.state !== 'running') { if (c && c.state === 'suspended' && !this.paused) c.resume().catch(() => {}); return; }
     const t = c.currentTime, v = st.v, kmh = v * 3.6, sm = (p, val, tc) => p.setTargetAtTime(val, t, tc || 0.08);
     const rpm = 0.25 + 0.75 * Math.max(st.throttle, Math.min(1, kmh / 140) * 0.35);
     const P = this.prof, synth = this.engSrc ? 0 : 1, base = P.base + rpm * P.span;   // fundamental in Hz, about 42 at a working notch

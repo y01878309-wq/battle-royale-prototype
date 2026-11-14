@@ -80,6 +80,58 @@ class Track {
     return g;
   }
 
+  /* ---- junctions: a siding (the extra track) that branches off to the left of the player's track, runs parallel and rejoins ---- */
+  divLatJ(j, s) {
+    const rel = this.wrap(s - j.s0); if (rel > j.len) return 0;
+    const sm = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+    return -TRACK_SP * sm(rel / j.R) * (1 - sm((rel - (j.len - j.R)) / j.R));
+  }
+
+  ribbonJ(j, profile, step, closed, uvScale) {
+    const n = Math.max(2, Math.ceil(j.len / step)), np = profile.length, fr = Track.makeFrame(), pos = [], uv = [], idx = [], cum = [0];
+    for (let q = 1; q < np; q++) cum.push(cum[q - 1] + Math.hypot(profile[q][0] - profile[q - 1][0], profile[q][1] - profile[q - 1][1]));
+    for (let k = 0; k <= n; k++) {
+      const s = j.s0 + k * (j.len / n); this.frame(s, fr); const c = this.divLatJ(j, s);
+      for (let q = 0; q < np; q++) { const l = profile[q][0] + c; pos.push(fr.pos.x + fr.right.x * l, profile[q][1], fr.pos.z + fr.right.z * l); uv.push(cum[q] / uvScale, (k * j.len / n) / uvScale); }
+    }
+    const segs = closed ? np : np - 1;
+    for (let k = 0; k < n; k++) for (let q = 0; q < segs; q++) { const a = k * np + q, b = k * np + (q + 1) % np, c2 = (k + 1) * np + q, d = (k + 1) * np + (q + 1) % np; idx.push(a, b, c2, b, d, c2); }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+    return g;
+  }
+
+  /* Adds one junction starting at s0 and len metres long: ballast, two rails, sleepers and the warning boards. */
+  addJunction(scene, s0, len) {
+    const j = { s0, len, R: Math.min(120, len * 0.3) }; (this.junctions = this.junctions || []).push(j);
+    const grp = new THREE.Group();
+    const bt = Tex.ballast(); bt.repeat.set(1, 1);
+    const bm = new THREE.MeshStandardMaterial({ map: bt, roughness: 1, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+    const ballast = new THREE.Mesh(this.ribbonJ(j, [[-2.5, -0.2], [-2.3, 0.31], [2.3, 0.31], [2.5, -0.2]], 4, false, 3), bm); ballast.receiveShadow = true; grp.add(ballast);
+    const rp = [[-.075, 0], [.075, 0], [.075, .03], [.02, .04], [.02, .13], [.04, .15], [.04, .17], [-.04, .17], [-.04, .15], [-.02, .13], [-.02, .04], [-.075, .03]];
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x74665c, roughness: 0.5, metalness: 0.8, side: THREE.DoubleSide });
+    for (const side of [-1, 1]) grp.add(new THREE.Mesh(this.ribbonJ(j, rp.map(([l, y]) => [l + side * GAUGE / 2, y + RAIL_TOP - 0.17 + 0.004]), 2, true, 10), railMat));
+    const n = Math.floor(len / 0.65), sl = new THREE.InstancedMesh(new THREE.BoxGeometry(2.6, 0.2, 0.26), new THREE.MeshStandardMaterial({ color: 0x7a6a58, roughness: 0.95 }), n);
+    const fr = Track.makeFrame(), m = new THREE.Matrix4(), up = new THREE.Vector3(0, 1, 0);
+    for (let i = 0; i < n; i++) { const s = s0 + i * 0.65, c = this.divLatJ(j, s); this.frame(s, fr); Track.basis(m, fr, up); m.setPosition(fr.pos.x + fr.right.x * c, 0.325, fr.pos.z + fr.right.z * c); sl.setMatrixAt(i, m); }
+    sl.instanceMatrix.needsUpdate = true; sl.receiveShadow = true; grp.add(sl);
+    // boards 300 m before and at the turnout: "junction, 45 km/h"
+    const mat = new THREE.MeshStandardMaterial({ map: Tex.sign('تحويلة ← ٤٥', 384, 128, '#1b5e3a', '#ffffff'), roughness: 0.6 }), post = new THREE.MeshStandardMaterial({ color: 0x59606a, metalness: 0.6, roughness: 0.5 });
+    for (const d of [-300, -20]) {
+      const f = this.frame(s0 + d, Track.makeFrame()), x = -3.4 - (d === -20 ? 0 : 0.4), g = new THREE.Group();
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.2, 8), post); pole.position.y = 1.6; g.add(pole);
+      const board = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.64), mat); board.position.y = 3.3; g.add(board);
+      g.position.set(f.pos.x + f.right.x * x, 0, f.pos.z + f.right.z * x); g.rotation.y = Math.atan2(-f.fwd.x, -f.fwd.z); grp.add(g);
+    }
+    scene.add(grp); (this.jgroups = this.jgroups || []).push(grp); return j;
+  }
+
+  /* The junction (if any) between 0 and maxAhead metres in front of distance s. */
+  junctionAhead(s, maxAhead) {
+    for (const j of this.junctions || []) { const a = this.wrap(j.s0 - s); if (a > 0 && a < maxAhead) return { j, dist: a }; }
+    return null;
+  }
+
   buildMeshes(scene, quality) {
     const group = new THREE.Group();
     const ballastTex = Tex.ballast(); ballastTex.repeat.set(1, 1);

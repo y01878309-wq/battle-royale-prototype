@@ -292,7 +292,7 @@ const SetUI = {
     const g = this.card(m, L('عندك كود هدية؟', 'Gift code?'), '🎁');
     this.field(g, '', '', L('اكتب الكود', 'Enter code'), L('استخدم الكود', 'Redeem'), async (v) => {
       if (!v) return ''; const r = await Account.gift(v); if (r.ok) { if (!Hub.root.hidden) Hub.show(Hub.scr); this.render(); return L('تم! اتضاف ' + r.coins + ' جنيه لعبة', 'Added ' + r.coins + ' coins'); }
-      return { invalid: L('الكود غلط أو خلص', 'Invalid code'), used: L('انت استخدمت الكود ده قبل كده', 'Already used'), noserver: L('الأكواد محتاجة إنترنت', 'Codes need the internet'), offline: L('مفيش اتصال بالإنترنت', 'No connection') }[r.why];
+      return { invalid: L('الكود غلط أو خلص', 'Invalid code'), used: L('انت استخدمت الكود ده قبل كده', 'Already used'), gone: L('الكود ده خلصت استخداماته', 'Code fully used'), noserver: L('الأكواد محتاجة إنترنت', 'Codes need the internet'), offline: L('مفيش اتصال بالإنترنت', 'No connection') }[r.why];
     }, { ltr: true, max: 24 });
     const f = this.card(m, L('بلّغ عن مشكلة أو اقترح', 'Report a problem or suggest'), '💬'), pay = window.QS_PAY || {}, num = String(pay.vodafone || '').replace(/^0/, '20');
     this.btn(f, L('ابعتلنا', 'Message us'), () => { window.open('https://wa.me/' + num + '?text=' + encodeURIComponent('قطارات مصر - ' + ((Account.d && Account.d.id) || '')), '_blank'); }, 'primary');

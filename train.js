@@ -75,10 +75,11 @@ class Train {
    * kind 'dmu'   diesel multiple unit cab car
    * 'driver' adds the cab interior, view anchors and the headlight beam. */
   buildLoco(spec, driver) {
-    const M = this.lm, h = spec.len / 2, kind = spec.kind, dmu = kind === 'dmu', vel = kind === 'velaro', boxy = kind === 'box', diesel = !dmu && !vel;
+    const M = this.lm, h = spec.len / 2, kind = spec.kind, dmu = kind === 'dmu', vel = kind === 'velaro', hood = kind === 'hood', boxy = kind === 'box' || hood, diesel = !dmu && !vel, ry = hood ? -0.8 : 0;
     const body = new THREE.Group(), hull = new THREE.Group(), W = vel ? 2.95 : 3.0, X = W / 2 + 0.06;
     let prof, win;   // win: windscreen centre, size and tilt
     if (vel) { prof = [[-h, 0.9], [-h, 3.8], [-h + 0.5, 4.0], [h - 9, 4.0], [h - 4.2, 3.55], [h - 1.2, 2.45], [h, 1.7], [h, 0.9]]; win = { y: 3.0, z: h - 2.7, th: -Math.atan2(0.939, 0.344), w: 2.3, h: 2.5, n: [0.939, 0.344] }; }
+    else if (hood) { prof = [[-h, 1.0], [-h, 3.2], [-h + 0.3, 3.4], [h - 4.6, 3.4], [h - 4.6, 4.25], [h - 0.3, 4.25], [h, 3.95], [h, 1.0]]; win = { y: 3.45, z: h + 0.02, th: 0, w: 2.7, h: 1.15, n: [0, 1] }; }
     else if (boxy) { prof = [[-h, 1.0], [-h, 3.7], [-h + 0.4, 3.95], [h - 0.4, 3.95], [h, 3.7], [h, 1.0]]; win = { y: 3.25, z: h + 0.02, th: 0, w: 2.7, h: 1.2, n: [0, 1] }; }
     else { prof = [[-h, 1.0], [-h, 3.95], [-h + 0.3, 4.2], [h - 2.4, 4.2], [h, 2.6], [h, 1.0]]; win = { y: 3.4, z: h - 1.2, th: -Math.atan2(0.832, 0.555), w: 2.55, h: 2.1, n: [0.832, 0.555] }; }
     const main = vel ? M.cream : M.blue;
@@ -89,10 +90,10 @@ class Train {
       const band = new THREE.Mesh(this.extrudeBody(bp, W + 0.06), M.cream); band.castShadow = true; hull.add(band);
       this.box(W + 0.04, 0.5, spec.len + 0.1, M.dark, 0, 1.25, 0, hull);                       // black skirt and underframe
       this.box(W + 0.1, 0.05, spec.len + 0.1, M.yellow, 0, 2.53, 0, hull);                      // pinstripe on the band
-      this.box(2.7, 0.14, spec.len * 0.82, M.roof, 0, boxy ? 3.99 : 4.26, -spec.len * 0.06, hull);
-      for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.18, 20), M.dark); f.position.set(0, boxy ? 4.1 : 4.4, -h + 1.8 + i * 2.6); hull.add(f); }
-      this.box(1.6, 0.35, 3.2, M.roof, 0, boxy ? 4.15 : 4.45, -1.0, hull);
-      for (const [i, ch] of [0.5, 0.62, 0.74, 0.62, 0.5].entries()) { const hn = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, ch, 8), M.steel); hn.position.set(-0.4 + i * 0.2, (boxy ? 4.0 : 4.3) + ch / 2, h - (boxy ? 3 : 4.6)); hull.add(hn); }   // five-chime horn
+      this.box(2.7, 0.14, spec.len * (hood ? 0.62 : 0.82), M.roof, 0, (boxy ? 3.99 : 4.26) + ry, hood ? -spec.len * 0.17 : -spec.len * 0.06, hull);
+      for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.18, 20), M.dark); f.position.set(0, (boxy ? 4.1 : 4.4) + ry, -h + 1.8 + i * 2.6); hull.add(f); }
+      this.box(1.6, 0.35, 3.2, M.roof, 0, (boxy ? 4.15 : 4.45) + ry, hood ? -h + 9 : -1.0, hull);
+      for (const [i, ch] of [0.5, 0.62, 0.74, 0.62, 0.5].entries()) { const hn = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, ch, 8), M.steel); hn.position.set(-0.4 + i * 0.2, (hood ? 4.25 : boxy ? 4.0 : 4.3) + ch / 2, h - (boxy ? 3 : 4.6)); hull.add(hn); }   // five-chime horn
       if (!boxy) this.box(1.0, 0.3, 2.0, M.roof, 0, 4.4, h - 7.4, hull);
     } else if (dmu) {
       this.box(3.2, 1.3, spec.len + 0.1, M.cream, 0, 1.72, 0, hull);
@@ -111,7 +112,7 @@ class Train {
     const wm = new THREE.MeshStandardMaterial({ map: Tex.louver(diesel), roughness: 0.08, metalness: 0.25, envMapIntensity: 1.8 });
     const gl = new THREE.Mesh(new THREE.PlaneGeometry(win.w, win.h), wm);
     gl.position.set(0, win.y + win.n[0] * 0.12 * 0, win.z); if (!boxy) { gl.position.y = win.y + win.n[0] * 0.12; gl.position.z = win.z + win.n[1] * 0.12; } gl.rotation.x = win.th; hull.add(gl);
-    if (boxy) { this.box(2.9, 0.1, 0.45, M.blue, 0, 3.92, h + 0.2, hull); }
+    if (boxy) { this.box(2.9, 0.1, 0.45, M.blue, 0, hood ? 4.2 : 3.92, h + 0.2, hull); }
     if (driver) this.glass = gl;
     // front lamps, tail lamps, buffer beam, buffers
     const lampY = vel ? 1.35 : 1.7, lampX = vel ? 0.95 : 1.0, lampZ = vel ? h + 0.02 : h + 0.1;
@@ -133,12 +134,20 @@ class Train {
         this.box(0.03, 0.8, 1.6, M.glass, sx * (W / 2 + 0.01), 3.2, h - 6.4, hull);
         for (const z of [-h + 2.4, h - 8.4]) { this.box(0.03, 2.35, 1.15, M.opening, sx * (W / 2 + 0.02), 2.2, z, hull); }
       } else {
+        if (hood) {   // long hood behind a tall cab at the front: grilles on the hood, cab window and door at the front
+          for (const z of [-h + 2.6, -h + 6.2]) this.plane(Tex.grille(3.2, 1.0), 3.2, 1.0, sx * 1.512, 2.5, z, face(sx), hull);
+          this.box(0.03, 1.0, 2.2, M.glass, sx * 1.6, 3.6, h - 2.3, hull);
+          this.box(0.03, 2.3, 0.9, M.dark, sx * 1.6, 2.3, h - 4.2, hull);
+          for (const sy of [1.25, 1.85]) this.box(0.5, 0.05, 0.7, M.steel, sx * 1.8, sy, h - 4.2, hull);
+          for (const z of [h - 4.75, h - 3.65]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.2, 6), M.steel); r.position.set(sx * 1.68, 2.4, z); hull.add(r); }
+        } else {
         for (const z of [-h + 3.3, -h + 7.4]) this.plane(Tex.grille(3.4, 1.15), 3.4, 1.15, sx * 1.512, 3.5, z + (boxy ? 1.2 : 0), face(sx), hull);   // radiator and engine-room grilles
         this.box(0.03, 1.0, 1.9, M.glass, sx * 1.6, 3.35, h - 4.1, hull);
         this.box(0.03, 2.5, 1.1, M.dark, sx * 1.6, 2.5, h - 5.9, hull);
         this.box(0.03, 0.7, 1.0, M.glass, sx * 1.62, 3.55, h - 5.9, hull);
         for (const sy of [1.25, 1.85]) this.box(0.5, 0.05, 0.7, M.steel, sx * 1.8, sy, h - 5.9, hull);
         for (const z of [h - 6.55, h - 5.25]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.3, 6), M.steel); r.position.set(sx * 1.68, 2.55, z); hull.add(r); }
+        }
         this.plane(flag, 0.72, 0.48, sx * 1.612, 2.05, h - 9.4, face(sx), hull);
         for (let k = 0; k < 4; k++) this.box(0.02, 0.5, 0.9, M.dark, sx * 1.51, 1.2, -h + 2 + k * 3.6, hull);   // fuel-tank access panels
       }
@@ -308,7 +317,7 @@ class Train {
     this.vehicles.forEach((v, idx) => {
       if (idx > 0) { const p = this.vehicles[idx - 1]; center -= sg * (p.len / 2 + 0.9 + v.len / 2); }
       const fa = tr.frame(center + v.bs / 2, this.fa), fb = tr.frame(center - v.bs / 2, this.fb);
-      if (lat) { fa.pos.addScaledVector(fa.right, lat); fb.pos.addScaledVector(fb.right, lat); }
+      { const dj = this.divJ, la = lat + (dj ? tr.divLatJ(dj, center + v.bs / 2) : 0), lb = lat + (dj ? tr.divLatJ(dj, center - v.bs / 2) : 0); if (la) fa.pos.addScaledVector(fa.right, la); if (lb) fb.pos.addScaledVector(fb.right, lb); }
       this.tmp.copy(fa.pos).sub(fb.pos); const dir = this.tmp.clone().normalize(); if (rev) dir.negate();
       v.body.position.copy(fa.pos).add(fb.pos).multiplyScalar(0.5); v.body.position.y = RAIL_TOP;
       v.body.lookAt(v.body.position.x + dir.x, RAIL_TOP, v.body.position.z + dir.z);

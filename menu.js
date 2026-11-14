@@ -39,7 +39,7 @@ const Menu = {
   refreshBar() {
     const a = Account.d; if (!a) { this.bar.textContent = ''; return; }
     const lv = levelOf(a.xp || 0), title = lv.title;
-    this.bar.innerHTML = `<div class="pname"><b>${this.esc(a.name)}</b> <small>${this.esc(title)}</small></div>
+    this.bar.innerHTML = `<div class="pname"><b>${this.stickerEmoji()}${this.esc(a.name)}</b> <small>${this.esc(title)}</small></div>
       <div class="pmeta"><span>مستوى ${lv.level}</span><span>💰 ${a.coins}</span><span class="pid" title="انسخ">ID: ${this.esc(a.id)}</span></div>
       <div class="xpbar"><i style="width:${Math.round(100 * lv.into / lv.need)}%"></i></div>`;
     this.bar.querySelector('.pid').onclick = () => this.copy(a.id);
@@ -63,23 +63,60 @@ const Menu = {
     });
   },
 
-  shop() {
+  /* Store: trains, metro and monorail, stickers and top-up packages. Trains are bought here only. */
+  stickerEmoji() { const t = STICKERS.find((x) => x.id === this.sticker() && Account.d && Account.owns(x)); return t ? t.emoji + ' ' : ''; },
+  sticker() { try { return localStorage.getItem('qs-sticker') || ''; } catch (e) { return ''; } },
+  shop(tab) {
     if (!Account.d) return this.askName();
-    this.modal('المتجر', (b) => {
+    tab = tab || this._shopTab || 'trains'; this._shopTab = tab;
+    this.modal('🛒 المتجر', (b) => {
       const a = Account.d, pay = window.QS_PAY || {};
       b.appendChild(this.el('div', 'wallet', `رصيدك: <b>🪙 ${a.coins}</b> جنيه لعبة · <b>💎 ${a.gems || 0}</b> ماسة`));
-      const tb = this.el('button', 'mbtn', '💎 اشحن ماس'); tb.type = 'button'; tb.onclick = () => this.topup(); b.appendChild(tb);
+      const tabs = this.el('div', 'tabs');
+      for (const [k, t] of [['trains', '🚆 القطارات'], ['metro', '🚇 المترو والمونوريل'], ['stickers', '⭐ الملصقات'], ['packs', '💎 الباكدجات والشحن']]) {
+        const x = this.el('button', 'mbtn' + (k === tab ? ' primary' : ''), t); x.type = 'button'; x.onclick = () => this.shop(k); tabs.appendChild(x);
+      }
+      b.appendChild(tabs);
       const grid = this.el('div', 'shop');
-      for (const t of TRAIN_TYPES) {
-        const own = Account.owns(t), c = this.el('div', 'item' + (own ? ' own' : ''));
-        c.innerHTML = `<b>${this.esc(t.name)}</b><small>${this.esc(t.desc || '')}</small><span>${own ? '✔ معاك' : '🔒 ' + priceTag(t) + (t.gems ? ' (شحن فقط)' : '')}</span>`;
-        const btn = this.el('button', 'mbtn ' + (own ? '' : 'primary'), own ? 'اختار' : 'اشتري'); btn.type = 'button';
+      const buyBtn = (t, own, c, onOwn) => {
+        const btn = this.el('button', 'mbtn ' + (own ? '' : 'primary'), own ? (onOwn ? onOwn[0] : '✔ معاك') : 'اشتري'); btn.type = 'button'; btn.disabled = own && !onOwn;
         btn.onclick = async () => {
-          if (own) { document.getElementById('optTrain').value = t.id; this.close(); this.onChange(); return; }
+          if (own) { onOwn && onOwn[1](); return; }
           btn.disabled = true; const r = await Account.buy(t);
-          if (r === 'ok') { this.refresh(); this.shop(); this.onChange(); } else if (r === 'coins' || r === 'gems') { btn.disabled = false; btn.textContent = 'رصيدك مش كفاية'; this.noFunds(r, t); } else { btn.disabled = false; btn.textContent = 'مفيش اتصال بالإنترنت'; }
+          if (r === 'ok') { this.refresh(); this.shop(tab); this.onChange(); } else if (r === 'coins' || r === 'gems') { btn.disabled = false; btn.textContent = 'رصيدك مش كفاية'; this.noFunds(r, t); } else { btn.disabled = false; btn.textContent = 'مفيش اتصال بالإنترنت'; }
         };
-        c.appendChild(btn); grid.appendChild(c);
+        c.appendChild(btn);
+      };
+      const hex = (n) => '#' + (n | 0).toString(16).padStart(6, '0');
+      if (tab === 'trains' || tab === 'metro') {
+        for (const t of TRAIN_TYPES.filter((x) => (x.cat || 'train') === (tab === 'metro' ? 'metro' : 'train'))) {
+          const own = Account.owns(t), c = this.el('div', 'item' + (own ? ' own' : ''));
+          const sw = `<div class="sw"><i style="background:${hex(t.loco.top)}"></i><i style="background:${hex(t.loco.low)}"></i><i style="background:${hex(t.loco.trim)}"></i><i style="background:${hex(t.coach.body)}"></i><i style="background:${hex(t.coach.band)}"></i></div>`;
+          c.innerHTML = `${sw}<b>${this.esc(t.name)}</b><small>${this.esc(t.desc || '')}</small><span>${own ? '✔ معاك' : '🔒 ' + priceTag(t) + (t.gems ? ' (شحن فقط)' : '')} · ${t.vmax} كم/س</span>`;
+          buyBtn(t, own, c, own ? ['اختار', () => { document.getElementById('optTrain').value = t.id; this.close(); this.onChange(); }] : null);
+          grid.appendChild(c);
+        }
+      } else if (tab === 'stickers') {
+        const cur = this.sticker();
+        for (const t of STICKERS) {
+          const own = Account.owns(t), c = this.el('div', 'item' + (own ? ' own' : ''));
+          c.innerHTML = `<div class="stk">${t.emoji}</div><b>${this.esc(t.name)}</b><small>${this.esc(t.desc)}</small><span>${own ? (cur === t.id ? '✔ مستخدم' : '✔ معاك') : '🔒 ' + priceTag(t)}</span>`;
+          buyBtn(t, own, c, own ? [cur === t.id ? 'شيل الملصق' : 'استخدمه', () => { try { localStorage.setItem('qs-sticker', cur === t.id ? '' : t.id); } catch (e) { /* */ } this.refresh(); this.shop(tab); }] : null);
+          grid.appendChild(c);
+        }
+      } else {
+        const packs = pay.packs || [];
+        const top = this.el('div', 'topup');
+        top.innerHTML = `<h4>شحن الرصيد</h4><p>${this.esc(pay.note || '')}</p>
+          <div class="row"><span>فودافون كاش</span><b dir="ltr">${this.esc(pay.vodafone || '')}</b><button type="button" class="mbtn" data-c="${this.esc(pay.vodafone || '')}">نسخ</button></div>
+          <div class="row"><span>الـ ID بتاعك</span><b dir="ltr">${this.esc(a.id)}</b><button type="button" class="mbtn" data-c="${this.esc(a.id)}">نسخ</button></div>`;
+        top.querySelectorAll('button[data-c]').forEach((x) => { x.onclick = () => this.copy(x.dataset.c); });
+        b.appendChild(top);
+        for (const k of packs) {
+          const c = this.el('div', 'item'), msg = 'عايز أشحن باكدج ' + k.name + ' (' + k.egp + ' جنيه) في لعبة قطارات مصر. الـ ID: ' + a.id;
+          c.innerHTML = `<div class="stk">${k.gems ? '💎' : '🪙'}</div><b>${this.esc(k.name)}</b><small>${k.gems ? k.gems + ' ماسة' : k.coins + ' جنيه لعبة'}${k.bonus ? ' + ' + this.esc(k.bonus) : ''}</small><span>${k.egp} جنيه مصري</span>`;
+          const w = this.el('a', 'mbtn primary', 'ابعت على واتساب'); w.target = '_blank'; w.rel = 'noopener'; w.href = 'https://wa.me/2' + String(pay.vodafone || '') + '?text=' + encodeURIComponent(msg); c.appendChild(w); grid.appendChild(c);
+        }
       }
       b.appendChild(grid);
     });

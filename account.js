@@ -1,5 +1,6 @@
 'use strict';
-/* Player account: name, numeric ID, coins, bought trains, experience and claimed rewards.
+/* The game needs the internet, so every account lives on the server (nothing is kept only on the phone any more).
+ * Player account: name, numeric ID, coins, bought trains, experience and claimed rewards.
  * With Firebase reachable the account lives in Firestore (players/{ID}); the security rules in firebase/firestore.rules are the
  * only thing that decides what a player may change, and the owner tops players up by ID from admin.html.
  * Without Firebase (offline, or the SDK blocked) the account is local to this device: it works, but cannot be topped up. */
@@ -26,14 +27,14 @@ const Account = {
   async init() {
     this.load(); this.error = '';
     await FB.init();
-    if (!FB.ok) { this.error = 'offline'; return !!this.d; }
+    if (this.d && this.d.local) { this.d = null; try { localStorage.removeItem('qs-acct'); } catch (e) { /* */ } }   // old offline-only accounts are gone
+    if (!FB.ok) { this.error = 'offline'; return false; }
     try {
       let snap = null;
       if (this.d && !this.d.local && this.d.id) { try { const s = await this.pref(this.d.id).get(); if (s.exists) snap = s; } catch (e) { /* not ours any more: look it up below */ } }
       if (!snap) { const q = await this.col('players').where('owner', '==', FB.uid).limit(1).get(); if (!q.empty) snap = q.docs[0]; }
       if (snap) { this.d = { id: snap.id, local: false }; this.take(snap.data()); return true; }
-    } catch (e) { this.error = 'offline'; return !!this.d; }
-    if (this.d && this.d.local) { await this.register(this.d.name); return true; }   // Firebase appeared: open the real account
+    } catch (e) { this.error = 'offline'; return false; }
     if (this.d) { this.error = 'lost'; this.d = null; try { localStorage.removeItem('qs-acct'); } catch (e) { /* */ } }
     return false;
   },
@@ -52,9 +53,7 @@ const Account = {
         } catch (e) { if (!/taken/.test(String(e && e.message))) { this.error = (e && e.code) === 'permission-denied' ? 'rules' : 'offline'; break; } }
       }
     } else this.error = 'offline';
-    if (!this.d || !this.d.local) this.d = { id: 'L' + String(Math.floor(10000 + Math.random() * 90000)), name, coins: 50, gems: 0, owned: [], xp: 0, claimed: [], local: true, rec: Account.makeRec(), contact: '' };
-    else this.d.name = name;
-    this.save(); return false;
+    return false;   // no internet or the rules refused: no account is made on the phone
   },
 
   async rename(name) {
@@ -86,7 +85,8 @@ const Account = {
     this.d.contact = c; this.save(); return true;
   },
 
-  /* A gift code. Returns { ok, coins } or { ok: false, why: 'invalid' | 'used' | 'offline' | 'noserver' }. */
+  /* A gift code. The admin sets how many times one person may use it (per, default 1) and how many uses in total (max, 0 = unlimited).
+   * Returns { ok, coins } or { ok: false, why: 'invalid' | 'used' | 'gone' | 'offline' | 'noserver' }. */
   async gift(code) {
     if (!this.server) return { ok: false, why: 'noserver' };
     code = String(code || '').trim().toUpperCase().slice(0, 24); if (!/^[A-Z0-9_-]{3,24}$/.test(code)) return { ok: false, why: 'invalid' };
@@ -94,11 +94,14 @@ const Account = {
     try {
       await FB.db.runTransaction(async (tx) => {
         const g = await tx.get(gref); if (!g.exists) throw new Error('invalid');
-        const gd = g.data(); if ((gd.used || []).length >= gd.max) throw new Error('invalid'); if ((gd.used || []).includes(pid)) throw new Error('used');
+        const gd = g.data(), by = gd.by || {}, n = gd.n || 0, per = gd.per || 1, max = gd.max || 0, mine = by[pid] || 0;
+        if (mine >= per) throw new Error('used');
+        if (max > 0 && n >= max) throw new Error('gone');
         const p = await tx.get(pref); got = gd.coins;
-        tx.update(pref, { coins: p.data().coins + gd.coins, lastGift: code }); tx.update(gref, { used: [...gd.used, pid] });
+        tx.update(pref, { coins: p.data().coins + gd.coins, lastGift: code });
+        tx.update(gref, { n: n + 1, last: pid, ['by.' + pid]: mine + 1 });
       });
-    } catch (e) { const m = String((e && e.message) || ''); return { ok: false, why: /used/.test(m) ? 'used' : (e && e.code === 'permission-denied') || /invalid/.test(m) ? 'invalid' : 'offline' }; }
+    } catch (e) { const m = String((e && e.message) || ''); return { ok: false, why: /used/.test(m) ? 'used' : /gone/.test(m) ? 'gone' : (e && e.code === 'permission-denied') || /invalid/.test(m) ? 'invalid' : 'offline' }; }
     await this.refresh().catch(() => {}); return { ok: true, coins: got };
   },
 
@@ -117,13 +120,13 @@ const Account = {
     } catch (e) { return { online: false, list: null }; }
   },
 
-  owns(t) { return isFree(t) || this.d.owned.includes('train:' + t.id); },
+  owns(t) { return isFree(t) || this.d.owned.includes((t.item || 'train') + ':' + t.id); },
 
   /* Buys a train (game coins, or gems for the gem-only trains). Returns 'ok' | 'coins' | 'gems' | 'offline'. */
   async buy(t) {
     if (this.owns(t)) return 'ok';
     if (this.server) {
-      const item = 'train:' + t.id, pref = this.pref();
+      const item = (t.item || 'train') + ':' + t.id, pref = this.pref();
       try {
         const r = await FB.db.runTransaction(async (tx) => {
           const p = (await tx.get(pref)).data(); if (p.owned.includes(item)) return 'ok';
@@ -136,7 +139,7 @@ const Account = {
     }
     if (t.gems) return (this.d.gems || 0) < t.gems ? 'gems' : 'offline';
     if (this.d.coins < t.price) return 'coins';
-    this.d.coins -= t.price; this.d.owned.push('train:' + t.id); this.save(); return 'ok';
+    this.d.coins -= t.price; this.d.owned.push((t.item || 'train') + ':' + t.id); this.save(); return 'ok';
   },
 
   /* Coins and experience for a finished trip. Also records the trip in today's contests. Returns the coins actually paid. */

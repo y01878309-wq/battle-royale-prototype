@@ -209,3 +209,40 @@ button.primary:hover{filter:brightness(1.08)}
 #rotate{position:fixed;inset:0;z-index:200;background:#0b0f14;color:#fff;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-size:20px;text-align:center;padding:20px}
 #rotate i{font-size:64px;font-style:normal;animation:rot 2s infinite ease-in-out}@keyframes rot{0%,30%{transform:rotate(0)}70%,100%{transform:rotate(-90deg)}}
 @media (orientation:portrait) and (max-width:900px){#rotate{display:flex}}
+
+/* ---- no-internet gate ---- */
+#netgate{position:fixed;inset:0;z-index:400;background:radial-gradient(circle at 50% 30%,#23314f,#0b0f18 70%);display:grid;place-items:center;padding:16px}
+#netgate[hidden]{display:none}
+.ng-card{max-width:560px;text-align:center;display:grid;gap:14px;color:#fff;font-family:var(--body)}
+.ng-ic{font-size:64px}.ng-card h2{margin:0;font:700 34px var(--display);color:#f7c531}.ng-card p{margin:0;font-size:19px;line-height:1.6;color:#c9d3e6}
+
+/* ---- colourful start screen ---- */
+#splash{position:fixed;inset:0;z-index:300;overflow:hidden;display:grid;place-items:center;text-align:center;color:#fff;cursor:pointer;
+  background:linear-gradient(120deg,#ff5f6d,#ffc371 28%,#47d6a0 55%,#3a8dff 80%,#8a4dff);background-size:300% 300%;animation:spGrad 9s ease infinite}
+#splash[hidden]{display:none}
+@keyframes spGrad{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
+#splash .sp-sh{position:absolute;font-size:9vh;opacity:.85;filter:drop-shadow(0 .6vh .8vh #0004);animation:spFloat 6s ease-in-out infinite}
+@keyframes spFloat{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-3.5vh) rotate(8deg)}}
+#splash .sp-bl{position:absolute;border-radius:50%;background:rgba(255,255,255,.22);animation:spFloat 8s ease-in-out infinite}
+#splash .sp-rail{position:absolute;left:0;right:0;bottom:7vh;height:1.6vh;background:repeating-linear-gradient(90deg,#3b2a1a 0 3vh,transparent 3vh 6vh);opacity:.55}
+#splash .sp-rail::before{content:"";position:absolute;left:0;right:0;top:-.8vh;height:.6vh;background:#2a2a2e}
+#splash .sp-train{position:absolute;bottom:8vh;font-size:12vh;white-space:nowrap;animation:spTrain 9s linear infinite;filter:drop-shadow(0 .8vh .6vh #0005)}
+@keyframes spTrain{0%{transform:translateX(120vw)}100%{transform:translateX(-120vw)}}
+#splash .sp-c{position:relative;display:grid;gap:2.2vh;justify-items:center;z-index:2}
+#splash .sp-logo{font:700 13vh/1.05 var(--display);background:#16100a;color:#ffd84a;padding:.6vh 3vw;border-radius:2.4vh;border:.8vh solid #fff;box-shadow:0 1.2vh 0 #0006,0 2vh 5vh #0006;transform:rotate(-3deg);animation:spPulse 2.4s ease-in-out infinite}
+@keyframes spPulse{0%,100%{transform:rotate(-3deg) scale(1)}50%{transform:rotate(-3deg) scale(1.04)}}
+#splash .sp-sub{font:700 3.2vh var(--display);text-shadow:0 .3vh .8vh #0007;letter-spacing:.04em}
+#splash .sp-go{border:0;border-radius:4vh;background:#fff;color:#17202e;font:700 4.4vh var(--display);padding:1.2vh 5vw;box-shadow:0 .9vh 0 #0004;animation:spBtn 1.4s ease-in-out infinite}
+@keyframes spBtn{0%,100%{transform:translateY(0)}50%{transform:translateY(-.8vh)}}
+#splash small{font-size:2.2vh;opacity:.95;text-shadow:0 .2vh .6vh #0008}
+
+/* store */
+.tabs{flex-wrap:wrap}
+.item .sw{display:flex;height:14px;border-radius:7px;overflow:hidden;margin-bottom:4px;box-shadow:0 0 0 1px #fff3 inset}.item .sw i{flex:1}
+.item .stk{font-size:42px;line-height:1.1;text-align:center}
+a.mbtn{display:block;text-align:center;text-decoration:none}
+
+/* junction button */
+#jbtn{position:fixed;left:50%;transform:translateX(-50%);top:25%;z-index:20;border:0;border-radius:3vh;padding:1.1vh 3vw;font:700 2.6vh var(--display);background:#1b8f55;color:#fff;box-shadow:0 .6vh 0 #0b4a2a,0 1vh 3vh #0007;max-width:70vw}
+#jbtn.on{background:#e8a317;color:#1a1208;box-shadow:0 .6vh 0 #7a5208,0 1vh 3vh #0007}
+#jbtn[hidden]{display:none}

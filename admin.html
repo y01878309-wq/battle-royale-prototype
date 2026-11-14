@@ -53,7 +53,7 @@ button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
     <h2>كود هدية</h2>
     <label>الكود (حروف إنجليزي وأرقام). سيبه فاضي لو عايز كود عشوائي</label>
     <input id="gcode" dir="ltr" maxlength="24" placeholder="WELCOME">
-    <div class="row"><div><label>جنيه لعبة</label><input id="gcoins" inputmode="numeric" dir="ltr" value="50"></div><div><label>أقصى عدد استخدامات</label><input id="gmax" inputmode="numeric" dir="ltr" value="1"></div></div>
+    <div class="row"><div><label>جنيه لعبة</label><input id="gcoins" inputmode="numeric" dir="ltr" value="50"></div><div><label>عدد الأشخاص الكلي (0 = بلا حد)</label><input id="gmax" inputmode="numeric" dir="ltr" value="1"></div><div><label>كام مرة للشخص الواحد</label><input id="gper" inputmode="numeric" dir="ltr" value="1"></div></div>
     <button id="btnGift">اعمل الكود</button>
   </div>
 
@@ -121,10 +121,10 @@ $('btnCredit').onclick = async () => {
   } catch (e) { log(why(e), 'bad'); } finally { $('btnCredit').disabled = false; }
 };
 $('btnGift').onclick = async () => {
-  let code = $('gcode').value.trim().toUpperCase(); const coins = parseInt($('gcoins').value, 10), max = parseInt($('gmax').value, 10);
+  let code = $('gcode').value.trim().toUpperCase(); const coins = parseInt($('gcoins').value, 10), max = parseInt($('gmax').value, 10), per = parseInt($('gper').value, 10) || 1;
   if (!code) { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; code = ''; for (let i = 0; i < 8; i++) code += A[Math.floor(Math.random() * A.length)]; }
-  if (!/^[A-Z0-9_-]{3,24}$/.test(code) || !(coins > 0) || !(max > 0)) return log('الكود 3 لـ 24 حرف إنجليزي أو أرقام، والفلوس وعدد الاستخدامات أرقام أكبر من صفر', 'bad');
-  try { const ref = db.collection('gifts').doc(code); if ((await ref.get()).exists) return log('الكود ده موجود قبل كده', 'bad'); await ref.set({ coins, max, used: [], at: ts() }); log('اتعمل الكود: ' + code + '\n' + coins + ' جنيه لعبة · ' + max + ' استخدام', 'ok'); } catch (e) { log(why(e), 'bad'); }
+  if (!/^[A-Z0-9_-]{3,24}$/.test(code) || !(coins > 0) || !(max >= 0) || !(per > 0)) return log('الكود 3 لـ 24 حرف إنجليزي أو أرقام، والفلوس أكبر من صفر، وعدد الاستخدامات الكلي 0 (بلا حد) أو أكتر، واستخدامات الشخص الواحد 1 أو أكتر', 'bad');
+  try { const ref = db.collection('gifts').doc(code); if ((await ref.get()).exists) return log('الكود ده موجود قبل كده', 'bad'); await ref.set({ coins, max, per, n: 0, by: {}, last: '', at: ts() }); log('اتعمل الكود: ' + code + '\n' + coins + ' جنيه لعبة · ' + (max || 'بلا حد') + ' استخدام إجمالي · كل شخص ' + per + ' مرة', 'ok'); } catch (e) { log(why(e), 'bad'); }
 };
 $('btnCatalog').onclick = async () => {
   try { const j = await (await fetch('catalog.json', { cache: 'no-store' })).json(); await db.collection('config').doc('catalog').set(j); log('اتنشر الكتالوج ✔\n' + Object.keys(j.prices).length + ' قطر · ' + Object.keys(j.rewards).length + ' مكافأة', 'ok'); } catch (e) { log(why(e), 'bad'); }

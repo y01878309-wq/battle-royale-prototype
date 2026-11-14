@@ -5,7 +5,7 @@ const SKY_PRESETS = {
   noon:    { elev: 64, az: 160, zen: [0.18, 0.44, 0.90], hor: [0.80, 0.86, 0.92], sun: [1.0, 0.97, 0.92], sunI: 3.4, hemiSky: 0xb7d0f0, hemiGnd: 0x8a7a5a, hemiI: 0.85, fog: 0.00026, exp: 0.9, cover: 0.35, cloud: [1.0, 1.0, 1.0], stars: 0 },
   sunset:  { elev: 7,  az: 250, zen: [0.16, 0.27, 0.56], hor: [0.98, 0.62, 0.36], sun: [1.0, 0.56, 0.26], sunI: 2.6, hemiSky: 0x8a9cc8, hemiGnd: 0x6b4c36, hemiI: 0.6,  fog: 0.00038, exp: 1.0, cover: 0.25, cloud: [1.0, 0.7, 0.55], stars: 0 },
   overcast:{ elev: 42, az: 200, zen: [0.46, 0.50, 0.56], hor: [0.72, 0.74, 0.76], sun: [0.9, 0.9, 0.9], sunI: 1.3, hemiSky: 0xc4cad2, hemiGnd: 0x7a7060, hemiI: 1.25, fog: 0.00048, exp: 1.0, cover: 0.92, cloud: [0.6, 0.62, 0.67], stars: 0 },
-  night:   { elev: 38, az: 120, zen: [0.015, 0.025, 0.07], hor: [0.07, 0.09, 0.16], sun: [0.55, 0.65, 0.95], sunI: 0.55, hemiSky: 0x1b2748, hemiGnd: 0x0e0d12, hemiI: 0.4, fog: 0.00042, exp: 1.0, cover: 0.2, cloud: [0.12, 0.14, 0.22], stars: 1 }
+  night:   { elev: 38, az: 120, zen: [0.015, 0.025, 0.07], hor: [0.07, 0.09, 0.16], sun: [0.45, 0.55, 0.9], sunI: 0.22, hemiSky: 0x141c36, hemiGnd: 0x07070a, hemiI: 0.22, fog: 0.00042, exp: 0.85, cover: 0.2, cloud: [0.12, 0.14, 0.22], stars: 1 }
 };
 
 class Sky {
@@ -76,13 +76,13 @@ class Sky {
     this.sunLight.color.setRGB(p.sun[0], p.sun[1], p.sun[2]); this.sunLight.intensity = p.sunI;
     this.hemi.color.set(p.hemiSky); this.hemi.groundColor.set(p.hemiGnd); this.hemi.intensity = p.hemiI;
     this.scene.fog.color.setRGB(p.hor[0] * 0.98, p.hor[1] * 0.97, p.hor[2] * 0.95); this.scene.fog.density = p.fog;
-    this.renderer.toneMappingExposure = p.exp * 1.12;
+    this.renderer.toneMappingExposure = this.night ? p.exp : p.exp * 1.12;
     // Reflections: render the dome alone into a prefiltered environment map.
     const envScene = new THREE.Scene();
     const d = new THREE.Mesh(this.dome.geometry, this.dome.material); d.scale.setScalar(100); envScene.add(d);
     if (this.envTex) this.envTex.dispose();
     this.envTex = this.pmrem.fromScene(envScene, 0.02).texture;
-    this.scene.environment = this.envTex;
+    this.scene.environment = this.night ? null : this.envTex;   // at night the reflections of the sky dome are what used to wash everything out
     envScene.remove(d);
   }
 

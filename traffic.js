@@ -3,7 +3,7 @@
 class Traffic {
   constructor(scene, track, quality) {
     this.track = track; this.list = []; this.t = 0;
-    const n = quality === 'high' ? 3 : quality === 'medium' ? 2 : 1, ids = ['orange', 'talgo', 'third', 'dmu', 'bluecom', 'emuyellow', 'freight', 'cargo-cont', 'hitachi', 'vip', 'sleeper'], R = U.rng(4242);
+    const n = quality === 'high' ? 3 : quality === 'medium' ? 2 : 1, ids = ['orange', 'talgo', 'third', 'dmu', 'bluecom', 'emuyellow', 'freight', 'cargo-cont', 'hitachi', 'vip', 'sleeper', 'g22', 'es40-white', 'marlboro', 'alstom', 'de2550', 'turbine'], R = U.rng(4242);
     for (let i = 0; i < n; i++) {
       const type = TRAIN_TYPES.find((x) => x.id === ids[Math.floor(R() * ids.length)]) || TRAIN_TYPES[0], train = new Train(scene, track, 'low', type, true);
       train.rev = true; train.lat = TRACK_SP * (1 + (NTRACKS > 2 ? i % (NTRACKS - 1) : 0));

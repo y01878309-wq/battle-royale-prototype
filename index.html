@@ -215,11 +215,12 @@
 <script src="audio.js"></script>
 <script src="ui.js"></script>
 <script src="main.js"></script>
-<script>if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});</script>
 <script>
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { /* offline cache is optional */ }); });
-}
+/* The game needs the internet: old offline caches and the old service worker are removed. */
+try {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});
+  if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+} catch (e) { /* ignore */ }
 </script>
 </body>
 </html>

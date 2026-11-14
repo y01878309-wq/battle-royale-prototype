@@ -43,7 +43,25 @@ const LINES = [
     ['الإسكندرية (مصر)', 0, 'terminal'], ['الحمام', 55, 'town'], ['العلمين', 105, 'major'], ['الضبعة', 165, 'town'],
     ['مرسى مطروح', 290, 'terminal'], ['السلوم', 510, 'terminal']] },
   { id: 'safaga', name: 'قنا – سفاجا (البحر الأحمر)', env: 'valley', stations: [
-    ['قنا', 0, 'major'], ['سفاجا', 225, 'terminal']] }
+    ['قنا', 0, 'major'], ['سفاجا', 225, 'terminal']] },
+  { id: 'metro1', cat: 'metro', name: '🚇 مترو الخط الأول (حلوان – المرج)', env: 'delta', stations: [
+    ['حلوان', 0, 'terminal'], ['جامعة حلوان', 2.5, 'halt'], ['حدائق حلوان', 4.8, 'halt'], ['المعصرة', 6.5, 'town'], ['طره البلد', 10.5, 'halt'], ['المعادي', 13, 'town'],
+    ['دار السلام', 15.8, 'halt'], ['مار جرجس', 18.2, 'halt'], ['السيدة زينب', 20.6, 'town'], ['السادات', 22.4, 'major'], ['الشهداء', 25.4, 'major'], ['غمرة', 26.8, 'halt'],
+    ['كوبري القبة', 30.8, 'halt'], ['حدائق الزيتون', 34.4, 'halt'], ['المطرية', 36.6, 'town'], ['عين شمس', 37.9, 'town'], ['عزبة النخل', 39.4, 'halt'], ['المرج', 41, 'terminal']] },
+  { id: 'metro2', cat: 'metro', name: '🚇 مترو الخط الثاني (المنيب – شبرا الخيمة)', env: 'delta', stations: [
+    ['المنيب', 0, 'terminal'], ['أم المصريين', 2.4, 'halt'], ['الجيزة', 3.6, 'town'], ['فيصل', 5, 'halt'], ['جامعة القاهرة', 6.2, 'town'], ['الدقي', 8.6, 'halt'], ['الأوبرا', 10.3, 'town'],
+    ['السادات', 11.7, 'major'], ['العتبة', 13.5, 'major'], ['الشهداء', 14.4, 'halt'], ['روض الفرج', 17.1, 'halt'], ['الخلفاوي', 19.5, 'halt'], ['كلية الزراعة', 22.5, 'halt'], ['شبرا الخيمة', 24.3, 'terminal']] },
+  { id: 'metro3', cat: 'metro', name: '🚇 مترو الخط الثالث (عدلي منصور – جامعة القاهرة)', env: 'delta', stations: [
+    ['عدلي منصور', 0, 'terminal'], ['الهايكستب', 1.5, 'halt'], ['قباء', 4.5, 'halt'], ['النزهة', 7.5, 'halt'], ['هليوبوليس', 12, 'town'], ['الأهرام', 14.6, 'halt'], ['الاستاد', 17.2, 'town'],
+    ['العباسية', 19.8, 'halt'], ['باب الشعرية', 23.6, 'town'], ['العتبة', 25, 'major'], ['ماسبيرو', 27.4, 'halt'], ['الكيت كات', 30, 'town'], ['جامعة القاهرة', 36, 'terminal']] },
+  { id: 'lrt1', cat: 'metro', name: '🚈 القطار الكهربائي الخفيف (عدلي منصور – العاشر من رمضان)', env: 'delta', stations: [
+    ['عدلي منصور', 0, 'terminal'], ['مدينة العبور', 18, 'halt'], ['مدينة الشروق', 36, 'halt'], ['مدينة بدر', 52, 'halt'], ['العاشر من رمضان', 68, 'terminal']] },
+  { id: 'lrt2', cat: 'metro', name: '🚈 القطار الكهربائي الخفيف (عدلي منصور – العاصمة الإدارية)', env: 'delta', stations: [
+    ['عدلي منصور', 0, 'terminal'], ['القاهرة الجديدة', 22, 'halt'], ['العاصمة الإدارية', 62, 'terminal']] },
+  { id: 'mono1', cat: 'metro', name: '🚝 مونوريل شرق النيل (استاد القاهرة – مدينة العدالة)', env: 'delta', stations: [
+    ['استاد القاهرة', 0, 'terminal'], ['القاهرة الجديدة', 24, 'halt'], ['مدينة العدالة', 42, 'terminal']] },
+  { id: 'tram1', cat: 'metro', name: '🚊 ترام الرمل (محطة الرمل – فيكتوريا)', env: 'delta', stations: [
+    ['محطة الرمل', 0, 'terminal'], ['الشاطبي', 2, 'halt'], ['كامب شيزار', 3.5, 'halt'], ['سان ستيفانو', 7, 'halt'], ['سيدي بشر', 9, 'halt'], ['فيكتوريا', 14, 'terminal']] }
 ];
 
 /* Latin spellings for platform name boards. */
@@ -57,6 +75,7 @@ const EN_NAMES = { 'شبرا': 'Shubra', 'بشتيل': 'Bashteel', 'ببا': 'Bi
  * snd.horn lists the chime pitches in Hz. The GE profile is measured from a recording (five chimes); the others are estimates. */
 const GE_HORN = [320, 382, 439, 498, 643];
 /* tag helpers: a train is free (no price), bought with game coins (price) or only with gems (gems, topped up by the owner) */
+/* cat: 'train' (default, shown in the store's trains tab) or 'metro' (metro, light rail, monorail, tram) */
 const isFree = (t) => !t.price && !t.gems;
 const priceTag = (t) => (t.gems ? '💎 ' + t.gems : '🪙 ' + t.price);
 const TRAIN_TYPES = [
@@ -151,11 +170,95 @@ const TRAIN_TYPES = [
     coach: { style: 'std', body: 0x6b4a35, band: 0x3a3a38, trim: 0xe8c43a }, consist: Array(20).fill('cont'),
     locoMass: 120, vehMass: 55, fmax: 420, power: 4.6, vmax: 110, brake: 0.8,
     snd: { base: 25, span: 18, horn: [147, 185, 220, 277], turbo: 0.05 } },
-  { id: 'cargo-phos', price: 80, name: 'شحن: فوسفات وحبوب', desc: 'عربيات مفتوحة من فوق (هوبر). ثقيلة جدًا.',
+  { id: 'cargo-phos', price: 80, name: 'قطر الفوسفات (أبو طرطور)', desc: 'عربيات مفتوحة من فوق (هوبر) للفوسفات والحبوب. ثقيلة جدًا.',
     loco: { kind: 'box', len: 17.6, top: 0x2f6a3e, low: 0x2f6a3e, trim: 0xe9dfb8, num: '٢٠٩٨' },
     coach: { style: 'std', body: 0x6b4a35, band: 0x3a3a38, trim: 0xe8c43a }, consist: Array(18).fill('hopper'),
     locoMass: 110, vehMass: 82, fmax: 340, power: 2.4, vmax: 70, brake: 0.55,
-    snd: { base: 25, span: 18, horn: [262, 330, 392, 523], turbo: 0.05 } }
+    snd: { base: 25, span: 18, horn: [262, 330, 392, 523], turbo: 0.05 } },
+  /* ---- new in the store: foreign and special locomotives, metro and monorail ---- */
+  { id: 'g22', price: 50, cat: 'train', name: 'الجرار الكندي الأزرق (G22)', desc: 'جرار كندي قديم بمقدمة طويلة منخفضة وكابينة عالية في الآخر. أزرق بشريط أبيض.',
+    loco: { kind: 'hood', len: 16.8, top: 0x1f4aa8, low: 0x173a86, trim: 0xe9ebee, num: '٣٣٢' },
+    coach: { style: 'std', body: 0xd9dde2, band: 0x1f4aa8, trim: 0xe9ebee }, consist: Array(7).fill('coach'),
+    locoMass: 100, vehMass: 44, fmax: 280, power: 2.2, vmax: 100, brake: 1.05,
+    snd: { base: 23, span: 16, horn: [196, 247, 311, 392], turbo: 0.04 } },
+  { id: 'alstom', price: 60, cat: 'train', name: 'الجرار الفرنسي ألستوم (الأزرق بالشريط الأصفر)', desc: 'جرار فرنسي بمقدمة مسطحة، أزرق وأصفر. قوي وثابت.',
+    loco: { kind: 'box', len: 18.4, top: 0x1c4ea6, low: 0x1c4ea6, trim: 0xf2c01a, num: '٤٢٠١' },
+    coach: { style: 'std', body: 0xe4e6e8, band: 0x1c4ea6, trim: 0xf2c01a }, consist: Array(8).fill('coach'),
+    locoMass: 108, vehMass: 45, fmax: 320, power: 3.0, vmax: 120, brake: 1.1,
+    snd: { base: 27, span: 17, horn: [262, 330, 392, 523], turbo: 0.06 } },
+  { id: 'es40-white', price: 50, cat: 'train', name: 'الجنرال GE بضاعة (ES40ACi الأبيض)', desc: 'جرار GE أبيض ورمادي بخط أحمر. يسحب ركاب أو بضاعة.',
+    loco: { kind: 'ge', len: 19.9, top: 0xf1f1ee, low: 0xaeb4ba, trim: 0xc4161c, num: '٦٠٥١' },
+    coach: { style: 'std', body: 0xeeeeea, band: 0xc4161c, trim: 0x8a8d90 }, consist: Array(8).fill('coach'),
+    locoMass: 100, vehMass: 46, fmax: 310, power: 3.0, vmax: 120, brake: 1.1,
+    snd: { base: 28, span: 17, horn: GE_HORN, turbo: 0.06 } },
+  { id: 'es40-royal', price: 60, cat: 'train', name: 'جرار وابتك الأزرق الملكي (ES40ACi)', desc: 'GE أزرق ملكي بخط ذهبي، عربيات زرقا.',
+    loco: { kind: 'ge', len: 19.9, top: 0x16389a, low: 0xcfd4dc, trim: 0xe5c44a, num: '٦٠٣٣' },
+    coach: { style: 'std', body: 0x2b4fa8, band: 0xe5c44a, trim: 0xe9e4d6 }, consist: Array(8).fill('coach'),
+    locoMass: 100, vehMass: 48, fmax: 310, power: 3.0, vmax: 125, brake: 1.1,
+    snd: { base: 28, span: 17, horn: GE_HORN, turbo: 0.06 } },
+  { id: 'es40-redwhite', price: 50, cat: 'train', name: 'الجنرال GE بضاعة (ES40ACi أحمر وأبيض)', desc: 'GE أحمر بجانب أبيض لقطارات البضاعة المختلطة.',
+    loco: { kind: 'ge', len: 19.9, top: 0xc4161c, low: 0xf0efe8, trim: 0x23232a, num: '٦٠٨٨' },
+    coach: { style: 'std', body: 0x6b4a35, band: 0x3a3a38, trim: 0xe8c43a }, consist: ['tank', 'box', 'cont', 'gond', 'tank', 'hopper', 'cont', 'tank', 'box', 'cont'],
+    locoMass: 100, vehMass: 66, fmax: 330, power: 2.8, vmax: 85, brake: 0.65,
+    snd: { base: 27, span: 17, horn: GE_HORN, turbo: 0.06 } },
+  { id: 'marlboro', price: 50, cat: 'train', name: 'المارلبورو (جرار GE الأحمر والأبيض)', desc: 'الجرار الأحمر القديم بخطوط بيضا. عربيات ركاب.',
+    loco: { kind: 'ge', len: 19.9, top: 0xd3141b, low: 0xf6f4ee, trim: 0xf6f4ee, num: '٢٠٠٨' },
+    coach: { style: 'std', body: 0xf1efe8, band: 0xd3141b, trim: 0x23232a }, consist: Array(8).fill('coach'),
+    locoMass: 95, vehMass: 44, fmax: 300, power: 2.7, vmax: 110, brake: 1.1,
+    snd: { base: 27, span: 17, horn: GE_HORN, turbo: 0.06 } },
+  { id: 'turbine', price: 70, cat: 'train', name: 'القطار التوربيني (أحمر وأبيض)', desc: 'قطار توربيني بمقدمة مدببة من الطرفين، أحمر وأبيض. سريع جدًا.',
+    loco: { kind: 'dmu', len: 23, top: 0xc4161c, low: 0xf3f2ee, trim: 0x23232a, num: '١٥' },
+    coach: { style: 'std', body: 0xf3f2ee, band: 0xc4161c, trim: 0x23232a }, consist: ['coach', 'coach', 'coach', 'coach', 'cab'],
+    locoMass: 55, vehMass: 40, fmax: 250, power: 3.4, vmax: 160, brake: 1.25,
+    snd: { base: 44, span: 26, horn: [392, 494, 587], turbo: 0.18 } },
+  { id: 'de2550', price: 40, cat: 'train', name: 'جرار أدترانز الألماني (الخنافس - DE2550)', desc: 'جرار ألماني أبيض بأزرق وأصفر في المقدمة.',
+    loco: { kind: 'box', len: 17.6, top: 0xf2f2f0, low: 0x2a5ba8, trim: 0xf2c01a, num: '٣١٠٤' },
+    coach: { style: 'std', body: 0xe7e9ec, band: 0x2a5ba8, trim: 0xf2c01a }, consist: Array(7).fill('coach'),
+    locoMass: 92, vehMass: 44, fmax: 290, power: 2.5, vmax: 110, brake: 1.1,
+    snd: { base: 29, span: 17, horn: [262, 311, 392, 466], turbo: 0.06 } },
+  { id: 'talgo-prl', price: 90, cat: 'train', name: 'قطار تالجو الفاخر (جرار PRL الأمريكي)', desc: 'جرار فضي بخطوط ذهبية يسحب عربيات تالجو فاخرة. هادي وسريع.',
+    loco: { kind: 'ge', len: 19.9, top: 0xc3c7cd, low: 0x8a8f96, trim: 0xb8923c, num: '١٠١٠' },
+    coach: { style: 'talgo', body: 0xd9dbe0, band: 0xb8923c, trim: 0x2a2f36 }, consist: Array(11).fill('talgo'),
+    locoMass: 92, vehMass: 36, fmax: 300, power: 3.6, vmax: 150, brake: 1.25,
+    snd: { base: 29, span: 17, horn: [277, 349, 415, 523], turbo: 0.08 } },
+  { id: 'metro-red', price: 40, cat: 'metro', name: 'مترو الأنفاق (الأبيض بالأحمر)', desc: 'عربيات مترو بيضاء بخط أحمر وبنفسجي. أبواب كتير ووقفات قصيرة.',
+    loco: { kind: 'dmu', len: 20, top: 0xc4161c, low: 0xf1f1ef, trim: 0x6a3fa0, num: '٣' },
+    coach: { style: 'std', body: 0xf1f1ef, band: 0xc4161c, trim: 0x6a3fa0 }, consist: ['coach', 'coach', 'coach', 'coach', 'cab'],
+    locoMass: 45, vehMass: 36, fmax: 220, power: 2.6, vmax: 90, brake: 1.4,
+    snd: { base: 46, span: 22, horn: [494, 587], turbo: 0.2 } },
+  { id: 'metro-line3', price: 40, cat: 'metro', name: 'مترو الخط الثالث (عدلي منصور)', desc: 'مترو حديث أبيض ورمادي بخط أخضر.',
+    loco: { kind: 'dmu', len: 20, top: 0x2f9a5b, low: 0xeceff1, trim: 0x6a7480, num: '٣٠٣' },
+    coach: { style: 'std', body: 0xeceff1, band: 0x2f9a5b, trim: 0x6a7480 }, consist: ['coach', 'coach', 'coach', 'coach', 'coach', 'cab'],
+    locoMass: 45, vehMass: 36, fmax: 230, power: 2.8, vmax: 100, brake: 1.4,
+    snd: { base: 46, span: 22, horn: [494, 587], turbo: 0.2 } },
+  { id: 'lrt', price: 50, cat: 'metro', name: 'القطار الكهربائي الخفيف (LRT)', desc: 'قطار خفيف أبيض بأزرق، تسارع سريع بين المدن الجديدة.',
+    loco: { kind: 'dmu', len: 22, top: 0x2a6bd0, low: 0xf6f7f8, trim: 0x23b5d3, num: '٥٠١' },
+    coach: { style: 'std', body: 0xf6f7f8, band: 0x2a6bd0, trim: 0x23b5d3 }, consist: ['coach', 'coach', 'coach', 'cab'],
+    locoMass: 48, vehMass: 38, fmax: 240, power: 3.0, vmax: 120, brake: 1.35,
+    snd: { base: 44, span: 22, horn: [440, 554], turbo: 0.2 } },
+  { id: 'monorail', price: 60, cat: 'metro', name: 'مونوريل القاهرة', desc: 'قطار مونوريل أبيض انسيابي بخط أزرق. هادي وسريع التسارع.',
+    loco: { kind: 'velaro', len: 25.6, top: 0xf4f6f8, low: 0xf4f6f8, trim: 0x1c6bd0, num: '٧' },
+    coach: { style: 'velaro', body: 0xf4f6f8, band: 0x59606a, trim: 0x1c6bd0 }, consist: ['vcoach', 'vcoach', 'vcoach', 'cab'],
+    locoMass: 50, vehMass: 40, fmax: 260, power: 3.4, vmax: 80, brake: 1.3,
+    snd: { base: 44, span: 22, horn: [523, 659], turbo: 0.15 } },
+  { id: 'tram-victoria', price: 40, cat: 'metro', name: 'ترام الرمل (فيكتوريا)', desc: 'ترام إسكندراني أصفر وكريمي، بطيء ويقف كتير.',
+    loco: { kind: 'dmu', len: 16, top: 0xe9b92b, low: 0xf1e8c6, trim: 0x8a2b2b, num: '٢٢' },
+    coach: { style: 'old', body: 0xf1e8c6, band: 0xe9b92b, trim: 0x8a2b2b }, consist: ['old', 'cab'],
+    locoMass: 30, vehMass: 28, fmax: 150, power: 1.2, vmax: 60, brake: 1.4,
+    snd: { base: 38, span: 18, horn: [330, 392], turbo: 0.1 } }
+];
+
+
+/* STICKERS: cosmetic badges bought in the store; the chosen one shows next to the player's name. */
+const STICKERS = [
+  { id: 'star', item: 'sticker', price: 20, emoji: '⭐', name: 'نجمة', desc: 'نجمة جنب اسمك' },
+  { id: 'train', item: 'sticker', price: 25, emoji: '🚂', name: 'سواق قطر', desc: 'قطر جنب اسمك' },
+  { id: 'crown', item: 'sticker', price: 60, emoji: '👑', name: 'تاج', desc: 'للأساطير' },
+  { id: 'flag', item: 'sticker', price: 30, emoji: '🇪🇬', name: 'علم مصر', desc: 'علم مصر جنب اسمك' },
+  { id: 'fire', item: 'sticker', price: 40, emoji: '🔥', name: 'نار', desc: 'للسواقين السريعين' },
+  { id: 'palm', item: 'sticker', price: 25, emoji: '🌴', name: 'نخلة', desc: 'ريحة الصعيد' },
+  { id: 'diamond', item: 'sticker', price: 90, emoji: '💎', name: 'ألماسة', desc: 'ستايل VIP' },
+  { id: 'rocket', item: 'sticker', price: 50, emoji: '🚀', name: 'صاروخ', desc: 'سرعة وتركيز' }
 ];
 
 /* DAILY MISSIONS (progress resets every day) and ACHIEVEMENTS (lifetime). 'stat' names a counter kept in main.js
@@ -191,8 +294,10 @@ function levelOf(xp) {
 /* Region of a station, from its name. It decides the look of the station and the houses around it (see stations.js STYLES).
  * 'cairo' Cairo and Giza, 'delta' Delta towns, 'alex' Alexandria, 'canal' Suez Canal cities, 'middle' Beni Suef to Dairut,
  * 'upper' Asyut to Qena, 'luxor' Luxor and Esna, 'aswan' Edfu to Aswan (Nubian colours). */
+const METRO_NAMES = new Set(LINES.filter((l) => l.cat === 'metro').flatMap((l) => l.stations.map((x) => x[0])));
 function regionOf(name) {
   const n = String(name || '');
+  if (METRO_NAMES.has(n) && !/^(الجيزة|القاهرة|عين شمس)$/.test(n)) return 'cairo';
   if (/مطروح|العلمين|الضبعة|الحمام|السلوم/.test(n)) return 'matrouh';
   if (/سفاجا/.test(n)) return 'redsea';
   if (/الخارجة/.test(n)) return 'newvalley';
