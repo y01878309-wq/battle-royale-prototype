@@ -173,11 +173,14 @@ class Train {
       this.box(3.0, 0.14, 5.6, ic, 0, 4.12, 5.4, cab);
       for (const sx of [-1, 1]) { this.box(0.12, 1.5, 4.2, ic, sx * 1.46, 1.9, 5.3, cab); this.box(0.12, 0.22, 4.2, ic, sx * 1.46, 3.95, 5.3, cab); this.box(0.14, 2.9, 0.16, trimM, sx * 1.45, 2.65, 7.0, cab); this.box(0.1, 0.1, 3.4, dk, sx * 1.47, 3.2, 5.2, cab); }
       this.box(3.0, 2.9, 0.1, ic, 0, 2.6, 2.9, cab);
-      for (const x of [-1.32, 0, 1.32]) { const p = new THREE.Mesh(new THREE.BoxGeometry(x === 0 ? 0.06 : 0.18, 0.1, 3.0), trimM); p.position.set(x, 4.2 - 0.83, 7.4 + 1.2); p.rotation.x = Math.atan2(1.65, 2.4); cab.add(p); }
+      for (const x of [-1.32, 0, 1.32]) { const p = new THREE.Mesh(new THREE.BoxGeometry(x === 0 ? 0.05 : 0.1, 0.1, 3.0), trimM); p.position.set(x, 4.2 - 0.83, 7.4 + 1.2); p.rotation.x = Math.atan2(1.65, 2.4); cab.add(p); }
       for (let i = -6; i <= 6; i++) { const bar = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.04, 2.9), dk); bar.position.set(i * 0.2, 3.65, 8.55); bar.rotation.x = Math.atan2(1.65, 2.4); bar.position.y = 3.37; bar.position.z = 8.5; cab.add(bar); }
       this.box(2.9, 0.62, 1.0, trimM, 0, 2.18, 6.5, cab);
       this.box(2.9, 0.08, 0.9, wood, 0, 2.52, 6.4, cab).rotation.x = 0.25;
-      this.box(2.9, 0.5, 0.5, dk, 0, 2.95, 6.6, cab).rotation.x = -0.3;   // black instrument console
+      { // slanted black instrument panel with two screens, low enough to keep the view over it clear
+        const pn = this.box(2.5, 0.34, 0.1, dk, 0, 2.7, 6.95, cab); pn.rotation.x = -0.75;
+        for (const [sx, col] of [[-0.62, 0x1a4c8a], [0.5, 0x14603a]]) { const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.22), new THREE.MeshBasicMaterial({ color: col })); sc.position.set(sx, 2.71, 6.9); sc.rotation.x = -0.75; sc.rotation.y = Math.PI; sc.position.z -= 0.02; cab.add(sc); }
+      }
       this.box(0.5, 0.7, 0.5, dk, -0.75, 1.5, 4.4, cab); this.box(0.5, 0.55, 0.1, dk, -0.75, 2.0, 4.15, cab);
       const ey = new THREE.Vector3(-0.75, 3.05, 5.0);
       this.dials = [];
