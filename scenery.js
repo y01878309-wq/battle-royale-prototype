@@ -70,7 +70,7 @@ class Scenery {
   async build() {
     U.setProgress(0.52, 'الرمال…'); this.buildSand(); U.setProgress(0.55, 'النخيل والشجر…'); this.buildPalms(); await U.tick();
     U.setProgress(0.68, 'القرى والمآذن…'); this.buildVillages(); await U.tick();
-    U.setProgress(0.82, 'أعمدة التلغراف والمزلقانات…'); this.buildPoles(); this.buildCrossings(); await U.tick();
+    U.setProgress(0.82, 'أعمدة التلغراف والمزلقانات…'); this.buildPoles(); this.buildCrossings(); this.buildValley(); await U.tick();
     U.setProgress(0.9, 'العمارات والطريق السريع…'); this.buildBlocks(); this.buildTraffic(); await U.tick();
   }
 
@@ -340,6 +340,50 @@ class Scenery {
       o.position.copy(p); o.position.y = p.y; o.rotation.set(0, yaw, 0); o.scale.set(1, 1, 1); o.updateMatrix(); this.carMesh[car.cls].setMatrixAt(car.ci, o.matrix);
     });
     this.carMesh.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
+  }
+
+  /* Nile-valley look: a hazy desert ridge on the horizon, trackside grass, signal masts with lamps and kilometre posts. */
+  buildValley() {
+    const R = this.R, tr = this.track, k = this.k;
+    // ridge ring that follows the camera (main.js moves it): jagged limestone hills fading into the haze
+    const seg = 120, g = new THREE.CylinderGeometry(2900, 2900, 1, seg, 1, true), p = g.attributes.position, cols = [];
+    const ph = [R() * 6, R() * 6, R() * 6];
+    for (let i = 0; i < p.count; i++) {
+      const a = Math.atan2(p.getZ(i), p.getX(i)), top = p.getY(i) > 0;
+      const hgt = 130 + 120 * (0.5 + 0.5 * Math.sin(a * 3 + ph[0])) + 70 * Math.sin(a * 7 + ph[1]) + 35 * Math.sin(a * 17 + ph[2]);
+      p.setY(i, top ? Math.max(40, hgt) : -20); cols.push(...(top ? [0.74, 0.68, 0.58] : [0.86, 0.8, 0.68]));
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    this.ridge = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: true, depthWrite: false }));
+    this.ridge.frustumCulled = false; this.ridge.renderOrder = -1; this.scene.add(this.ridge);
+    // grass tufts beside the track
+    const n = Math.floor(1800 * k), tuft = new THREE.InstancedMesh(new THREE.ConeGeometry(0.42, 0.8, 5), new THREE.MeshStandardMaterial({ roughness: 1 }), n), o = new THREE.Object3D(), col = new THREE.Color();
+    tuft.geometry.translate(0, 0.4, 0); let c = 0;
+    for (let i = 0; i < n; i++) {
+      const s = R() * tr.L, lat = (R() < 0.5 ? -1 : 1) * (7 + R() * 14);
+      if (this.inStation(s) || R() < this.sandAt(s) * 0.7) continue;
+      if (lat > 0 && lat > World.riverLat(s) - World.riverWidth(s) / 2 - 10) continue;
+      const w = tr.at(s, lat, 0); o.position.copy(w); o.rotation.set(0, R() * 6, 0); o.scale.set(0.8 + R() * 1.1, 0.7 + R() * 1.4, 0.8 + R() * 1.1); o.updateMatrix(); tuft.setMatrixAt(c, o.matrix);
+      tuft.setColorAt(c, col.setHSL(0.17 + R() * 0.1, 0.45, 0.28 + R() * 0.12)); c++;
+    }
+    tuft.count = c; if (tuft.instanceColor) tuft.instanceColor.needsUpdate = true; this.scene.add(tuft);
+    // signal masts with three lamps (red, amber, green), and kilometre posts
+    const ns = Math.max(1, Math.floor(tr.L / 900)), mast = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.09, 5.2, 6), new THREE.MeshStandardMaterial({ color: 0x8a8d90, roughness: 0.6, metalness: 0.5 }), ns);
+    const head = new THREE.InstancedMesh(new THREE.BoxGeometry(0.55, 1.5, 0.4), new THREE.MeshStandardMaterial({ color: 0x14171a, roughness: 0.7 }), ns);
+    const lamps = [0xd02020, 0xe0a820, 0x20b84a].map((cc, j) => new THREE.InstancedMesh(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 12), new THREE.MeshStandardMaterial({ color: cc, emissive: cc, emissiveIntensity: j === 2 ? 0.9 : 0.15 }), ns));
+    const fr = Track.makeFrame(); let m = 0;
+    for (let i = 0; i < ns; i++) {
+      const s = 300 + i * 900 + R() * 200; if (s > tr.L - 50 || this.inStation(s)) continue;
+      tr.frame(s, fr); const x = fr.pos.x + fr.right.x * 6.2, z = fr.pos.z + fr.right.z * 6.2, yaw = Math.atan2(fr.fwd ? fr.fwd.x : 0, fr.fwd ? fr.fwd.z : 1);
+      o.rotation.set(0, 0, 0); o.scale.set(1, 1, 1); o.position.set(x, 2.6, z); o.updateMatrix(); mast.setMatrixAt(m, o.matrix);
+      o.rotation.set(0, yaw, 0); o.position.set(x, 5.3, z); o.updateMatrix(); head.setMatrixAt(m, o.matrix);
+      lamps.forEach((l, j) => { o.rotation.set(Math.PI / 2, yaw, 0); o.position.set(x + (fr.fwd ? fr.fwd.x : 0) * -0.22, 5.75 - j * 0.45, z + (fr.fwd ? fr.fwd.z : 1) * -0.22); o.updateMatrix(); l.setMatrixAt(m, o.matrix); });
+      m++;
+    }
+    mast.count = head.count = m; lamps.forEach((l) => { l.count = m; this.scene.add(l); }); mast.castShadow = true; this.scene.add(mast, head);
+    const nk = Math.floor(tr.L / 1000), km = new THREE.InstancedMesh(new THREE.BoxGeometry(0.3, 0.9, 0.12), new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.8 }), nk); let q = 0;
+    for (let i = 1; i <= nk; i++) { const s = i * 1000; if (this.inStation(s)) continue; tr.frame(s, fr); o.rotation.set(0, 0, 0); o.scale.set(1, 1, 1); o.position.set(fr.pos.x + fr.right.x * 5.4, 0.45, fr.pos.z + fr.right.z * 5.4); o.updateMatrix(); km.setMatrixAt(q++, o.matrix); }
+    km.count = q; this.scene.add(km);
   }
 
   buildPoles() {

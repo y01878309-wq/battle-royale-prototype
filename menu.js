@@ -100,7 +100,7 @@ const Menu = {
       const a = Account.d, pay = window.QS_PAY || {};
       b.appendChild(this.el('div', 'wallet', `رصيدك: <b>🪙 ${a.coins}</b> جنيه لعبة · <b>💎 ${a.gems || 0}</b> ماسة`));
       const tabs = this.el('div', 'tabs');
-      for (const [k, t] of [['trains', '🚆 القطارات'], ['metro', '🚇 المترو والمونوريل'], ['stickers', '⭐ الملصقات'], ['packs', '💎 الباكدجات والشحن']]) {
+      for (const [k, t] of [['trains', '🚆 القطارات'], ['metro', '🚇 المترو والمونوريل'], ['cabs', '🪑 الكبائن'], ['stickers', '⭐ الملصقات'], ['packs', '💎 الباكدجات والشحن']]) {
         const x = this.el('button', 'mbtn' + (k === tab ? ' primary' : ''), t); x.type = 'button'; x.onclick = () => this.shop(k); tabs.appendChild(x);
       }
       b.appendChild(tabs);
@@ -122,6 +122,16 @@ const Menu = {
           c.innerHTML = `<img class="tsvg" alt="" src="thumbs/${t.id}.jpg?v=${window.QS_BUILD || 1}"><b>${this.esc(t.name)}</b><small>${this.esc(t.desc || '')}</small><span>${own ? '✔ معاك' : '🔒 ' + priceTag(t) + (t.gems ? ' (شحن فقط)' : '')} · ${t.vmax} كم/س</span>`;
           { const im = c.querySelector('img'); im.onerror = () => { const d = document.createElement('div'); d.innerHTML = sw; im.replaceWith(d.firstChild); }; }
           buyBtn(t, own, c, own ? ['اختار', () => { document.getElementById('optTrain').value = t.id; this.close(); this.onChange(); }] : null);
+          grid.appendChild(c);
+        }
+      } else if (tab === 'cabs') {
+        let cur = 'ge'; try { cur = localStorage.getItem('qs-cab') || 'ge'; } catch (e) { /* */ }
+        const note = this.el('p', 'dim', 'الكابينة بتظهر لما تسوق بكاميرا «من جوه». المترو ليه كابينته الخاصة.'); grid.appendChild(note);
+        for (const t of CABS) {
+          const own = Account.owns(t), c = this.el('div', 'item' + (own ? ' own' : ''));
+          c.innerHTML = `<img class="tsvg" alt="" src="thumbs/cab-${t.id}.jpg?v=${window.QS_BUILD || 1}"><b>${this.esc(t.name)}</b><small>${this.esc(t.desc)}</small><span>${own ? (cur === t.id ? '✔ مستخدمة' : '✔ معاك') : '🔒 ' + priceTag(t) + ' (جواهر فقط)'}</span>`;
+          c.querySelector('img').onerror = function () { this.remove(); };
+          buyBtn(t, own, c, own ? [cur === t.id ? 'مستخدمة' : 'استخدمها', () => { try { localStorage.setItem('qs-cab', t.id); } catch (e) { /* */ } this.shop(tab); }] : null);
           grid.appendChild(c);
         }
       } else if (tab === 'stickers') {

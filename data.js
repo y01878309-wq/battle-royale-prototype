@@ -222,18 +222,18 @@ const TRAIN_TYPES = [
     locoMass: 92, vehMass: 36, fmax: 300, power: 3.6, vmax: 150, brake: 1.25,
     snd: { base: 29, span: 17, horn: [277, 349, 415, 523], turbo: 0.08 } },
   { id: 'metro-red', price: 40, cat: 'metro', name: 'مترو الأنفاق (الأبيض بالأحمر)', desc: 'عربيات مترو بيضاء بخط أحمر وبنفسجي. أبواب كتير ووقفات قصيرة.',
-    loco: { kind: 'dmu', len: 20, top: 0xc4161c, low: 0xf1f1ef, trim: 0x6a3fa0, num: '٣' },
-    coach: { style: 'std', body: 0xf1f1ef, band: 0xc4161c, trim: 0x6a3fa0 }, consist: ['coach', 'coach', 'coach', 'coach', 'cab'],
+    loco: { kind: 'metro', len: 20, top: 0xc4161c, low: 0xf1f1ef, trim: 0x6a3fa0, num: '٣' },
+    coach: { style: 'std', body: 0xf1f1ef, band: 0xc4161c, trim: 0x6a3fa0 }, consist: ['mcoach', 'mcoach', 'mcoach', 'mcoach', 'cab'],
     locoMass: 45, vehMass: 36, fmax: 220, power: 2.6, vmax: 90, brake: 1.4,
     snd: { base: 46, span: 22, horn: [494, 587], turbo: 0.2 } },
   { id: 'metro-line3', price: 40, cat: 'metro', name: 'مترو الخط الثالث (عدلي منصور)', desc: 'مترو حديث أبيض ورمادي بخط أخضر.',
-    loco: { kind: 'dmu', len: 20, top: 0x2f9a5b, low: 0xeceff1, trim: 0x6a7480, num: '٣٠٣' },
-    coach: { style: 'std', body: 0xeceff1, band: 0x2f9a5b, trim: 0x6a7480 }, consist: ['coach', 'coach', 'coach', 'coach', 'coach', 'cab'],
+    loco: { kind: 'metro', len: 20, top: 0x1f9a8f, low: 0xe6e9ea, trim: 0xf2c21b, num: '٣٠٣' },
+    coach: { style: 'std', body: 0xe6e9ea, band: 0x1f9a8f, trim: 0xf2c21b }, consist: ['mcoach', 'mcoach', 'mcoach', 'mcoach', 'mcoach', 'cab'],
     locoMass: 45, vehMass: 36, fmax: 230, power: 2.8, vmax: 100, brake: 1.4,
     snd: { base: 46, span: 22, horn: [494, 587], turbo: 0.2 } },
   { id: 'lrt', price: 50, cat: 'metro', name: 'القطار الكهربائي الخفيف (LRT)', desc: 'قطار خفيف أبيض بأزرق، تسارع سريع بين المدن الجديدة.',
-    loco: { kind: 'dmu', len: 22, top: 0x2a6bd0, low: 0xf6f7f8, trim: 0x23b5d3, num: '٥٠١' },
-    coach: { style: 'std', body: 0xf6f7f8, band: 0x2a6bd0, trim: 0x23b5d3 }, consist: ['coach', 'coach', 'coach', 'cab'],
+    loco: { kind: 'metro', len: 22, top: 0x2a6bd0, low: 0xf6f7f8, trim: 0x23b5d3, num: '٥٠١' },
+    coach: { style: 'std', body: 0xf6f7f8, band: 0x2a6bd0, trim: 0x23b5d3 }, consist: ['mcoach', 'mcoach', 'mcoach', 'cab'],
     locoMass: 48, vehMass: 38, fmax: 240, power: 3.0, vmax: 120, brake: 1.35,
     snd: { base: 44, span: 22, horn: [440, 554], turbo: 0.2 } },
   { id: 'monorail', gems: 30, cat: 'metro', name: 'مونوريل القاهرة', desc: 'قطار مونوريل أبيض انسيابي بخط أزرق. هادي وسريع التسارع.',
@@ -248,6 +248,12 @@ const TRAIN_TYPES = [
     snd: { base: 38, span: 18, horn: [330, 392], turbo: 0.1 } }
 ];
 
+
+/* CABS: driver's-cab interiors. 'ge' is free (tan walls, slanted barred windscreen); 'terra' (terracotta) is gems-only. The metro always uses its own cab. */
+const CABS = [
+  { id: 'ge', item: 'cab', price: 0, emoji: '🟫', name: 'كابينة الجنرال إلكتريك', desc: 'الكابينة العادية: جدران بيج وإزاز مائل بأسياخ وشاشتين' },
+  { id: 'terra', item: 'cab', gems: 25, emoji: '🟧', name: 'كابينة الطوب الأحمر (فاخرة)', desc: 'كابينة بنية محمرة بسقف مخرّم وشبابيك مدورة وشاشة وأزرار' }
+];
 
 /* STICKERS: cosmetic badges bought in the store; the chosen one shows next to the player's name. */
 const STICKERS = [

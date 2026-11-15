@@ -388,7 +388,7 @@
     train.setDials(game.kmh, game.brake, game.power);
     train.setCabState({ notch: inp.notch, brake: game.brake, doors: game.doors, emerg: inp.emergency, lights: lightsOn, horn: inp.horn, kmh: game.kmh, limit: game.limit, dist: game.phase === 'dwell' ? 'واقف' : Math.round(Math.max(0, game.distToStop())) + ' م', name: (stations.list[Math.min(game.nextIdx, stations.list.length - 1)] || {}).name });
     if (weather) weather.update(dt, camera, world.scenery.sandAt(game.s));
-    world.update(dt, game.t); world.scenery.trainS = game.s; world.scenery.trainLen = train.length;
+    world.update(dt, game.t); world.scenery.trainS = game.s; world.scenery.trainLen = train.length; if (world.scenery.ridge) world.scenery.ridge.position.set(camera.position.x, 0, camera.position.z);
     if (net) { net.setState(game, train.length); const hit = net.update(dt, game.t, train.length); if (hit && !game.derailed) handle(game.derail([], 'collision')); updateNetBox(); }
     { const idn = game.nextIdx, dd = game.distToStop(); if (idn < stations.list.length && dd < 1200 && dd > -150) crowd.prepare(idn); crowd.update(dt, game, train); }
     if (traffic) traffic.update(dt, game.s, game.t);

@@ -151,6 +151,8 @@ $('btnLoadPrices').onclick = async () => {
     const row = (key, name, price, gem) => `<div class="prow" data-k="${esc(key)}"><span>${esc(name)}</span><select><option value="c"${gem ? '' : ' selected'}>🪙 جنيه</option><option value="g"${gem ? ' selected' : ''}>💎 ماسة</option></select><input inputmode="numeric" dir="ltr" value="${gem || price || 0}"></div>`;
     let h = '<h3>القطارات والمترو</h3>';
     for (const t of TRAIN_TYPES) { const k = 'train:' + t.id, g = curCat.gems[k] > 0 ? curCat.gems[k] : (k in curCat.prices ? 0 : (t.gems || 0)), p = k in curCat.prices ? curCat.prices[k] : (t.price || 0); h += row(k, t.name.replace('💎 ', ''), p, g); }
+    h += '<h3>الكبائن</h3>';
+    for (const t of CABS) { const k = 'cab:' + t.id, g = curCat.gems[k] > 0 ? curCat.gems[k] : (k in curCat.prices ? 0 : (t.gems || 0)), p = k in curCat.prices ? curCat.prices[k] : (t.price || 0); h += row(k, t.emoji + ' ' + t.name, p, g); }
     h += '<h3>الملصقات</h3>';
     const extra = curShop.stickers || [], extraIds = new Set(extra.map((x) => x.id));
     for (const t of STICKERS.filter((x) => !extraIds.has(x.id))) { const k = 'sticker:' + t.id; h += row(k, t.emoji + ' ' + t.name, k in curCat.prices ? curCat.prices[k] : t.price, 0); }

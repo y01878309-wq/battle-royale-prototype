@@ -24,6 +24,7 @@
     "train:metro-line3": 40,
     "train:lrt": 50,
     "train:tram-victoria": 40,
+    "cab:ge": 0,
     "sticker:star": 20,
     "sticker:train": 25,
     "sticker:crown": 60,
@@ -58,6 +59,7 @@
     "train:heavy-gold": 35,
     "train:turbine": 35,
     "train:talgo-prl": 40,
-    "train:monorail": 30
+    "train:monorail": 30,
+    "cab:terra": 25
   }
 }

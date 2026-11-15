@@ -28,7 +28,7 @@ const Account = {
       const c = await this.col('config').doc('catalog').get();
       if (c.exists) {
         const d = c.data(), pr = d.prices || {}, gm = d.gems || {};
-        for (const [list, kind] of [[TRAIN_TYPES, 'train'], [STICKERS, 'sticker']]) for (const t of list) {
+        for (const [list, kind] of [[TRAIN_TYPES, 'train'], [STICKERS, 'sticker'], [CABS, 'cab']]) for (const t of list) {
           const k = kind + ':' + t.id;
           if (gm[k] > 0) { t.gems = gm[k]; t.price = 0; } else if (k in pr) { t.price = pr[k]; t.gems = 0; }
         }

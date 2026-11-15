@@ -8,8 +8,8 @@ class Train {
     /* MeshStandardMaterial, not Physical: the clear-coat shader fails to compile on some phones, and then the whole painted body is invisible (only its shadow shows). */
     const paint = (hex, cc) => new THREE.MeshStandardMaterial({ color: hex, roughness: 0.4 - 0.1 * cc, metalness: 0.2 });
     const common = {
-      glass: new THREE.MeshStandardMaterial({ color: 0x1f3a4d, roughness: 0.04, metalness: 0.55, envMapIntensity: 2.4 }),
-      winLit: new THREE.MeshStandardMaterial({ color: 0x1f3a4d, roughness: 0.05, metalness: 0.55, envMapIntensity: 2.4, emissive: 0xc89a55, emissiveIntensity: 0 }),
+      glass: new THREE.MeshStandardMaterial({ map: Tex.glassRefl(), color: 0xffffff, roughness: 0.04, metalness: 0.45, envMapIntensity: 2.4 }),
+      winLit: new THREE.MeshStandardMaterial({ map: Tex.glassRefl(), color: 0xffffff, roughness: 0.05, metalness: 0.45, envMapIntensity: 2.4, emissive: 0xc89a55, emissiveIntensity: 0 }),
       dark: new THREE.MeshStandardMaterial({ color: 0x1b1a19, roughness: 0.65, metalness: 0.4 }),
       steel: new THREE.MeshStandardMaterial({ color: 0x4a4744, roughness: 0.45, metalness: 0.85 }),
       roof: new THREE.MeshStandardMaterial({ color: 0xa6a69f, roughness: 0.7, metalness: 0.2 }),
@@ -19,12 +19,20 @@ class Train {
     };
     this.lm = Object.assign({ blue: paint(type.loco.top, 0.8), cream: paint(type.loco.low, 0.5), yellow: new THREE.MeshStandardMaterial({ color: type.loco.trim, roughness: 0.5 }) }, common);
     this.cm = Object.assign({ blue: paint(type.coach.band, 0.8), cream: paint(type.coach.body, 0.5), yellow: new THREE.MeshStandardMaterial({ color: type.coach.trim, roughness: 0.5 }) }, common);
+    this.cabStyle = Train.cabStyleFor(type);
     this.build();
+  }
+
+  /* Which interior this train shows: the metro always has its own; otherwise the one the player picked in the store (the terracotta one is gems-only). */
+  static cabStyleFor(type) {
+    if (type.loco.kind === 'metro') return 'metro';
+    try { const c = localStorage.getItem('qs-cab'); if (c === 'terra' && typeof Account !== 'undefined' && Account.d && Account.owns({ item: 'cab', id: 'terra', gems: 1 })) return 'terra'; } catch (e) { /* */ }
+    return 'ge';
   }
 
   /* Total length in metres, known before anything is built (the route needs it for platforms). */
   static lengthOf(type) {
-    const L = { coach: 22.2, old: 20.4, talgo: 14.6, vcoach: 24, tank: 13.6, box: 13.6, flat: 13.6, hopper: 13.6, gond: 13.6, cont: 13.6, cab: type.loco.len };
+    const L = { coach: 22.2, old: 20.4, talgo: 14.6, vcoach: 24, tank: 13.6, box: 13.6, flat: 13.6, hopper: 13.6, gond: 13.6, cont: 13.6, cab: type.loco.len, mcoach: type.loco.len };
     return type.loco.len + type.consist.reduce((a, k) => a + (L[k] || 22.2) + 0.9, 0);
   }
 
@@ -76,6 +84,7 @@ class Train {
    * kind 'dmu'   diesel multiple unit cab car
    * 'driver' adds the cab interior, view anchors and the headlight beam. */
   buildLoco(spec, driver) {
+    if (spec.kind === 'metro') return this.buildMetroCar(spec, driver, true);
     const M = this.lm, h = spec.len / 2, kind = spec.kind, dmu = kind === 'dmu', vel = kind === 'velaro', hood = kind === 'hood', boxy = kind === 'box' || hood, diesel = !dmu && !vel, ry = hood ? -0.8 : 0;
     const body = new THREE.Group(), hull = new THREE.Group(), W = vel ? 2.95 : 3.0, X = W / 2 + 0.06;
     let prof, win;   // win: windscreen centre, size and tilt
@@ -110,7 +119,7 @@ class Train {
       this.box(1.8, 0.35, 5, M.roof, 0, 4.1, -4, hull);
     }
     // windscreen
-    const wm = new THREE.MeshStandardMaterial({ map: Tex.louver(diesel), roughness: 0.08, metalness: 0.25, envMapIntensity: 1.8 });
+    const wm = new THREE.MeshStandardMaterial({ map: Tex.glassRefl(), roughness: 0.05, metalness: 0.45, envMapIntensity: 2.2 });
     const gl = new THREE.Mesh(new THREE.PlaneGeometry(win.w, win.h), wm);
     gl.position.set(0, win.y + win.n[0] * 0.12 * 0, win.z); if (!boxy) { gl.position.y = win.y + win.n[0] * 0.12; gl.position.z = win.z + win.n[1] * 0.12; } gl.rotation.x = win.th; hull.add(gl);
     if (boxy) { this.box(2.9, 0.1, 0.45, M.blue, 0, hood ? 4.2 : 3.92, h + 0.2, hull); }
@@ -168,42 +177,7 @@ class Train {
     if (driver) {
       this.locoHull = hull;
       const cab = new THREE.Group(), ic = new THREE.MeshStandardMaterial({ color: 0xcdb089, roughness: 0.92 }), dk = new THREE.MeshStandardMaterial({ color: 0x1c1b1a, roughness: 0.7 }), wood = new THREE.MeshStandardMaterial({ color: 0x6d4a30, roughness: 0.75 }), trimM = new THREE.MeshStandardMaterial({ color: 0x8a5a2c, roughness: 0.8 });
-      // cab shell modelled on the reference photo: terracotta walls and desk, beige perforated ceiling, rounded framed windows with glass, black screen with a row of yellow buttons
-      const terra = new THREE.MeshStandardMaterial({ color: 0x80402c, roughness: 0.82 }), desk2 = new THREE.MeshStandardMaterial({ color: 0xa4552e, roughness: 0.7 }), beige = new THREE.MeshStandardMaterial({ map: Tex.cabCeil(), color: 0xffffff, roughness: 0.95 });
-      const winTex = (w, h, rx, ry, rw, rh, rad, base) => { const c = U.canvas(512, Math.round(512 * h / w)), g = c.getContext('2d'); g.fillStyle = base; g.fillRect(0, 0, c.width, c.height);
-        const X = rx * c.width, Y = ry * c.height, W = rw * c.width, H = rh * c.height; const rr = (x, y, w2, h2, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w2, y, x + w2, y + h2, r); g.arcTo(x + w2, y + h2, x, y + h2, r); g.arcTo(x, y + h2, x, y, r); g.arcTo(x, y, x + w2, y, r); g.closePath(); };
-        g.lineWidth = 22; g.strokeStyle = '#161513'; rr(X, Y, W, H, rad); g.stroke();
-        g.fillStyle = '#9a8f84'; for (let i = 0; i < 26; i++) { const t = i / 26 * Math.PI * 2, px = X + W / 2 + Math.cos(t) * (W / 2 + 3), py = Y + H / 2 + Math.sin(t) * (H / 2 + 3); g.beginPath(); g.arc(Math.max(X, Math.min(X + W, px)), Math.max(Y, Math.min(Y + H, py)), 3.5, 0, 7); g.fill(); }
-        g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; rr(X, Y, W, H, rad); g.fill(); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t; };
-      const glass = new THREE.MeshStandardMaterial({ color: 0xa8d0e8, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.13, depthWrite: false });
-      const front = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.75), new THREE.MeshStandardMaterial({ map: winTex(3.0, 1.75, 0.07, 0.06, 0.86, 0.72, 60, '#80402c'), transparent: true, alphaTest: 0.5, roughness: 0.82, side: THREE.DoubleSide }));
-      front.position.set(0, 3.25, 7.45); front.rotation.y = Math.PI; cab.add(front);
-      const fg = new THREE.Mesh(new THREE.PlaneGeometry(2.35, 1.2), glass); fg.position.set(0, 3.28, 7.43); fg.rotation.y = Math.PI; cab.add(fg);
-      for (const sx of [-1, 1]) {   // side walls: terracotta lower half, window with rounded frame and glass
-        const sw = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.75), new THREE.MeshStandardMaterial({ map: winTex(4.6, 1.75, 0.16, 0.12, 0.5, 0.6, 50, '#80402c'), transparent: true, alphaTest: 0.5, roughness: 0.82, side: THREE.DoubleSide }));
-        sw.position.set(sx * 1.47, 3.25, 5.15); sw.rotation.y = -sx * Math.PI / 2; cab.add(sw);
-        const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.95), glass); sg.position.set(sx * 1.45, 3.29, 5.47); sg.rotation.y = -sx * Math.PI / 2; cab.add(sg);
-      }
-      this.box(3.0, 0.12, 6.6, new THREE.MeshStandardMaterial({ color: 0x2a2623, roughness: 0.9 }), 0, 1.09, 6.1, cab);        // floor
-      this.box(3.0, 0.12, 5.6, beige, 0, 4.16, 5.2, cab);                                                                     // ceiling
-      this.box(3.0, 2.1, 0.1, terra, 0, 3.0, 2.9, cab);                                                                       // rear wall
-      this.box(0.2, 0.12, 5.6, terra, -1.3, 4.05, 5.2, cab); this.box(0.2, 0.12, 5.6, terra, 1.3, 4.05, 5.2, cab);           // ceiling rails
-      this.box(2.9, 0.5, 1.2, terra, 0, 2.1, 6.85, cab);                                                                      // dash body
-      const slab = this.box(2.9, 0.08, 1.15, desk2, 0, 2.66, 6.7, cab); slab.rotation.x = -0.33;                              // sloped orange-brown dash top
-      this.box(2.9, 1.0, 0.7, terra, 0, 1.6, 6.9, cab);                                                                       // lower front
-      { // black driver's screen set into the dash, with a row of yellow buttons under it
-        const bez = this.box(1.0, 0.04, 0.72, dk, -0.1, 2.745, 6.62, cab); bez.rotation.x = -0.33;
-        const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.58), new THREE.MeshBasicMaterial({ map: Tex.cabScreen() })); sc.rotation.set(-Math.PI / 2 - 0.33, 0, 0); sc.position.set(-0.1, 2.775, 6.62); cab.add(sc);
-        for (let i = 0; i < 11; i++) { const bt = this.box(0.055, 0.02, 0.035, new THREE.MeshStandardMaterial({ color: 0xe9c25a, emissive: 0x5a4210, roughness: 0.5 }), -0.52 + i * 0.085, 2.72, 6.22, cab); bt.rotation.x = -0.33; }
-        const side = this.box(0.34, 0.04, 0.62, dk, 0.66, 2.745, 6.62, cab); side.rotation.x = -0.33;                          // side button panel
-        const side2 = this.box(0.34, 0.04, 0.62, dk, -0.86, 2.745, 6.62, cab); side2.rotation.x = -0.33;
-      }
-      for (const wx of [-0.55, 0.15]) { const w = this.box(0.025, 0.04, 1.0, dk, wx, 3.55, 7.33, cab); w.rotation.z = 0.5; }      // wipers
-      { // driver's seat
-        this.box(0.55, 0.16, 0.55, dk, -0.75, 1.55, 4.1, cab); this.box(0.5, 0.75, 0.12, dk, -0.75, 2.05, 3.8, cab);
-        this.box(0.08, 0.5, 0.08, new THREE.MeshStandardMaterial({ color: 0x555a60, metalness: 0.6, roughness: 0.4 }), -0.75, 1.25, 4.1, cab);
-      }
-      for (const sx of [-1, 1]) this.box(0.16, 0.9, 1.4, dk, sx * 1.35, 2.0, 3.6, cab);   // side lockers
+      this.cabShell(cab, this.cabStyle);
       const ey = new THREE.Vector3(-0.75, 3.05, 5.0);
       this.dials = [];
       for (const [x, max, lab, big] of [[-0.75, this.dialMax, 'كم/س', 0.34], [-0.15, 10, 'بار', 0.26], [0.35, 10, 'قوة', 0.26]]) {
@@ -224,6 +198,60 @@ class Train {
     this.scene.add(body);
     const ax = dmu || vel ? 2 : 3, sp = dmu || vel ? 2.5 : 1.9;
     return { body, len: spec.len, bs: vel ? 17.4 : dmu ? 15.6 : 11.4, bogies: [this.makeBogie(ax, sp), this.makeBogie(ax, sp)], loco: driver };
+  }
+
+  /* Cairo-metro style car: rounded black glass nose on the driving cars, doors and big windows along the sides, coloured stripes. */
+  buildMetroCar(spec, driver, cab) {
+    const M = driver || cab ? this.lm : this.cm, h = spec.len / 2, W = 2.9, body = new THREE.Group(), root = new THREE.Group(); root.add(body);
+    const lo = driver || cab, bodyM = lo ? this.lm.cream : this.cm.cream, band = lo ? this.lm.blue : this.cm.blue, trim = lo ? this.lm.yellow : this.cm.yellow;
+    const prof = cab ? [[-h, 0.95], [-h, 3.55], [-h + 0.3, 3.68], [h - 1.9, 3.68], [h - 0.55, 3.3], [h, 2.55], [h, 0.95]] : [[-h, 0.95], [-h, 3.55], [-h + 0.3, 3.68], [h - 0.3, 3.68], [h, 3.55], [h, 0.95]];
+    const shell = new THREE.Mesh(this.extrudeBody(prof, W), bodyM); shell.castShadow = true; shell.receiveShadow = true; body.add(shell);
+    this.box(W + 0.02, 0.5, spec.len - 0.2, M.dark, 0, 1.1, 0, body);                      // skirt
+    this.box(W + 0.05, 0.26, spec.len - 0.05, band, 0, 1.6, 0, body);                      // wide coloured band
+    this.box(W + 0.06, 0.07, spec.len - 0.05, trim, 0, 1.86, 0, body);                     // thin stripe above it
+    const winY = 2.75, winH = 1.0;
+    const zs = [-h * 0.72, -h * 0.24, h * 0.24, h * 0.72];
+    for (const sx of [-1, 1]) {
+      for (let k = -4; k <= 4; k++) {   // windows between the doors, with dark frames
+        const z = k * (spec.len / 9);
+        if (zs.some((d) => Math.abs(d - z) < 1.6) || (cab && z > h - 3.2)) continue;
+        this.box(0.02, winH + 0.12, 1.42, M.dark, sx * (W / 2 + 0.015), winY, z, body);
+        this.box(0.03, winH, 1.3, M.winLit, sx * (W / 2 + 0.03), winY, z, body);
+      }
+    }
+    this.addDoors(body, M, zs.filter((z) => !(cab && z > h - 3.2)), 2.15, 2.3);
+    this.box(2.2, 0.3, spec.len - 3, M.roof, 0, 3.75, 0, body);                            // roof air-conditioning pods
+    for (let k = 0; k < 3; k++) this.box(1.4, 0.18, 2.2, M.roof, 0, 3.92, -spec.len * 0.3 + k * spec.len * 0.3, body);
+    for (const e of [-1, 1]) { if (cab && e > 0) continue; this.box(2.4, 2.1, 0.2, M.dark, 0, 2.3, e * (h + 0.05), body); }   // gangway
+    let eye = null, nose = null;
+    if (cab) {
+      // black glass front over the slope, yellow destination strip, headlights and tail lights
+      const fr = new THREE.Mesh(this.extrudeBody([[h - 1.92, 3.7], [h - 0.55, 3.32], [h + 0.02, 2.56], [h + 0.02, 1.3], [h - 1.92, 1.3]], W - 0.5), M.glass); fr.castShadow = true; body.add(fr);
+      this.box(W - 0.9, 0.06, 0.05, new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xffd21f, emissiveIntensity: 1.4 }), 0, 3.12, h - 0.34, body).rotation.x = -0.55;
+      for (const sx of [-1, 1]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.08, 16), M.lamp); l.rotation.x = Math.PI / 2; l.position.set(sx * 0.95, 1.55, h + 0.06); body.add(l); }
+      this.box(W - 0.2, 0.2, 0.1, trim, 0, 1.34, h + 0.04, body);
+      this.box(0.04, 1.15, 0.05, M.dark, 0, 2.2, h + 0.045, body);
+      if (driver) {
+        this.locoHull = body; const cabG = new THREE.Group(); this.cabStyle = 'metro';
+        this.cabShell(cabG, 'metro'); this.cabParts = cabG;
+        const ey = new THREE.Vector3(-0.75, 3.05, 5.0), ofs = h - 9.8;
+        this.dials = [];
+        for (const [x, max, lab, big] of [[-0.75, this.dialMax, 'كم/س', 0.34], [-0.15, 10, 'بار', 0.26], [0.35, 10, 'قوة', 0.26]]) {
+          const grp = new THREE.Group(); grp.position.set(x, 2.58, 6.2);
+          grp.add(new THREE.Mesh(new THREE.PlaneGeometry(big, big), new THREE.MeshBasicMaterial({ map: Tex.dial(max, lab), transparent: true })));
+          const needle = new THREE.Group(), nm = new THREE.Mesh(new THREE.BoxGeometry(0.008, big * 0.4, 0.002), new THREE.MeshBasicMaterial({ color: 0xff7a2a }));
+          nm.position.y = big * 0.2; needle.add(nm); needle.position.z = 0.003; grp.add(needle); cabG.add(grp); grp.lookAt(ey.x, ey.y, ey.z); this.dials.push({ needle, max });
+        }
+        this.buildCabControls(cabG);
+        cabG.position.z = ofs; cabG.visible = false; root.add(cabG); this.cab = cabG; this.metroRoot = root;
+        eye = new THREE.Object3D(); eye.position.set(ey.x, ey.y, ey.z + ofs); eye.rotation.y = Math.PI; root.add(eye);
+        nose = new THREE.Object3D(); nose.position.set(0, 1.6, h + 0.6); nose.rotation.y = Math.PI; root.add(nose);
+        this.spot = new THREE.SpotLight(0xffe9c0, 0, 120, 0.30, 0.7, 2.6); this.spot.position.set(0, 1.5, h + 2.2); this.spot.target.position.set(0, 0.3, h + 60);
+        root.add(this.spot, this.spot.target); this.eye = eye; this.nose = nose;
+      }
+    }
+    this.scene.add(root);
+    return { body: root, len: spec.len, bs: spec.len * 0.7, bogies: [this.makeBogie(2, 2.2), this.makeBogie(2, 2.2)], loco: !!driver };
   }
 
   /* Passenger coaches in three styles. */
@@ -329,6 +357,7 @@ class Train {
     this.type.consist.forEach((k, i) => {
       let v;
       if (k === 'cab') { v = this.buildLoco(this.type.loco, false); v.flip = true; }
+      else if (k === 'mcoach') v = this.buildMetroCar(this.type.loco, false, false);
       else if (['tank', 'box', 'flat', 'cont', 'hopper', 'gond'].includes(k)) v = this.buildWagon(k, i);
       else v = this.buildCoach(k === 'old' ? 'old' : k === 'talgo' ? 'talgo' : k === 'vcoach' ? 'velaro' : 'std', i);
       this.vehicles.push(v);
@@ -338,7 +367,11 @@ class Train {
     this.fa = Track.makeFrame(); this.fb = Track.makeFrame(); this.tmp = new THREE.Vector3();
   }
 
-  setCabView(on) { this.cabMode = on; this.locoHull.visible = !on; this.cab.visible = on; }
+  setCabView(on) {
+    this.cabMode = on; this.cab.visible = on;
+    if (this.metroRoot) { const keep = new Set([this.cab, this.eye, this.nose, this.spot, this.spot && this.spot.target]); this.metroRoot.children.forEach((c) => { if (!keep.has(c)) c.visible = !on; }); }   // the metro car is a group of parts, so hide every part except the cab
+    else this.locoHull.visible = !on;
+  }
 
   /* Place every vehicle. sHead is the distance of the loco's front buffer. */
   place(sHead, time, speed, derailT) {
@@ -370,6 +403,126 @@ class Train {
 
   /* Working controls on the driver's desk: throttle and brake levers, horn / doors / emergency / headlight buttons, a small screen and lamps.
    * cabHits lists the meshes a click can land on (userData.act = 'throttle' | 'brake' | 'horn' | 'door' | 'emerg' | 'light'). */
+  /* Rectangular window opening in a wall made of boxes: pieces around [x0..x1] x [y0..y1] on the plane z (front) or x (side). */
+  wallWithOpening(cab, axis, pos, span0, span1, ya, yb, o0, o1, y0, y1, mat, th) {
+    // axis 'z': wall in the plane z=pos spanning x (span0..span1); axis 'x': wall in the plane x=pos spanning z.
+    const put = (a0, a1, b0, b1) => { if (a1 - a0 < 0.001 || b1 - b0 < 0.001) return; if (axis === 'z') this.box(a1 - a0, b1 - b0, th, mat, (a0 + a1) / 2, (b0 + b1) / 2, pos, cab); else this.box(th, b1 - b0, a1 - a0, mat, pos, (b0 + b1) / 2, (a0 + a1) / 2, cab); };
+    put(span0, span1, ya, y0); put(span0, span1, y1, yb); put(span0, o0, y0, y1); put(o1, span1, y0, y1);
+  }
+
+  cabGE(cab, dk, glassM) {
+    const tan = new THREE.MeshStandardMaterial({ color: 0xd8bb8f, roughness: 0.9 }), orange = new THREE.MeshStandardMaterial({ color: 0xbd6a24, roughness: 0.85 }), brown = new THREE.MeshStandardMaterial({ color: 0x6a4936, roughness: 0.75 });
+    const navy = new THREE.MeshStandardMaterial({ color: 0x182033, roughness: 0.6 }), frame = new THREE.MeshStandardMaterial({ color: 0x15130f, roughness: 0.7 });
+    this.box(3.0, 0.12, 6.6, new THREE.MeshStandardMaterial({ color: 0x3a2c25, roughness: 0.9 }), 0, 1.09, 6.1, cab);                    // floor
+    this.box(3.0, 0.12, 5.6, new THREE.MeshStandardMaterial({ color: 0xe0cba9, roughness: 0.95 }), 0, 4.16, 5.2, cab);                 // ceiling
+    this.box(3.0, 2.1, 0.1, tan, 0, 3.0, 2.9, cab);                                                                                   // rear wall
+    // front wall with one big windscreen, orange pillars, security bars
+    this.wallWithOpening(cab, 'z', 7.45, -1.5, 1.5, 1.1, 4.16, -1.3, 1.3, 2.85, 4.04, tan, 0.1);
+    for (const sx of [-1, 1]) this.box(0.2, 1.3, 0.14, orange, sx * 1.4, 3.45, 7.43, cab);
+    this.box(2.7, 0.09, 0.12, frame, 0, 2.87, 7.42, cab); this.box(2.7, 0.09, 0.12, frame, 0, 4.0, 7.42, cab);
+    for (let i = -7; i <= 7; i++) { const b = this.box(0.022, 1.15, 0.03, frame, i * 0.17, 3.44, 7.4, cab); b.rotation.z = i * 0.012; }
+    for (const [x, r] of [[0.85, -0.55], [1.05, -0.6]]) { const b = this.box(0.02, 1.4, 0.03, frame, x, 3.45, 7.39, cab); b.rotation.z = r; }
+    const fg = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.18), glassM); fg.position.set(0, 3.44, 7.41); fg.rotation.y = Math.PI; cab.add(fg);
+    for (const sx of [-1, 1]) {   // side walls: a big window on the driver's side, a narrower one opposite
+      const z0 = sx > 0 ? 3.5 : 4.4, z1 = sx > 0 ? 6.9 : 6.6;
+      this.wallWithOpening(cab, 'x', sx * 1.47, 2.9, 7.45, 1.1, 4.16, z0, z1, 2.75, 3.95, sx > 0 ? tan : orange, 0.1);
+      this.box(0.12, 0.08, z1 - z0 + 0.1, frame, sx * 1.46, 2.74, (z0 + z1) / 2, cab); this.box(0.12, 0.08, z1 - z0 + 0.1, frame, sx * 1.46, 3.96, (z0 + z1) / 2, cab);
+      const sg = new THREE.Mesh(new THREE.PlaneGeometry(z1 - z0, 1.2), glassM); sg.position.set(sx * 1.45, 3.35, (z0 + z1) / 2); sg.rotation.y = -sx * Math.PI / 2; cab.add(sg);
+    }
+    // dash
+    this.box(2.9, 0.5, 1.2, brown, 0, 2.1, 6.85, cab); this.box(2.9, 1.0, 0.7, brown, 0, 1.6, 6.9, cab);
+    const slab = this.box(2.9, 0.08, 1.15, brown, 0, 2.66, 6.7, cab); slab.rotation.x = -0.33;
+    const tilt = (m) => { m.rotation.x = -0.33; return m; };
+    tilt(this.box(0.72, 0.045, 0.62, navy, 1.05, 2.745, 6.62, cab));
+    for (let i = 0; i < 5; i++) tilt(this.box(0.06, 0.03, 0.06, new THREE.MeshStandardMaterial({ color: [0x4aa3ff, 0xe9c25a, 0xe9e9e9, 0x4aa3ff, 0xe05a3a][i] }), 1.25 - i * 0.1, 2.775, 6.5, cab));
+    tilt(this.box(0.98, 0.045, 0.62, dk, 0.0, 2.745, 6.65, cab));
+    { const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.84, 0.46), new THREE.MeshBasicMaterial({ map: Tex.cabScreen2() })); sc.rotation.set(-Math.PI / 2 - 0.33, 0, 0); sc.position.set(0, 2.8, 6.65); cab.add(sc); }
+    for (let i = 0; i < 10; i++) tilt(this.box(0.055, 0.02, 0.035, new THREE.MeshStandardMaterial({ color: 0xe9c25a, emissive: 0x5a4210 }), -0.4 + i * 0.09, 2.755, 6.4, cab));
+    tilt(this.box(0.8, 0.045, 0.62, dk, -0.98, 2.745, 6.65, cab));
+    { const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.66, 0.46), new THREE.MeshBasicMaterial({ map: Tex.cabScreen() })); sc.rotation.set(-Math.PI / 2 - 0.33, 0, 0); sc.position.set(-0.98, 2.8, 6.65); cab.add(sc); }
+    const spk = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.05, 16), dk); spk.position.set(-1.3, 2.82, 6.45); spk.rotation.x = 1.2; cab.add(spk);
+    for (const x of [-0.45, -0.05]) { const hs = this.box(0.36, 0.1, 0.55, new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.6 }), x, 2.55, 5.95, cab); hs.rotation.x = -0.05; }   // lever housings
+    for (const wx of [-0.55, 0.15]) { const w = this.box(0.025, 0.04, 1.0, dk, wx, 3.45, 7.33, cab); w.rotation.z = 0.5; }
+    this.box(0.55, 0.16, 0.55, dk, -0.75, 1.55, 4.1, cab); this.box(0.5, 0.75, 0.12, dk, -0.75, 2.05, 3.8, cab);
+    for (const sx of [-1, 1]) this.box(0.16, 0.9, 1.0, dk, sx * 1.35, 2.0, 3.4, cab);
+  }
+
+  cabMetro(cab, dk, glassM) {
+    const wall = new THREE.MeshStandardMaterial({ color: 0xd3d9dd, roughness: 0.8 }), white = new THREE.MeshStandardMaterial({ color: 0xeef0f1, roughness: 0.7 }), teal = new THREE.MeshStandardMaterial({ color: 0x1f8f86, roughness: 0.6 });
+    const frame = new THREE.MeshStandardMaterial({ color: 0x1a1d20, roughness: 0.6 }), flo = new THREE.MeshStandardMaterial({ color: 0x4a4f54, roughness: 0.9 });
+    this.box(3.0, 0.12, 6.6, flo, 0, 1.09, 6.1, cab);
+    this.box(3.0, 0.12, 5.6, white, 0, 4.16, 5.2, cab);
+    this.box(1.8, 0.03, 0.25, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff6e0, emissiveIntensity: 1.1 }), 0, 4.09, 5.0, cab);
+    this.box(3.0, 2.1, 0.1, wall, 0, 3.0, 2.9, cab);
+    // wide panoramic windscreen with a centre emergency door frame
+    this.wallWithOpening(cab, 'z', 7.45, -1.5, 1.5, 1.1, 4.16, -1.35, 1.35, 2.7, 4.06, wall, 0.1);
+    this.box(2.8, 0.1, 0.12, frame, 0, 2.7, 7.42, cab); this.box(2.8, 0.1, 0.12, frame, 0, 4.05, 7.42, cab);
+    for (const x of [-1.35, -0.42, 0.42, 1.35]) this.box(0.1, 1.4, 0.12, frame, x, 3.38, 7.42, cab);
+    this.box(0.84, 0.05, 0.12, frame, 0, 3.6, 7.42, cab);
+    const fg = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 1.34), glassM); fg.position.set(0, 3.38, 7.41); fg.rotation.y = Math.PI; cab.add(fg);
+    for (const sx of [-1, 1]) {
+      this.wallWithOpening(cab, 'x', sx * 1.47, 2.9, 7.45, 1.1, 4.16, 5.2, 6.6, 2.85, 3.9, wall, 0.1);
+      const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.05), glassM); sg.position.set(sx * 1.45, 3.38, 5.9); sg.rotation.y = -sx * Math.PI / 2; cab.add(sg);
+      this.box(0.06, 2.4, 1.1, teal, sx * 1.44, 2.4, 4.1, cab);   // driver's door
+    }
+    this.box(2.9, 0.5, 1.2, wall, 0, 2.1, 6.85, cab); this.box(2.9, 1.0, 0.7, wall, 0, 1.6, 6.9, cab);
+    const slab = this.box(2.9, 0.08, 1.15, white, 0, 2.66, 6.7, cab); slab.rotation.x = -0.33;
+    this.box(2.9, 0.04, 0.12, teal, 0, 2.64, 7.22, cab);
+    for (const [x, w, tx] of [[-0.55, 0.8, 'cabScreen2'], [0.5, 0.8, 'cabScreen']]) {
+      const bz = this.box(w + 0.08, 0.045, 0.56, dk, x, 2.745, 6.65, cab); bz.rotation.x = -0.33;
+      const sc = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.44), new THREE.MeshBasicMaterial({ map: Tex[tx]() })); sc.rotation.set(-Math.PI / 2 - 0.33, 0, 0); sc.position.set(x, 2.8, 6.65); cab.add(sc);
+    }
+    this.box(0.55, 0.16, 0.55, flo, -0.75, 1.55, 4.1, cab); this.box(0.5, 0.75, 0.12, flo, -0.75, 2.05, 3.8, cab);
+  }
+
+  /* Cab interiors. 'ge' (free): tan walls, slanted windscreen with bars, brown desk with black panels. 'terra' (gems): terracotta walls, rounded framed windows.
+   * 'metro': light modern metro cab. The levers, dials and buttons are shared (buildCabControls); only the shell and dash differ. */
+  cabShell(cab, style) {
+    const dk = new THREE.MeshStandardMaterial({ color: 0x1c1b1a, roughness: 0.7 }), trimM = new THREE.MeshStandardMaterial({ color: 0x8a5a2c, roughness: 0.8 });
+    const glassM = new THREE.MeshStandardMaterial({ color: 0xa8d0e8, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.13, depthWrite: false });
+    if (style === 'ge') return this.cabGE(cab, dk, glassM);
+    const metro = style === 'metro';   // the metro cab reuses the verified rounded-window shell in light grey and white with a teal stripe
+    {
+      // 'terra': cab shell modelled on the reference photo: terracotta walls and desk, beige perforated ceiling, rounded framed windows with glass, black screen with a row of yellow buttons
+      const terra = new THREE.MeshStandardMaterial({ color: metro ? 0x7d878e : 0x80402c, roughness: 0.82 }), desk2 = new THREE.MeshStandardMaterial({ color: metro ? 0x3f474d : 0xa4552e, roughness: 0.7 }), beige = new THREE.MeshStandardMaterial({ map: metro ? null : Tex.cabCeil(), color: metro ? 0x9aa4aa : 0xffffff, roughness: 0.95 });
+      const winTex = (w, h, rx, ry, rw, rh, rad, base) => { const c = U.canvas(512, Math.round(512 * h / w)), g = c.getContext('2d'); g.fillStyle = base; g.fillRect(0, 0, c.width, c.height);
+        const X = rx * c.width, Y = ry * c.height, W = rw * c.width, H = rh * c.height; const rr = (x, y, w2, h2, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w2, y, x + w2, y + h2, r); g.arcTo(x + w2, y + h2, x, y + h2, r); g.arcTo(x, y + h2, x, y, r); g.arcTo(x, y, x + w2, y, r); g.closePath(); };
+        g.lineWidth = 22; g.strokeStyle = '#161513'; rr(X, Y, W, H, rad); g.stroke();
+        g.fillStyle = '#9a8f84'; for (let i = 0; i < 26; i++) { const t = i / 26 * Math.PI * 2, px = X + W / 2 + Math.cos(t) * (W / 2 + 3), py = Y + H / 2 + Math.sin(t) * (H / 2 + 3); g.beginPath(); g.arc(Math.max(X, Math.min(X + W, px)), Math.max(Y, Math.min(Y + H, py)), 3.5, 0, 7); g.fill(); }
+        g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; rr(X, Y, W, H, rad); g.fill(); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t; };
+      const glass = glassM;
+      const front = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.75), new THREE.MeshStandardMaterial({ map: winTex(3.0, 1.75, 0.07, 0.06, 0.86, 0.72, 60, (metro ? '#7d878e' : '#80402c')), transparent: true, alphaTest: 0.5, roughness: 0.82, side: THREE.DoubleSide }));
+      front.position.set(0, 3.25, 7.45); front.rotation.y = Math.PI; cab.add(front);
+      const fg = new THREE.Mesh(new THREE.PlaneGeometry(2.35, 1.2), glass); fg.position.set(0, 3.28, 7.43); fg.rotation.y = Math.PI; cab.add(fg);
+      for (const sx of [-1, 1]) {   // side walls: terracotta lower half, window with rounded frame and glass
+        const sw = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.75), new THREE.MeshStandardMaterial({ map: winTex(4.6, 1.75, 0.16, 0.12, 0.5, 0.6, 50, (metro ? '#7d878e' : '#80402c')), transparent: true, alphaTest: 0.5, roughness: 0.82, side: THREE.DoubleSide }));
+        sw.position.set(sx * 1.47, 3.25, 5.15); sw.rotation.y = -sx * Math.PI / 2; cab.add(sw);
+        const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.95), glass); sg.position.set(sx * 1.45, 3.29, 5.47); sg.rotation.y = -sx * Math.PI / 2; cab.add(sg);
+      }
+      this.box(3.0, 0.12, 6.6, new THREE.MeshStandardMaterial({ color: 0x2a2623, roughness: 0.9 }), 0, 1.09, 6.1, cab);        // floor
+      this.box(3.0, 0.12, 5.6, beige, 0, 4.16, 5.2, cab);                                                                     // ceiling
+      this.box(3.0, 2.1, 0.1, terra, 0, 3.0, 2.9, cab);                                                                       // rear wall
+      this.box(0.2, 0.12, 5.6, terra, -1.3, 4.05, 5.2, cab); this.box(0.2, 0.12, 5.6, terra, 1.3, 4.05, 5.2, cab);           // ceiling rails
+      this.box(2.9, 0.5, 1.2, terra, 0, 2.1, 6.85, cab);                                                                      // dash body
+      const slab = this.box(2.9, 0.08, 1.15, desk2, 0, 2.66, 6.7, cab); slab.rotation.x = -0.33;                              // sloped orange-brown dash top
+      this.box(2.9, 1.0, 0.7, terra, 0, 1.6, 6.9, cab);                                                                       // lower front
+      if (metro) { this.box(2.92, 0.05, 0.05, new THREE.MeshStandardMaterial({ color: 0x1f8f86, roughness: 0.5 }), 0, 2.45, 7.28, cab); this.box(0.06, 2.0, 0.9, new THREE.MeshStandardMaterial({ color: 0x1f8f86, roughness: 0.6 }), -1.43, 2.2, 4.1, cab); this.box(0.06, 2.0, 0.9, new THREE.MeshStandardMaterial({ color: 0x1f8f86, roughness: 0.6 }), 1.43, 2.2, 4.1, cab); }
+      { // black driver's screen set into the dash, with a row of yellow buttons under it
+        const bez = this.box(1.0, 0.04, 0.72, dk, -0.1, 2.745, 6.62, cab); bez.rotation.x = -0.33;
+        const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.58), new THREE.MeshBasicMaterial({ map: Tex.cabScreen() })); sc.rotation.set(-Math.PI / 2 - 0.33, 0, 0); sc.position.set(-0.1, 2.775, 6.62); cab.add(sc);
+        for (let i = 0; i < 11; i++) { const bt = this.box(0.055, 0.02, 0.035, new THREE.MeshStandardMaterial({ color: 0xe9c25a, emissive: 0x5a4210, roughness: 0.5 }), -0.52 + i * 0.085, 2.72, 6.22, cab); bt.rotation.x = -0.33; }
+        const side = this.box(0.34, 0.04, 0.62, dk, 0.66, 2.745, 6.62, cab); side.rotation.x = -0.33;                          // side button panel
+        const side2 = this.box(0.34, 0.04, 0.62, dk, -0.86, 2.745, 6.62, cab); side2.rotation.x = -0.33;
+      }
+      for (const wx of [-0.55, 0.15]) { const w = this.box(0.025, 0.04, 1.0, dk, wx, 3.55, 7.33, cab); w.rotation.z = 0.5; }      // wipers
+      { // driver's seat
+        this.box(0.55, 0.16, 0.55, dk, -0.75, 1.55, 4.1, cab); this.box(0.5, 0.75, 0.12, dk, -0.75, 2.05, 3.8, cab);
+        this.box(0.08, 0.5, 0.08, new THREE.MeshStandardMaterial({ color: 0x555a60, metalness: 0.6, roughness: 0.4 }), -0.75, 1.25, 4.1, cab);
+      }
+      for (const sx of [-1, 1]) this.box(0.16, 0.9, 1.4, dk, sx * 1.35, 2.0, 3.6, cab);   // side lockers
+    }
+  }
+
   buildCabControls(cab) {
     this.cabHits = []; const C = this.cabCtl = {};
     const plate = new THREE.CanvasTexture((() => {

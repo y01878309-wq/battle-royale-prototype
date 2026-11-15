@@ -331,13 +331,33 @@ const Tex = {
   /* the driver's display: dark, with gauges and white readouts */
   cabScreen() {
     if (this._cs) return this._cs;
-    const c = U.canvas(512, 340), g = c.getContext('2d'); g.fillStyle = '#080b0d'; g.fillRect(0, 0, 512, 340);
-    g.strokeStyle = '#cfd8dc'; g.lineWidth = 2; g.strokeRect(14, 14, 484, 312);
-    g.beginPath(); g.arc(256, 150, 78, Math.PI, 0); g.stroke(); for (let i = 0; i <= 10; i++) { const a = Math.PI + i / 10 * Math.PI; g.beginPath(); g.moveTo(256 + Math.cos(a) * 70, 150 + Math.sin(a) * 70); g.lineTo(256 + Math.cos(a) * 78, 150 + Math.sin(a) * 78); g.stroke(); }
-    g.beginPath(); g.moveTo(256, 150); g.lineTo(256 + Math.cos(Math.PI * 1.3) * 66, 150 + Math.sin(Math.PI * 1.3) * 66); g.stroke();
-    g.fillStyle = '#4fc3f7'; for (let i = 0; i < 6; i++) g.fillRect(30 + i * 34, 40, 26, 12); g.fillStyle = '#cfd8dc'; g.font = '16px monospace';
-    for (let r = 0; r < 4; r++) { g.fillText('SPD  ' + (r * 20 + 20), 30, 210 + r * 24); g.fillText('BP  ' + (5 - r * 0.2).toFixed(1), 300, 210 + r * 24); }
+    const c = U.canvas(512, 340), g = c.getContext('2d'); g.fillStyle = '#0c2238'; g.fillRect(0, 0, 512, 340);
+    g.fillStyle = '#134a7a'; g.fillRect(14, 14, 484, 40); g.fillStyle = '#1f7a4a'; g.fillRect(14, 270, 230, 56);
+    g.strokeStyle = '#e1ecf2'; g.lineWidth = 3; g.strokeRect(14, 14, 484, 312);
+    g.beginPath(); g.arc(256, 190, 86, Math.PI, 0); g.stroke(); for (let i = 0; i <= 10; i++) { const a = Math.PI + i / 10 * Math.PI; g.beginPath(); g.moveTo(256 + Math.cos(a) * 76, 190 + Math.sin(a) * 76); g.lineTo(256 + Math.cos(a) * 86, 190 + Math.sin(a) * 86); g.stroke(); }
+    g.beginPath(); g.moveTo(256, 190); g.lineTo(256 + Math.cos(Math.PI * 1.3) * 70, 190 + Math.sin(Math.PI * 1.3) * 70); g.stroke();
+    g.fillStyle = '#7fd0ff'; for (let i = 0; i < 6; i++) g.fillRect(30 + i * 34, 28, 26, 12); g.fillStyle = '#e1ecf2'; g.font = '18px monospace';
+    for (let r = 0; r < 2; r++) { g.fillText('SPD ' + (r * 20 + 20), 270, 270 + r * 24); }
+    g.fillStyle = '#f0c040'; for (let i = 0; i < 5; i++) g.fillRect(266 + i * 44, 316, 34, 6);
     const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return (this._cs = t);
+  },
+  /* the second display of the GE cab: blue operating screen */
+  cabScreen2() {
+    if (this._cs2) return this._cs2;
+    const c = U.canvas(512, 280), g = c.getContext('2d'); g.fillStyle = '#071018'; g.fillRect(0, 0, 512, 280);
+    g.fillStyle = '#1b5da8'; g.fillRect(14, 14, 230, 40); g.fillRect(262, 14, 236, 40); g.fillStyle = '#2f8f4f'; g.fillRect(262, 66, 236, 30);
+    g.strokeStyle = '#6fa8dc'; g.lineWidth = 2; g.strokeRect(14, 70, 230, 150); g.beginPath(); g.arc(380, 190, 70, Math.PI, 0); g.stroke();
+    g.fillStyle = '#cfd8dc'; g.font = '16px monospace'; for (let r = 0; r < 5; r++) g.fillText('LOAD  ' + (r * 12 + 8) + '%', 26, 100 + r * 26);
+    g.fillStyle = '#e9c25a'; for (let i = 0; i < 8; i++) g.fillRect(20 + i * 30, 240, 22, 22);
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return (this._cs2 = t);
+  },
+  /* reflective window glass: sky tint at the top, dark interior below, soft diagonal glare streaks */
+  glassRefl() {
+    if (this._gr) return this._gr;
+    const c = U.canvas(128, 128), g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 128);
+    gr.addColorStop(0, '#9ccbea'); gr.addColorStop(0.45, '#4c7d9c'); gr.addColorStop(1, '#14222c'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    g.fillStyle = 'rgba(255,255,255,0.22)'; for (const x of [18, 70]) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 22, 0); g.lineTo(x - 30, 128); g.lineTo(x - 52, 128); g.closePath(); g.fill(); }
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return (this._gr = t);
   },
   dial(max, label) {
     const S = 256, c = U.canvas(S, S), g = c.getContext('2d');
