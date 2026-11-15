@@ -167,14 +167,17 @@ class Train {
     let eye = null, nose = null;
     if (driver) {
       this.locoHull = hull;
-      const cab = new THREE.Group(), ic = new THREE.MeshStandardMaterial({ color: 0x6f6b60, roughness: 0.9 }), dk = new THREE.MeshStandardMaterial({ color: 0x242321, roughness: 0.7 });
-      this.box(3.0, 0.12, 6.6, new THREE.MeshStandardMaterial({ color: 0x3b3a36, roughness: 0.9 }), 0, 1.09, 6.1, cab);
+      const cab = new THREE.Group(), ic = new THREE.MeshStandardMaterial({ color: 0xcdb089, roughness: 0.92 }), dk = new THREE.MeshStandardMaterial({ color: 0x1c1b1a, roughness: 0.7 }), wood = new THREE.MeshStandardMaterial({ color: 0x6d4a30, roughness: 0.75 }), trimM = new THREE.MeshStandardMaterial({ color: 0x8a5a2c, roughness: 0.8 });
+      // cab shell like the real GE cab: tan walls, brown desk, tall slanted windscreen with security bars, side windows
+      this.box(3.0, 0.12, 6.6, new THREE.MeshStandardMaterial({ color: 0x4a3f33, roughness: 0.9 }), 0, 1.09, 6.1, cab);
       this.box(3.0, 0.14, 5.6, ic, 0, 4.12, 5.4, cab);
-      for (const sx of [-1, 1]) { this.box(0.12, 1.5, 4.2, ic, sx * 1.46, 1.9, 5.3, cab); this.box(0.12, 0.22, 4.2, ic, sx * 1.46, 3.95, 5.3, cab); this.box(0.14, 2.9, 0.16, dk, sx * 1.45, 2.65, 7.0, cab); }
+      for (const sx of [-1, 1]) { this.box(0.12, 1.5, 4.2, ic, sx * 1.46, 1.9, 5.3, cab); this.box(0.12, 0.22, 4.2, ic, sx * 1.46, 3.95, 5.3, cab); this.box(0.14, 2.9, 0.16, trimM, sx * 1.45, 2.65, 7.0, cab); this.box(0.1, 0.1, 3.4, dk, sx * 1.47, 3.2, 5.2, cab); }
       this.box(3.0, 2.9, 0.1, ic, 0, 2.6, 2.9, cab);
-      for (const x of [-1.32, 0, 1.32]) { const p = new THREE.Mesh(new THREE.BoxGeometry(x === 0 ? 0.05 : 0.15, 0.1, 3.0), dk); p.position.set(x, 4.2 - 0.83, 7.4 + 1.2); p.rotation.x = Math.atan2(1.65, 2.4); cab.add(p); }
-      this.box(2.9, 0.62, 1.0, dk, 0, 2.18, 6.5, cab);
-      this.box(2.9, 0.08, 0.9, new THREE.MeshStandardMaterial({ color: 0x35332f, roughness: 0.6 }), 0, 2.52, 6.4, cab).rotation.x = 0.25;
+      for (const x of [-1.32, 0, 1.32]) { const p = new THREE.Mesh(new THREE.BoxGeometry(x === 0 ? 0.06 : 0.18, 0.1, 3.0), trimM); p.position.set(x, 4.2 - 0.83, 7.4 + 1.2); p.rotation.x = Math.atan2(1.65, 2.4); cab.add(p); }
+      for (let i = -6; i <= 6; i++) { const bar = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.04, 2.9), dk); bar.position.set(i * 0.2, 3.65, 8.55); bar.rotation.x = Math.atan2(1.65, 2.4); bar.position.y = 3.37; bar.position.z = 8.5; cab.add(bar); }
+      this.box(2.9, 0.62, 1.0, trimM, 0, 2.18, 6.5, cab);
+      this.box(2.9, 0.08, 0.9, wood, 0, 2.52, 6.4, cab).rotation.x = 0.25;
+      this.box(2.9, 0.5, 0.5, dk, 0, 2.95, 6.6, cab).rotation.x = -0.3;   // black instrument console
       this.box(0.5, 0.7, 0.5, dk, -0.75, 1.5, 4.4, cab); this.box(0.5, 0.55, 0.1, dk, -0.75, 2.0, 4.15, cab);
       const ey = new THREE.Vector3(-0.75, 3.05, 5.0);
       this.dials = [];
@@ -351,7 +354,7 @@ class Train {
       g.fillStyle = '#777'; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc(12 + i * 12.5, 8, 2, 0, 7); g.fill(); }
       return c; })());
     plate.encoding = THREE.sRGBEncoding;
-    const desk = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.05, 0.7), [0, 0, 1, 0, 0, 0].map((x) => x ? new THREE.MeshStandardMaterial({ map: plate, roughness: 0.6 }) : new THREE.MeshStandardMaterial({ color: 0x24272a, roughness: 0.7 })));
+    const desk = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.05, 0.7), [0, 0, 1, 0, 0, 0].map((x) => x ? new THREE.MeshStandardMaterial({ map: plate, roughness: 0.6 }) : new THREE.MeshStandardMaterial({ color: 0x6d4a30, roughness: 0.7 })));
     desk.position.set(0, 2.5, 5.78); cab.add(desk);
     const lab = (txt, x, z) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.05), new THREE.MeshBasicMaterial({ map: Tex.sign(txt, 160, 40, '#1b1d20', '#e8e4d6'), transparent: true })); m.rotation.x = -Math.PI / 2; m.position.set(x, 2.528, z); cab.add(m); };
     const hit = (mesh, act) => { mesh.userData.act = act; this.cabHits.push(mesh); };
@@ -362,13 +365,13 @@ class Train {
       const big = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); big.position.y = 0.25; piv.add(big);
       hit(big, act); hit(knob, act); hit(rod, act); lab(name, x, 5.62); return piv;
     };
-    C.throttle = lever(-0.45, 0xc22b24, 'throttle', 'القوة'); C.brake = lever(-0.05, 0x1d1d1f, 'brake', 'فرامل');
+    C.throttle = lever(-0.45, 0x101010, 'throttle', 'القوة'); C.brake = lever(-0.05, 0xd01c1c, 'brake', 'فرامل');
     const button = (x, col, act, name, r) => {
       const b = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.035, 16), new THREE.MeshStandardMaterial({ color: col, roughness: 0.4, emissive: col, emissiveIntensity: 0.15 })); b.position.set(x, 2.55, 5.98); cab.add(b);
       const big = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); big.position.set(x, 2.56, 5.98); cab.add(big);
       hit(b, act); hit(big, act); lab(name, x, 5.78); return b;
     };
-    C.horn = button(0.35, 0xe0a82a, 'horn', 'زمارة', 0.04); C.door = button(0.6, 0x2e9a58, 'door', 'أبواب', 0.04);
+    C.horn = button(0.35, 0xe8d21a, 'horn', 'زمارة', 0.04); C.door = button(0.6, 0x2a7fe0, 'door', 'أبواب', 0.04);
     C.emerg = button(0.85, 0xd32020, 'emerg', 'طوارئ', 0.06); C.light = button(1.1, 0xe8e8e0, 'light', 'أنوار', 0.04);
     // small screen with speed, limit and the next stop
     this.scrC = U.canvas(256, 128); this.scrT = new THREE.CanvasTexture(this.scrC); this.scrT.encoding = THREE.sRGBEncoding;

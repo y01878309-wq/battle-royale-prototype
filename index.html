@@ -9,8 +9,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="hub.css">
+<link rel="stylesheet" href="style.css?v=20261115a">
+<link rel="stylesheet" href="hub.css?v=20261115a">
+<script>
+/* Self-update: if the server has a newer build than this page, clear every cache and reload once. */
+(function () { try {
+  var V = '20261115a';
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+    if (j && j.v && j.v !== V && !/[?&]r=/.test(location.search)) {
+      var go = function () { location.replace(location.pathname + '?r=' + j.v); };
+      if (window.caches) caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }).then(go, go); else go();
+    }
+  }).catch(function () {});
+} catch (e) { /* ignore */ } })();
+</script>
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -190,31 +202,31 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="config.js"></script>
-<script src="fb.js"></script>
-<script src="util.js"></script>
-<script src="settings.js"></script>
-<script src="textures.js"></script>
-<script src="data.js"></script>
-<script src="route.js"></script>
-<script src="track.js"></script>
-<script src="sky.js"></script>
-<script src="world.js"></script>
-<script src="scenery.js"></script>
-<script src="train.js"></script>
-<script src="stations.js"></script>
-<script src="net.js"></script>
-<script src="traffic.js"></script>
-<script src="crowd.js"></script>
-<script src="game.js"></script>
-<script src="commentary.js"></script>
-<script src="account.js"></script>
-<script src="menu.js"></script>
-<script src="weather.js"></script>
-<script src="hub.js"></script>
-<script src="audio.js"></script>
-<script src="ui.js"></script>
-<script src="main.js"></script>
+<script src="config.js?v=20261115a"></script>
+<script src="fb.js?v=20261115a"></script>
+<script src="util.js?v=20261115a"></script>
+<script src="settings.js?v=20261115a"></script>
+<script src="textures.js?v=20261115a"></script>
+<script src="data.js?v=20261115a"></script>
+<script src="route.js?v=20261115a"></script>
+<script src="track.js?v=20261115a"></script>
+<script src="sky.js?v=20261115a"></script>
+<script src="world.js?v=20261115a"></script>
+<script src="scenery.js?v=20261115a"></script>
+<script src="train.js?v=20261115a"></script>
+<script src="stations.js?v=20261115a"></script>
+<script src="net.js?v=20261115a"></script>
+<script src="traffic.js?v=20261115a"></script>
+<script src="crowd.js?v=20261115a"></script>
+<script src="game.js?v=20261115a"></script>
+<script src="commentary.js?v=20261115a"></script>
+<script src="account.js?v=20261115a"></script>
+<script src="menu.js?v=20261115a"></script>
+<script src="weather.js?v=20261115a"></script>
+<script src="hub.js?v=20261115a"></script>
+<script src="audio.js?v=20261115a"></script>
+<script src="ui.js?v=20261115a"></script>
+<script src="main.js?v=20261115a"></script>
 <script>
 /* The game needs the internet: old offline caches and the old service worker are removed. */
 try {

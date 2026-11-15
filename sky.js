@@ -45,7 +45,7 @@ class Sky {
         }`
     });
     this.dome = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), mat);
-    this.dome.scale.setScalar(12000); this.dome.renderOrder = -10; this.dome.frustumCulled = false;
+    this.dome.scale.setScalar(7000); this.dome.renderOrder = -10; this.dome.frustumCulled = false;
     scene.add(this.dome);
 
     this.sunLight = new THREE.DirectionalLight(0xffffff, 3);

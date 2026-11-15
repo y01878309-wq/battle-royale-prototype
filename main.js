@@ -103,7 +103,7 @@
       if (!this.el) return; if (performance.now() > this.until && !this.errs.length) { this.el.hidden = true; return; }
       const gl = renderer.info, hull = train.locoHull, c = train.cab;
       this.el.hidden = false;
-      this.el.textContent = `cam=${CAMERAS[camIdx][0]} hull=${hull && hull.visible} cab=${c && c.visible} tri=${gl.render.triangles} calls=${gl.render.calls} prog=${gl.programs ? gl.programs.length : '?'} y=${camera.position.y.toFixed(1)}\n` + this.errs.join('\n');
+      this.el.textContent = `b=${window.QS_BUILD} cam=${CAMERAS[camIdx][0]} hull=${hull && hull.visible} cab=${c && c.visible} tri=${gl.render.triangles} calls=${gl.render.calls} prog=${gl.programs ? gl.programs.length : '?'} y=${camera.position.y.toFixed(1)}\n` + this.errs.join('\n');
     }
   };
   Diag.hook();
@@ -184,7 +184,7 @@
     renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.shadowMap.enabled = S.shadows > 0; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(66, window.innerWidth / window.innerHeight, 0.25, 20000);
+    camera = new THREE.PerspectiveCamera(66, window.innerWidth / window.innerHeight, 0.3, 9000);
     window.addEventListener('resize', onResize); bindPointer(renderer.domElement);
 
     route = new Route(line, online ? Math.max(ONLINE_REF_LEN, Train.lengthOf(type)) : Train.lengthOf(type));   // online: everyone builds the same track
@@ -317,7 +317,7 @@
 
   function updateCamera(dt) {
     const k = CAMERAS[camIdx][0], body = train.loco.body; body.updateMatrixWorld(true);
-    baseFov = (k === 'cab' ? 70 : 60) * Settings.d.fov; camera.fov = baseFov; const f = Math.min(1, game.v / 25) * (Settings.d.shake ? 1 : 0);
+    baseFov = (k === 'cab' ? 70 : 60) * Settings.d.fov; camera.fov = baseFov; camera.near = k === 'cab' ? 0.12 : 0.8; const f = Math.min(1, game.v / 25) * (Settings.d.shake ? 1 : 0);
     if (k === 'cab') {
       train.eye.getWorldPosition(camera.position); train.eye.getWorldQuaternion(camera.quaternion);
       camera.position.y += Math.sin(game.t * 17) * 0.004 * f + Math.sin(game.t * 5.3) * 0.006 * f; camera.position.x += Math.sin(game.t * 3.1) * 0.004 * f;
