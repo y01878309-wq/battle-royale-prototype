@@ -321,6 +321,24 @@ const Tex = {
   },
 
   /* Gauge dial for the cab dashboard. */
+  /* beige perforated cab ceiling */
+  cabCeil() {
+    if (this._cc) return this._cc;
+    const c = U.canvas(256, 256), g = c.getContext('2d'); g.fillStyle = '#d6c3a8'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#b9a88f';
+    for (let y = 4; y < 256; y += 8) for (let x = (y / 8) % 2 ? 4 : 8; x < 256; x += 8) { g.beginPath(); g.arc(x, y, 1.3, 0, 7); g.fill(); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 3); t.encoding = THREE.sRGBEncoding; return (this._cc = t);
+  },
+  /* the driver's display: dark, with gauges and white readouts */
+  cabScreen() {
+    if (this._cs) return this._cs;
+    const c = U.canvas(512, 340), g = c.getContext('2d'); g.fillStyle = '#080b0d'; g.fillRect(0, 0, 512, 340);
+    g.strokeStyle = '#cfd8dc'; g.lineWidth = 2; g.strokeRect(14, 14, 484, 312);
+    g.beginPath(); g.arc(256, 150, 78, Math.PI, 0); g.stroke(); for (let i = 0; i <= 10; i++) { const a = Math.PI + i / 10 * Math.PI; g.beginPath(); g.moveTo(256 + Math.cos(a) * 70, 150 + Math.sin(a) * 70); g.lineTo(256 + Math.cos(a) * 78, 150 + Math.sin(a) * 78); g.stroke(); }
+    g.beginPath(); g.moveTo(256, 150); g.lineTo(256 + Math.cos(Math.PI * 1.3) * 66, 150 + Math.sin(Math.PI * 1.3) * 66); g.stroke();
+    g.fillStyle = '#4fc3f7'; for (let i = 0; i < 6; i++) g.fillRect(30 + i * 34, 40, 26, 12); g.fillStyle = '#cfd8dc'; g.font = '16px monospace';
+    for (let r = 0; r < 4; r++) { g.fillText('SPD  ' + (r * 20 + 20), 30, 210 + r * 24); g.fillText('BP  ' + (5 - r * 0.2).toFixed(1), 300, 210 + r * 24); }
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return (this._cs = t);
+  },
   dial(max, label) {
     const S = 256, c = U.canvas(S, S), g = c.getContext('2d');
     g.fillStyle = '#0c0b09'; g.beginPath(); g.arc(128, 128, 124, 0, 7); g.fill();

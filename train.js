@@ -8,8 +8,8 @@ class Train {
     /* MeshStandardMaterial, not Physical: the clear-coat shader fails to compile on some phones, and then the whole painted body is invisible (only its shadow shows). */
     const paint = (hex, cc) => new THREE.MeshStandardMaterial({ color: hex, roughness: 0.4 - 0.1 * cc, metalness: 0.2 });
     const common = {
-      glass: new THREE.MeshStandardMaterial({ color: 0x0a1319, roughness: 0.06, metalness: 0.2, envMapIntensity: 1.8 }),
-      winLit: new THREE.MeshStandardMaterial({ color: 0x0a1319, roughness: 0.08, metalness: 0.2, envMapIntensity: 1.8, emissive: 0xc89a55, emissiveIntensity: 0 }),
+      glass: new THREE.MeshStandardMaterial({ color: 0x1f3a4d, roughness: 0.04, metalness: 0.55, envMapIntensity: 2.4 }),
+      winLit: new THREE.MeshStandardMaterial({ color: 0x1f3a4d, roughness: 0.05, metalness: 0.55, envMapIntensity: 2.4, emissive: 0xc89a55, emissiveIntensity: 0 }),
       dark: new THREE.MeshStandardMaterial({ color: 0x1b1a19, roughness: 0.65, metalness: 0.4 }),
       steel: new THREE.MeshStandardMaterial({ color: 0x4a4744, roughness: 0.45, metalness: 0.85 }),
       roof: new THREE.MeshStandardMaterial({ color: 0xa6a69f, roughness: 0.7, metalness: 0.2 }),
@@ -137,15 +137,15 @@ class Train {
       } else {
         if (hood) {   // long hood behind a tall cab at the front: grilles on the hood, cab window and door at the front
           for (const z of [-h + 2.6, -h + 6.2]) this.plane(Tex.grille(3.2, 1.0), 3.2, 1.0, sx * 1.512, 2.5, z, face(sx), hull);
-          this.box(0.03, 1.0, 2.2, M.glass, sx * 1.6, 3.6, h - 2.3, hull);
+          this.box(0.025, 1.14, 2.34, M.dark, sx * 1.595, 3.6, h - 2.3, hull); this.box(0.03, 1.0, 2.2, M.glass, sx * 1.612, 3.6, h - 2.3, hull);
           this.box(0.03, 2.3, 0.9, M.dark, sx * 1.6, 2.3, h - 4.2, hull);
           for (const sy of [1.25, 1.85]) this.box(0.5, 0.05, 0.7, M.steel, sx * 1.8, sy, h - 4.2, hull);
           for (const z of [h - 4.75, h - 3.65]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.2, 6), M.steel); r.position.set(sx * 1.68, 2.4, z); hull.add(r); }
         } else {
         for (const z of [-h + 3.3, -h + 7.4]) this.plane(Tex.grille(3.4, 1.15), 3.4, 1.15, sx * 1.512, 3.5, z + (boxy ? 1.2 : 0), face(sx), hull);   // radiator and engine-room grilles
-        this.box(0.03, 1.0, 1.9, M.glass, sx * 1.6, 3.35, h - 4.1, hull);
+        this.box(0.025, 1.14, 2.04, M.dark, sx * 1.595, 3.35, h - 4.1, hull); this.box(0.03, 1.0, 1.9, M.glass, sx * 1.612, 3.35, h - 4.1, hull);
         this.box(0.03, 2.5, 1.1, M.dark, sx * 1.6, 2.5, h - 5.9, hull);
-        this.box(0.03, 0.7, 1.0, M.glass, sx * 1.62, 3.55, h - 5.9, hull);
+        this.box(0.025, 0.84, 1.14, M.dark, sx * 1.612, 3.55, h - 5.9, hull); this.box(0.03, 0.7, 1.0, M.glass, sx * 1.628, 3.55, h - 5.9, hull);
         for (const sy of [1.25, 1.85]) this.box(0.5, 0.05, 0.7, M.steel, sx * 1.8, sy, h - 5.9, hull);
         for (const z of [h - 6.55, h - 5.25]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.3, 6), M.steel); r.position.set(sx * 1.68, 2.55, z); hull.add(r); }
         }
@@ -168,20 +168,42 @@ class Train {
     if (driver) {
       this.locoHull = hull;
       const cab = new THREE.Group(), ic = new THREE.MeshStandardMaterial({ color: 0xcdb089, roughness: 0.92 }), dk = new THREE.MeshStandardMaterial({ color: 0x1c1b1a, roughness: 0.7 }), wood = new THREE.MeshStandardMaterial({ color: 0x6d4a30, roughness: 0.75 }), trimM = new THREE.MeshStandardMaterial({ color: 0x8a5a2c, roughness: 0.8 });
-      // cab shell like the real GE cab: tan walls, brown desk, tall slanted windscreen with security bars, side windows
-      this.box(3.0, 0.12, 6.6, new THREE.MeshStandardMaterial({ color: 0x4a3f33, roughness: 0.9 }), 0, 1.09, 6.1, cab);
-      this.box(3.0, 0.14, 5.6, ic, 0, 4.12, 5.4, cab);
-      for (const sx of [-1, 1]) { this.box(0.12, 1.5, 4.2, ic, sx * 1.46, 1.9, 5.3, cab); this.box(0.12, 0.22, 4.2, ic, sx * 1.46, 3.95, 5.3, cab); this.box(0.14, 2.9, 0.16, trimM, sx * 1.45, 2.65, 7.0, cab); this.box(0.1, 0.1, 3.4, dk, sx * 1.47, 3.2, 5.2, cab); }
-      this.box(3.0, 2.9, 0.1, ic, 0, 2.6, 2.9, cab);
-      for (const x of [-1.32, 0, 1.32]) { const p = new THREE.Mesh(new THREE.BoxGeometry(x === 0 ? 0.05 : 0.1, 0.1, 3.0), trimM); p.position.set(x, 4.2 - 0.83, 7.4 + 1.2); p.rotation.x = Math.atan2(1.65, 2.4); cab.add(p); }
-      for (let i = -6; i <= 6; i++) { const bar = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.04, 2.9), dk); bar.position.set(i * 0.2, 3.65, 8.55); bar.rotation.x = Math.atan2(1.65, 2.4); bar.position.y = 3.37; bar.position.z = 8.5; cab.add(bar); }
-      this.box(2.9, 0.62, 1.0, trimM, 0, 2.18, 6.5, cab);
-      this.box(2.9, 0.08, 0.9, wood, 0, 2.52, 6.4, cab).rotation.x = 0.25;
-      { // slanted black instrument panel with two screens, low enough to keep the view over it clear
-        const pn = this.box(2.5, 0.34, 0.1, dk, 0, 2.7, 6.95, cab); pn.rotation.x = -0.75;
-        for (const [sx, col] of [[-0.62, 0x1a4c8a], [0.5, 0x14603a]]) { const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.22), new THREE.MeshBasicMaterial({ color: col })); sc.position.set(sx, 2.71, 6.9); sc.rotation.x = -0.75; sc.rotation.y = Math.PI; sc.position.z -= 0.02; cab.add(sc); }
+      // cab shell modelled on the reference photo: terracotta walls and desk, beige perforated ceiling, rounded framed windows with glass, black screen with a row of yellow buttons
+      const terra = new THREE.MeshStandardMaterial({ color: 0x80402c, roughness: 0.82 }), desk2 = new THREE.MeshStandardMaterial({ color: 0xa4552e, roughness: 0.7 }), beige = new THREE.MeshStandardMaterial({ map: Tex.cabCeil(), color: 0xffffff, roughness: 0.95 });
+      const winTex = (w, h, rx, ry, rw, rh, rad, base) => { const c = U.canvas(512, Math.round(512 * h / w)), g = c.getContext('2d'); g.fillStyle = base; g.fillRect(0, 0, c.width, c.height);
+        const X = rx * c.width, Y = ry * c.height, W = rw * c.width, H = rh * c.height; const rr = (x, y, w2, h2, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w2, y, x + w2, y + h2, r); g.arcTo(x + w2, y + h2, x, y + h2, r); g.arcTo(x, y + h2, x, y, r); g.arcTo(x, y, x + w2, y, r); g.closePath(); };
+        g.lineWidth = 22; g.strokeStyle = '#161513'; rr(X, Y, W, H, rad); g.stroke();
+        g.fillStyle = '#9a8f84'; for (let i = 0; i < 26; i++) { const t = i / 26 * Math.PI * 2, px = X + W / 2 + Math.cos(t) * (W / 2 + 3), py = Y + H / 2 + Math.sin(t) * (H / 2 + 3); g.beginPath(); g.arc(Math.max(X, Math.min(X + W, px)), Math.max(Y, Math.min(Y + H, py)), 3.5, 0, 7); g.fill(); }
+        g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; rr(X, Y, W, H, rad); g.fill(); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t; };
+      const glass = new THREE.MeshStandardMaterial({ color: 0xa8d0e8, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.13, depthWrite: false });
+      const front = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.75), new THREE.MeshStandardMaterial({ map: winTex(3.0, 1.75, 0.07, 0.06, 0.86, 0.72, 60, '#80402c'), transparent: true, alphaTest: 0.5, roughness: 0.82, side: THREE.DoubleSide }));
+      front.position.set(0, 3.25, 7.45); front.rotation.y = Math.PI; cab.add(front);
+      const fg = new THREE.Mesh(new THREE.PlaneGeometry(2.35, 1.2), glass); fg.position.set(0, 3.28, 7.43); fg.rotation.y = Math.PI; cab.add(fg);
+      for (const sx of [-1, 1]) {   // side walls: terracotta lower half, window with rounded frame and glass
+        const sw = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.75), new THREE.MeshStandardMaterial({ map: winTex(4.6, 1.75, 0.16, 0.12, 0.5, 0.6, 50, '#80402c'), transparent: true, alphaTest: 0.5, roughness: 0.82, side: THREE.DoubleSide }));
+        sw.position.set(sx * 1.47, 3.25, 5.15); sw.rotation.y = -sx * Math.PI / 2; cab.add(sw);
+        const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.95), glass); sg.position.set(sx * 1.45, 3.29, 5.47); sg.rotation.y = -sx * Math.PI / 2; cab.add(sg);
       }
-      this.box(0.5, 0.7, 0.5, dk, -0.75, 1.5, 4.4, cab); this.box(0.5, 0.55, 0.1, dk, -0.75, 2.0, 4.15, cab);
+      this.box(3.0, 0.12, 6.6, new THREE.MeshStandardMaterial({ color: 0x2a2623, roughness: 0.9 }), 0, 1.09, 6.1, cab);        // floor
+      this.box(3.0, 0.12, 5.6, beige, 0, 4.16, 5.2, cab);                                                                     // ceiling
+      this.box(3.0, 2.1, 0.1, terra, 0, 3.0, 2.9, cab);                                                                       // rear wall
+      this.box(0.2, 0.12, 5.6, terra, -1.3, 4.05, 5.2, cab); this.box(0.2, 0.12, 5.6, terra, 1.3, 4.05, 5.2, cab);           // ceiling rails
+      this.box(2.9, 0.5, 1.2, terra, 0, 2.1, 6.85, cab);                                                                      // dash body
+      const slab = this.box(2.9, 0.08, 1.15, desk2, 0, 2.66, 6.7, cab); slab.rotation.x = -0.33;                              // sloped orange-brown dash top
+      this.box(2.9, 1.0, 0.7, terra, 0, 1.6, 6.9, cab);                                                                       // lower front
+      { // black driver's screen set into the dash, with a row of yellow buttons under it
+        const bez = this.box(1.0, 0.04, 0.72, dk, -0.1, 2.745, 6.62, cab); bez.rotation.x = -0.33;
+        const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.58), new THREE.MeshBasicMaterial({ map: Tex.cabScreen() })); sc.rotation.set(-Math.PI / 2 - 0.33, 0, 0); sc.position.set(-0.1, 2.775, 6.62); cab.add(sc);
+        for (let i = 0; i < 11; i++) { const bt = this.box(0.055, 0.02, 0.035, new THREE.MeshStandardMaterial({ color: 0xe9c25a, emissive: 0x5a4210, roughness: 0.5 }), -0.52 + i * 0.085, 2.72, 6.22, cab); bt.rotation.x = -0.33; }
+        const side = this.box(0.34, 0.04, 0.62, dk, 0.66, 2.745, 6.62, cab); side.rotation.x = -0.33;                          // side button panel
+        const side2 = this.box(0.34, 0.04, 0.62, dk, -0.86, 2.745, 6.62, cab); side2.rotation.x = -0.33;
+      }
+      for (const wx of [-0.55, 0.15]) { const w = this.box(0.025, 0.04, 1.0, dk, wx, 3.55, 7.33, cab); w.rotation.z = 0.5; }      // wipers
+      { // driver's seat
+        this.box(0.55, 0.16, 0.55, dk, -0.75, 1.55, 4.1, cab); this.box(0.5, 0.75, 0.12, dk, -0.75, 2.05, 3.8, cab);
+        this.box(0.08, 0.5, 0.08, new THREE.MeshStandardMaterial({ color: 0x555a60, metalness: 0.6, roughness: 0.4 }), -0.75, 1.25, 4.1, cab);
+      }
+      for (const sx of [-1, 1]) this.box(0.16, 0.9, 1.4, dk, sx * 1.35, 2.0, 3.6, cab);   // side lockers
       const ey = new THREE.Vector3(-0.75, 3.05, 5.0);
       this.dials = [];
       for (const [x, max, lab, big] of [[-0.75, this.dialMax, 'كم/س', 0.34], [-0.15, 10, 'بار', 0.26], [0.35, 10, 'قوة', 0.26]]) {

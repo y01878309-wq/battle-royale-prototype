@@ -89,24 +89,7 @@
     else jbtn.hidden = true;
   }
 
-  /* Temporary on-screen diagnostics (first 40 s of a drive): graphics errors and what the camera sees, so a screenshot shows why something is invisible. */
-  const Diag = {
-    errs: [], el: null, until: 0,
-    add(m) { m = String(m).slice(0, 260); if (!this.errs.includes(m) && this.errs.length < 6) this.errs.push(m); },
-    hook() {
-      const ce = console.error.bind(console); console.error = (...a) => { try { this.add('E: ' + a.map((x) => (x && x.message) || x).join(' ')); } catch (e) { /* */ } ce(...a); };
-      const cw = console.warn.bind(console); console.warn = (...a) => { try { const t = a.join(' '); if (/shader|WebGL|THREE/i.test(t)) this.add('W: ' + t); } catch (e) { /* */ } cw(...a); };
-      window.addEventListener('error', (ev) => this.add('X: ' + ev.message + ' ' + (ev.lineno || '')));
-    },
-    start() { this.until = performance.now() + 40000; if (!this.el) { const d = document.createElement('pre'); d.id = 'diag'; document.body.appendChild(d); this.el = d; } },
-    tick() {
-      if (!this.el) return; if (performance.now() > this.until && !this.errs.length) { this.el.hidden = true; return; }
-      const gl = renderer.info, hull = train.locoHull, c = train.cab;
-      this.el.hidden = false;
-      this.el.textContent = `b=${window.QS_BUILD} cam=${CAMERAS[camIdx][0]} hull=${hull && hull.visible} cab=${c && c.visible} tri=${gl.render.triangles} calls=${gl.render.calls} prog=${gl.programs ? gl.programs.length : '?'} y=${camera.position.y.toFixed(1)}\n` + this.errs.join('\n');
-    }
-  };
-  Diag.hook();
+
 
   /* Colourful start screen: one tap unlocks sound, goes fullscreen + landscape, then shows the main menu. */
   function splash(done) {
@@ -216,7 +199,6 @@
     applyCamera(S.cam || 0); ui.setMuteLabel(Sound.muted); bindTilt();
     if (netNote) setTimeout(() => ui.toast(netNote, net ? 'good' : 'bad', 4500), 6200);
     ui.toast('اضغط W علشان تزود القوة، وابدأ الفرملة قبل علامة «قف» بـ 300 م', '', 5600);
-    Diag.start();
     window.__game = { game, track, train, stations, world, sky, renderer, scene, camera, route };
     last = performance.now(); requestAnimationFrame(frame);
   }
@@ -436,7 +418,7 @@
       dist: dwell ? Math.max(0, Math.ceil(16 - game.dwellT)) + ' ث' : Math.round(Math.max(0, game.distToStop())) + ' م',
       score: Math.round(game.score), clock: String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')
     });
-    renderer.render(scene, camera); Diag.tick();
+    renderer.render(scene, camera);
   }
 
   boot();

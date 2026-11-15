@@ -152,7 +152,10 @@ $('btnLoadPrices').onclick = async () => {
     let h = '<h3>القطارات والمترو</h3>';
     for (const t of TRAIN_TYPES) { const k = 'train:' + t.id, g = curCat.gems[k] > 0 ? curCat.gems[k] : (k in curCat.prices ? 0 : (t.gems || 0)), p = k in curCat.prices ? curCat.prices[k] : (t.price || 0); h += row(k, t.name.replace('💎 ', ''), p, g); }
     h += '<h3>الملصقات</h3>';
-    for (const t of STICKERS) { const k = 'sticker:' + t.id; h += row(k, t.emoji + ' ' + t.name, k in curCat.prices ? curCat.prices[k] : t.price, 0); }
+    const extra = curShop.stickers || [], extraIds = new Set(extra.map((x) => x.id));
+    for (const t of STICKERS.filter((x) => !extraIds.has(x.id))) { const k = 'sticker:' + t.id; h += row(k, t.emoji + ' ' + t.name, k in curCat.prices ? curCat.prices[k] : t.price, 0); }
+    h += '<h3>ملصقات جديدة (إيموجي أو رمز · اسم · سعر)</h3><p class="dim">اكتب الرمز والاسم والسعر. امسح الاسم عشان تشيل الملصق. السعر بالجنيه أو الماس زي باقي الأسعار.</p>';
+    for (let i = 0; i < 8; i++) { const x = extra[i] || {}, id = x.id || ('c' + (i + 1)), k = 'sticker:' + id, g = curCat.gems[k] > 0 ? curCat.gems[k] : 0, p = k in curCat.prices ? curCat.prices[k] : 0; h += `<div class="pstk" data-id="${id}"><input placeholder="رمز" value="${esc(x.emoji || '')}" style="width:60px"><input placeholder="اسم الملصق" value="${esc(x.name || '')}"><select><option value="c"${g ? '' : ' selected'}>🪙 جنيه</option><option value="g"${g ? ' selected' : ''}>💎 ماسة</option></select><input inputmode="numeric" dir="ltr" value="${g || p}" style="width:80px"></div>`; }
     h += '<h3>مكافآت المهام والإنجازات (جنيه لعبة)</h3>';
     for (const m of [...MISSIONS, ...ACHIEVEMENTS]) h += `<div class="prow" data-r="${esc(m.id)}"><span>${esc(m.name || m.title || m.id)}</span><span></span><input inputmode="numeric" dir="ltr" value="${m.id in curCat.rewards ? curCat.rewards[m.id] : m.reward}"></div>`;
     h += '<h3>باكدجات الشحن (تظهر في المتجر)</h3><p class="dim">الاسم · ماسات · جنيهات لعبة · السعر بالجنيه المصري. امسح الاسم عشان تشيل الباكدج.</p>';
@@ -166,7 +169,8 @@ $('btnSavePrices').onclick = async () => {
     document.querySelectorAll('#priceBox .prow[data-k]').forEach((r) => { const v = Math.max(0, parseInt(r.querySelector('input').value, 10) || 0), g = r.querySelector('select').value === 'g'; if (g && v > 0) cat.gems[r.dataset.k] = v; else cat.prices[r.dataset.k] = v; });
     document.querySelectorAll('#priceBox .prow[data-r]').forEach((r) => { cat.rewards[r.dataset.r] = Math.max(0, parseInt(r.querySelector('input').value, 10) || 0); });
     const packs = []; document.querySelectorAll('#priceBox .prack').forEach((r) => { const i = r.querySelectorAll('input'), name = i[0].value.trim(), gems = parseInt(i[1].value, 10) || 0, coins = parseInt(i[2].value, 10) || 0, egp = parseInt(i[3].value, 10) || 0; if (name && (gems || coins) && egp) packs.push(gems ? { name, gems, egp } : { name, coins, egp }); });
-    await db.collection('config').doc('catalog').set(cat); await db.collection('config').doc('shop').set({ packs });
+    const stickers = []; document.querySelectorAll('#priceBox .pstk').forEach((r) => { const i = r.querySelectorAll('input'), name = i[1].value.trim(); if (!name) return; const v = Math.max(0, parseInt(i[2].value, 10) || 0), g = r.querySelector('select').value === 'g', k = 'sticker:' + r.dataset.id; stickers.push({ id: r.dataset.id, emoji: i[0].value.trim() || '⭐', name }); if (g && v > 0) cat.gems[k] = v; else cat.prices[k] = v; });
+    await db.collection('config').doc('catalog').set(cat); await db.collection('config').doc('shop').set({ packs, stickers });
     log('اتحفظت الأسعار ✔\n' + Object.keys(cat.prices).length + ' سعر بالجنيه · ' + Object.keys(cat.gems).length + ' سعر بالماس · ' + packs.length + ' باكدج', 'ok');
   } catch (e) { log('فشل الحفظ: ' + why(e), 'bad'); }
 };

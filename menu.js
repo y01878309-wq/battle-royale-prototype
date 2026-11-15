@@ -119,7 +119,8 @@ const Menu = {
         for (const t of TRAIN_TYPES.filter((x) => (x.cat || 'train') === (tab === 'metro' ? 'metro' : 'train'))) {
           const own = Account.owns(t), c = this.el('div', 'item' + (own ? ' own' : ''));
           const sw = this.trainSVG(t);
-          c.innerHTML = `${sw}<b>${this.esc(t.name)}</b><small>${this.esc(t.desc || '')}</small><span>${own ? '✔ معاك' : '🔒 ' + priceTag(t) + (t.gems ? ' (شحن فقط)' : '')} · ${t.vmax} كم/س</span>`;
+          c.innerHTML = `<img class="tsvg" alt="" src="thumbs/${t.id}.jpg?v=${window.QS_BUILD || 1}"><b>${this.esc(t.name)}</b><small>${this.esc(t.desc || '')}</small><span>${own ? '✔ معاك' : '🔒 ' + priceTag(t) + (t.gems ? ' (شحن فقط)' : '')} · ${t.vmax} كم/س</span>`;
+          { const im = c.querySelector('img'); im.onerror = () => { const d = document.createElement('div'); d.innerHTML = sw; im.replaceWith(d.firstChild); }; }
           buyBtn(t, own, c, own ? ['اختار', () => { document.getElementById('optTrain').value = t.id; this.close(); this.onChange(); }] : null);
           grid.appendChild(c);
         }

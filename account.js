@@ -18,6 +18,13 @@ const Account = {
   async applyCatalog() {
     if (!FB.ok) return;
     try {
+      const s = await this.col('config').doc('shop').get();
+      if (s.exists) {
+        const sd = s.data();
+        if (Array.isArray(sd.packs) && window.QS_PAY) window.QS_PAY.packs = sd.packs;
+        // stickers the owner added from the admin page
+        if (Array.isArray(sd.stickers)) for (const x of sd.stickers) { if (x && x.id && x.name && !STICKERS.some((t) => t.id === x.id)) STICKERS.push({ id: String(x.id), item: 'sticker', price: 0, emoji: x.emoji || '⭐', name: x.name, desc: x.desc || 'ملصق' }); }
+      }
       const c = await this.col('config').doc('catalog').get();
       if (c.exists) {
         const d = c.data(), pr = d.prices || {}, gm = d.gems || {};
@@ -27,8 +34,6 @@ const Account = {
         }
         if (d.rewards) for (const m of [...MISSIONS, ...ACHIEVEMENTS]) if (m.id in d.rewards) m.reward = d.rewards[m.id];
       }
-      const s = await this.col('config').doc('shop').get();
-      if (s.exists && Array.isArray(s.data().packs) && window.QS_PAY) window.QS_PAY.packs = s.data().packs;
     } catch (e) { /* the default prices stay */ }
   },
   pref(id) { return FB.db.collection('players').doc(String(id || this.d.id)); },
