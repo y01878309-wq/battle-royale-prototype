@@ -54,7 +54,7 @@ class Train {
       for (let j = 0; j < M; j++) { const a = j / M * Math.PI * 2, c = Math.cos(a), s = Math.sin(a); pos.push(Math.sign(c) * Math.pow(Math.abs(c), ex) * W / 2 * f, ym + Math.sign(s) * Math.pow(Math.abs(s), ex) * hh / 2, z); uv.push((z - zmin) / L, (ym + Math.sign(s) * Math.pow(Math.abs(s), ex) * hh / 2) / 4.5); }
     }
     for (let i = 0; i < NS; i++) for (let j = 0; j < M; j++) { const a = i * M + j, b = i * M + (j + 1) % M, c = (i + 1) * M + j, d2 = (i + 1) * M + (j + 1) % M; idx.push(a, b, c, b, d2, c); }
-    for (const [i, flip] of [[0, true], [NS, false]]) {   // end caps
+    for (const [i, flip] of [[0, false], [NS, true]]) {   // end caps
       const base = pos.length / 3; let cy = 0, cz = zmin + L * i / NS; for (let j = 0; j < M; j++) cy += pos[(i * M + j) * 3 + 1]; cy /= M; pos.push(0, cy, cz); uv.push(i ? 1 : 0, cy / 4.5);
       for (let j = 0; j < M; j++) { const a = i * M + j, b = i * M + (j + 1) % M; if (flip) idx.push(base, a, b); else idx.push(base, b, a); }
     }
@@ -115,19 +115,22 @@ class Train {
     const body = new THREE.Group(), hull = new THREE.Group(), W = vel ? 2.95 : 3.0, X = W / 2 + 0.06;
     let prof, win;   // win: windscreen centre, size and tilt
     if (vel) { prof = [[-h, 0.9], [-h, 3.8], [-h + 0.5, 4.0], [h - 9, 4.0], [h - 4.2, 3.55], [h - 1.2, 2.45], [h, 1.7], [h, 0.9]]; win = { y: 3.0, z: h - 2.7, th: -Math.atan2(0.939, 0.344), w: 2.3, h: 2.5, n: [0.939, 0.344] }; }
-    else if (hood) { prof = [[-h, 1.0], [-h, 3.2], [-h + 0.3, 3.4], [h - 4.6, 3.4], [h - 4.6, 4.25], [h - 0.3, 4.25], [h, 3.95], [h, 1.0]]; win = { y: 3.45, z: h + 0.02, th: 0, w: 2.7, h: 1.15, n: [0, 1] }; }
-    else if (boxy) { prof = [[-h, 1.0], [-h, 3.7], [-h + 0.4, 3.95], [h - 0.4, 3.95], [h, 3.7], [h, 1.0]]; win = { y: 3.25, z: h + 0.02, th: 0, w: 2.7, h: 1.2, n: [0, 1] }; }
+    else if (hood) { prof = [[-h, 1.0], [-h, 3.2], [-h + 0.3, 3.4], [h - 4.6, 3.4], [h - 4.6, 4.25], [h - 0.3, 4.25], [h, 3.95], [h, 1.0]]; win = { y: 3.45, z: h + 0.02, th: 0, w: 2.4, h: 1.15, n: [0, 1] }; }
+    else if (boxy) { prof = [[-h, 1.0], [-h, 3.7], [-h + 0.4, 3.95], [h - 0.4, 3.95], [h, 3.7], [h, 1.0]]; win = { y: 3.25, z: h + 0.02, th: 0, w: 2.4, h: 1.2, n: [0, 1] }; }
     else { prof = [[-h, 1.0], [-h, 3.95], [-h + 0.3, 4.2], [h - 2.4, 4.2], [h, 2.6], [h, 1.0]]; win = { y: 3.4, z: h - 1.2, th: -Math.atan2(0.832, 0.555), w: 2.55, h: 2.1, n: [0.832, 0.555] }; }
     const main = vel ? M.cream : M.blue;
-    const loftOn = diesel && kind === 'ge';
+    const loftOn = diesel;
     let shell; const loftD = dmu && !loftOn;
-    if (loftD) {
+    if (vel) {
+      const tex = this.liveryTex(spec.len, spec.top, [[0x59606a, [[-h - 1, 0.8], [h + 1, 0.8], [h + 1, 1.3], [-h - 1, 1.3]]], [spec.trim, [[-h - 1, 1.55], [h - 3, 1.55], [h + 1, 1.2]], 0.1]]);
+      shell = new THREE.Mesh(this.bodyLoft(prof, W, 5, 0.86), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.3, metalness: 0.3 }));
+    } else if (loftD) {
       const tex = this.liveryTex(spec.len, spec.top, [[spec.low, [[-h - 1, 1.07], [h + 1, 1.07], [h + 1, 2.37], [-h - 1, 2.37]]], [spec.trim, [[-h - 1, 2.42], [h + 1, 2.42]], 0.07], [0x1b1a19, [[-h - 1, 0.9], [h + 1, 0.9], [h + 1, 1.07], [-h - 1, 1.07]]]]);
       shell = new THREE.Mesh(this.bodyLoft(prof, W, 5, 0.9), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, metalness: 0.25 }));
     } else if (loftOn) {
       const bp = boxy ? [[-h, 1.45], [-h, 2.5], [h + 0.02, 2.5], [h + 0.02, 1.45]] : [[-h, 1.45], [-h, 2.5], [h - 9.5, 2.5], [h - 4.2, 2.95], [h + 0.02, 2.25], [h + 0.02, 1.45]];
       const tex = this.liveryTex(spec.len, spec.top, [[spec.low, bp], [0x1b1a19, [[-h - 1, 0.9], [h + 1, 0.9], [h + 1, 1.45], [-h - 1, 1.45]]], [spec.trim, boxy ? [[-h, 2.5], [h + 0.02, 2.5]] : [[-h, 2.5], [h - 9.5, 2.5], [h - 4.2, 2.95], [h + 0.02, 2.25]], 0.06]]);
-      shell = new THREE.Mesh(this.bodyLoft(prof, W, 5, boxy ? 1 : 0.9), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, metalness: 0.25 }));
+      shell = new THREE.Mesh(this.bodyLoft(prof, W, 5.5, boxy ? 0.92 : 0.9), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, metalness: 0.25 }));
     } else shell = new THREE.Mesh(this.extrudeBody(prof, W), main);
     shell.castShadow = true; shell.receiveShadow = true; hull.add(shell);
     if (diesel) {
@@ -254,10 +257,9 @@ class Train {
     const M = driver || cab ? this.lm : this.cm, h = spec.len / 2, W = 2.9, body = new THREE.Group(), root = new THREE.Group(); root.add(body);
     const lo = driver || cab, bodyM = lo ? this.lm.cream : this.cm.cream, band = lo ? this.lm.blue : this.cm.blue, trim = lo ? this.lm.yellow : this.cm.yellow;
     const prof = cab ? [[-h, 0.95], [-h, 3.55], [-h + 0.3, 3.68], [h - 1.9, 3.68], [h - 0.55, 3.3], [h, 2.55], [h, 0.95]] : [[-h, 0.95], [-h, 3.55], [-h + 0.3, 3.68], [h - 0.3, 3.68], [h, 3.55], [h, 0.95]];
-    const shell = new THREE.Mesh(this.extrudeBody(prof, W), bodyM); shell.castShadow = true; shell.receiveShadow = true; body.add(shell);
-    this.box(W + 0.02, 0.5, spec.len - 0.2, M.dark, 0, 1.1, 0, body);                      // skirt
-    this.box(W + 0.05, 0.26, spec.len - 0.05, band, 0, 1.6, 0, body);                      // wide coloured band
-    this.box(W + 0.06, 0.07, spec.len - 0.05, trim, 0, 1.86, 0, body);                     // thin stripe above it
+    const lt = this.liveryTex(spec.len, bodyM.color.getHex(), [[0x2a2c2f, [[-h - 1, 0.9], [h + 1, 0.9], [h + 1, 1.35], [-h - 1, 1.35]]], [band.color.getHex(), [[-h - 1, 1.47], [h + 1, 1.47], [h + 1, 1.73], [-h - 1, 1.73]]], [trim.color.getHex(), [[-h - 1, 1.86], [h + 1, 1.86]], 0.07]]);
+    const shell = new THREE.Mesh(this.bodyLoft(prof, W, 5, cab ? 0.9 : 1), new THREE.MeshStandardMaterial({ map: lt, roughness: 0.38, metalness: 0.25 })); shell.castShadow = true; shell.receiveShadow = true; body.add(shell);
+    this.box(2.3, 0.4, spec.len - 1.2, M.dark, 0, 0.98, 0, body);                           // underframe
     const winY = 2.75, winH = 1.0;
     const zs = [-h * 0.72, -h * 0.24, h * 0.24, h * 0.72];
     for (const sx of [-1, 1]) {
