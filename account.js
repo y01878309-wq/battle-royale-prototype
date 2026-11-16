@@ -23,7 +23,10 @@ const Account = {
         const sd = s.data();
         if (Array.isArray(sd.packs) && window.QS_PAY) window.QS_PAY.packs = sd.packs;
         // stickers the owner added from the admin page
-        if (Array.isArray(sd.stickers)) for (const x of sd.stickers) { if (x && x.id && x.name && !STICKERS.some((t) => t.id === x.id)) STICKERS.push({ id: String(x.id), item: 'sticker', price: 0, emoji: x.emoji || '⭐', name: x.name, desc: x.desc || 'ملصق' }); }
+        if (Array.isArray(sd.stickers)) for (const x of sd.stickers) { if (x && x.id && x.name && !STICKERS.some((t) => t.id === x.id)) STICKERS.push({ id: String(x.id), item: 'sticker', price: 0, emoji: x.emoji || '⭐', img: typeof x.img === 'string' && x.img.startsWith('data:image/') ? x.img : '', name: x.name, desc: x.desc || 'ملصق' }); }
+      // trains the owner designed in the admin page: a copy of a base train with new colours and name
+      if (Array.isArray(sd.trains)) for (const x of sd.trains) { const b = x && TRAIN_TYPES.find((t) => t.id === x.base); if (!b || !x.id || !x.name || TRAIN_TYPES.some((t) => t.id === x.id)) continue; const hx = (v, d) => /^#[0-9a-f]{6}$/i.test(v) ? parseInt(v.slice(1), 16) : d;
+        const n = JSON.parse(JSON.stringify(b)); n.snd = b.snd; n.id = String(x.id); n.name = String(x.name); n.price = 0; n.gems = 0; n.custom = true; n.loco.top = hx(x.top, b.loco.top); n.loco.low = hx(x.low, b.loco.low); if (n.coach) n.coach.band = n.loco.top; TRAIN_TYPES.push(n); }
       }
       const c = await this.col('config').doc('catalog').get();
       if (c.exists) {

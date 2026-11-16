@@ -138,7 +138,7 @@ const Menu = {
         const cur = this.sticker();
         for (const t of STICKERS) {
           const own = Account.owns(t), c = this.el('div', 'item' + (own ? ' own' : ''));
-          c.innerHTML = `<div class="stk">${t.emoji}</div><b>${this.esc(t.name)}</b><small>${this.esc(t.desc)}</small><span>${own ? (cur === t.id ? '✔ مستخدم' : '✔ معاك') : '🔒 ' + priceTag(t)}</span>`;
+          c.innerHTML = `<div class="stk">${t.img ? `<img src="${t.img}" width="56" height="56" alt="">` : t.emoji}</div><b>${this.esc(t.name)}</b><small>${this.esc(t.desc)}</small><span>${own ? (cur === t.id ? '✔ مستخدم' : '✔ معاك') : '🔒 ' + priceTag(t)}</span>`;
           buyBtn(t, own, c, own ? [cur === t.id ? 'شيل الملصق' : 'استخدمه', () => { try { localStorage.setItem('qs-sticker', cur === t.id ? '' : t.id); } catch (e) { /* */ } this.refresh(); this.shop(tab); }] : null);
           grid.appendChild(c);
         }
