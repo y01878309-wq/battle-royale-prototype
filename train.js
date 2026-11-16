@@ -43,6 +43,32 @@ class Train {
     return g;
   }
 
+  /* Smooth hull: loft a rounded cross-section along the train. prof is the side profile polygon (z, y); the cross-section is a rounded box (super-ellipse), the ends narrow
+   * slightly in plan. UVs are (z along the length, y up to 4.5 m) so a livery canvas can be painted in side-view coordinates. */
+  bodyLoft(prof, W, nExp, plan) {
+    const pts = prof, zmin = pts[0][0], zmax = pts[pts.length - 1][0], bot = Math.min(...pts.map((p) => p[1])), path = pts.slice(1, -1), L = zmax - zmin;
+    const top = (z) => { for (let i = 0; i < path.length - 1; i++) { const a = path[i], b = path[i + 1]; if (z >= Math.min(a[0], b[0]) - 1e-6 && z <= Math.max(a[0], b[0]) + 1e-6 && Math.abs(b[0] - a[0]) > 1e-6) return a[1] + (b[1] - a[1]) * (z - a[0]) / (b[0] - a[0]); } return path[path.length - 1][1]; };
+    const NS = Math.max(24, Math.round(L * 3.5)), M = 40, pos = [], uv = [], idx = [], n = nExp || 5, ex = 2 / n, taperLen = 1.0, minF = plan === undefined ? 0.8 : plan;
+    for (let i = 0; i <= NS; i++) {
+      const z = zmin + L * i / NS, y1 = top(z), hh = y1 - bot, ym = (y1 + bot) / 2, d = Math.min(z - zmin, zmax - z), f = d >= taperLen ? 1 : Math.sqrt(1 - Math.pow(1 - d / taperLen, 2) * (1 - minF * minF));
+      for (let j = 0; j < M; j++) { const a = j / M * Math.PI * 2, c = Math.cos(a), s = Math.sin(a); pos.push(Math.sign(c) * Math.pow(Math.abs(c), ex) * W / 2 * f, ym + Math.sign(s) * Math.pow(Math.abs(s), ex) * hh / 2, z); uv.push((z - zmin) / L, (ym + Math.sign(s) * Math.pow(Math.abs(s), ex) * hh / 2) / 4.5); }
+    }
+    for (let i = 0; i < NS; i++) for (let j = 0; j < M; j++) { const a = i * M + j, b = i * M + (j + 1) % M, c = (i + 1) * M + j, d2 = (i + 1) * M + (j + 1) % M; idx.push(a, b, c, b, d2, c); }
+    for (const [i, flip] of [[0, true], [NS, false]]) {   // end caps
+      const base = pos.length / 3; let cy = 0, cz = zmin + L * i / NS; for (let j = 0; j < M; j++) cy += pos[(i * M + j) * 3 + 1]; cy /= M; pos.push(0, cy, cz); uv.push(i ? 1 : 0, cy / 4.5);
+      for (let j = 0; j < M; j++) { const a = i * M + j, b = i * M + (j + 1) % M; if (flip) idx.push(base, a, b); else idx.push(base, b, a); }
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g;
+  }
+
+  /* Livery painted in side-view coordinates for bodyLoft (z from -len/2 to len/2, y 0..4.5). regions: [[colour, [[z,y]...]], ...] painted in order over a base colour. */
+  liveryTex(len, base, regions) {
+    const W = 1024, H = 256, c = U.canvas(W, H), g = c.getContext('2d'), X = (z) => (z + len / 2) / len * W, Y = (y) => H - y / 4.5 * H, hex = (v) => '#' + ('000000' + v.toString(16)).slice(-6);
+    g.fillStyle = hex(base); g.fillRect(0, 0, W, H);
+    for (const [col, poly, line] of regions) { g.beginPath(); poly.forEach((p, i) => (i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1])))); if (line) { g.strokeStyle = hex(col); g.lineWidth = line * H / 4.5; g.stroke(); } else { g.fillStyle = hex(col); g.fill(); } }
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t;
+  }
+
   box(w, h, d, mat, x, y, z, parent) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
   }
@@ -93,22 +119,32 @@ class Train {
     else if (boxy) { prof = [[-h, 1.0], [-h, 3.7], [-h + 0.4, 3.95], [h - 0.4, 3.95], [h, 3.7], [h, 1.0]]; win = { y: 3.25, z: h + 0.02, th: 0, w: 2.7, h: 1.2, n: [0, 1] }; }
     else { prof = [[-h, 1.0], [-h, 3.95], [-h + 0.3, 4.2], [h - 2.4, 4.2], [h, 2.6], [h, 1.0]]; win = { y: 3.4, z: h - 1.2, th: -Math.atan2(0.832, 0.555), w: 2.55, h: 2.1, n: [0.832, 0.555] }; }
     const main = vel ? M.cream : M.blue;
-    const shell = new THREE.Mesh(this.extrudeBody(prof, W), main); shell.castShadow = true; shell.receiveShadow = true; hull.add(shell);
+    const loftOn = diesel && kind === 'ge';
+    let shell; const loftD = dmu && !loftOn;
+    if (loftD) {
+      const tex = this.liveryTex(spec.len, spec.top, [[spec.low, [[-h - 1, 1.07], [h + 1, 1.07], [h + 1, 2.37], [-h - 1, 2.37]]], [spec.trim, [[-h - 1, 2.42], [h + 1, 2.42]], 0.07], [0x1b1a19, [[-h - 1, 0.9], [h + 1, 0.9], [h + 1, 1.07], [-h - 1, 1.07]]]]);
+      shell = new THREE.Mesh(this.bodyLoft(prof, W, 5, 0.9), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, metalness: 0.25 }));
+    } else if (loftOn) {
+      const bp = boxy ? [[-h, 1.45], [-h, 2.5], [h + 0.02, 2.5], [h + 0.02, 1.45]] : [[-h, 1.45], [-h, 2.5], [h - 9.5, 2.5], [h - 4.2, 2.95], [h + 0.02, 2.25], [h + 0.02, 1.45]];
+      const tex = this.liveryTex(spec.len, spec.top, [[spec.low, bp], [0x1b1a19, [[-h - 1, 0.9], [h + 1, 0.9], [h + 1, 1.45], [-h - 1, 1.45]]], [spec.trim, boxy ? [[-h, 2.5], [h + 0.02, 2.5]] : [[-h, 2.5], [h - 9.5, 2.5], [h - 4.2, 2.95], [h + 0.02, 2.25]], 0.06]]);
+      shell = new THREE.Mesh(this.bodyLoft(prof, W, 5, boxy ? 1 : 0.9), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, metalness: 0.25 }));
+    } else shell = new THREE.Mesh(this.extrudeBody(prof, W), main);
+    shell.castShadow = true; shell.receiveShadow = true; hull.add(shell);
     if (diesel) {
       // sweeping grey band: flat along the hood, rising at the cab and dipping to the nose
       const bp = boxy ? [[-h, 1.45], [-h, 2.5], [h + 0.02, 2.5], [h + 0.02, 1.45]] : [[-h, 1.45], [-h, 2.5], [h - 9.5, 2.5], [h - 4.2, 2.95], [h + 0.02, 2.25], [h + 0.02, 1.45]];
-      const band = new THREE.Mesh(this.extrudeBody(bp, W + 0.06), M.cream); band.castShadow = true; hull.add(band);
+      if (!loftOn) { const band = new THREE.Mesh(this.extrudeBody(bp, W + 0.06), M.cream); band.castShadow = true; hull.add(band);
       this.box(W + 0.04, 0.5, spec.len + 0.1, M.dark, 0, 1.25, 0, hull);                       // black skirt and underframe
-      this.box(W + 0.1, 0.05, spec.len + 0.1, M.yellow, 0, 2.53, 0, hull);                      // pinstripe on the band
+      this.box(W + 0.1, 0.05, spec.len + 0.1, M.yellow, 0, 2.53, 0, hull); } else this.box(2.4, 0.5, spec.len - 1.2, M.dark, 0, 0.92, 0, hull);   // livery is painted on the hull; underframe tank
       this.box(2.7, 0.14, spec.len * (hood ? 0.62 : 0.82), M.roof, 0, (boxy ? 3.99 : 4.26) + ry, hood ? -spec.len * 0.17 : -spec.len * 0.06, hull);
-      for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.18, 20), M.dark); f.position.set(0, (boxy ? 4.1 : 4.4) + ry, -h + 1.8 + i * 2.6); hull.add(f); }
+      for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.18, 20), M.dark); f.position.set(0, (boxy ? 4.1 : 4.4) + ry, -h + 1.8 + i * 2.6); hull.add(f); const gr = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.025, 6, 24), M.steel); gr.rotation.x = Math.PI / 2; gr.position.set(0, (boxy ? 4.19 : 4.49) + ry, -h + 1.8 + i * 2.6); hull.add(gr); }
       this.box(1.6, 0.35, 3.2, M.roof, 0, (boxy ? 4.15 : 4.45) + ry, hood ? -h + 9 : -1.0, hull);
       for (const [i, ch] of [0.5, 0.62, 0.74, 0.62, 0.5].entries()) { const hn = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, ch, 8), M.steel); hn.position.set(-0.4 + i * 0.2, (hood ? 4.25 : boxy ? 4.0 : 4.3) + ch / 2, h - (boxy ? 3 : 4.6)); hull.add(hn); }   // five-chime horn
       if (!boxy) this.box(1.0, 0.3, 2.0, M.roof, 0, 4.4, h - 7.4, hull);
     } else if (dmu) {
-      this.box(3.2, 1.3, spec.len + 0.1, M.cream, 0, 1.72, 0, hull);
+      if (!loftD) { this.box(3.2, 1.3, spec.len + 0.1, M.cream, 0, 1.72, 0, hull);
       this.box(3.21, 0.16, spec.len + 0.1, M.blue, 0, 1.18, 0, hull);
-      this.box(3.21, 0.07, spec.len + 0.1, M.yellow, 0, 2.42, 0, hull);
+      this.box(3.21, 0.07, spec.len + 0.1, M.yellow, 0, 2.42, 0, hull); } else this.box(2.4, 0.5, spec.len - 1.2, M.dark, 0, 0.92, 0, hull);
       this.box(2.7, 0.14, spec.len * 0.82, M.roof, 0, 4.26, -spec.len * 0.06, hull);
       for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.18, 20), M.dark); f.position.set(0, 4.4, -h + 1.8 + i * 2.6); hull.add(f); }
       this.box(1.6, 0.35, 3.2, M.roof, 0, 4.45, -1.0, hull);
@@ -125,7 +161,7 @@ class Train {
     if (boxy) { this.box(2.9, 0.1, 0.45, M.blue, 0, hood ? 4.2 : 3.92, h + 0.2, hull); }
     if (driver) this.glass = gl;
     // front lamps, tail lamps, buffer beam, buffers
-    const lampY = vel ? 1.35 : 1.7, lampX = vel ? 0.95 : 1.0, lampZ = vel ? h + 0.02 : h + 0.1;
+    const lampY = vel ? 1.35 : 1.7, lampX = vel ? 0.95 : ((loftOn || loftD) && !boxy ? 0.68 : 1.0), lampZ = vel ? h + 0.02 : ((loftOn || loftD) && !boxy ? h + 0.02 : h + 0.1);
     for (const sx of [-lampX, lampX]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16), M.lamp); l.rotation.x = Math.PI / 2; l.position.set(sx, lampY, lampZ); hull.add(l); }
     if (!vel) { const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.1, 16), M.lamp); hl.rotation.x = Math.PI / 2; hl.position.set(0, boxy ? 2.2 : 2.45, h + 0.1); hl.visible = !boxy; hull.add(hl); }
     for (const sx of [-1.25, 1.25]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 12), M.redlamp); r.rotation.x = Math.PI / 2; r.position.set(sx, 1.7, -h - 0.1); hull.add(r); }
@@ -297,7 +333,7 @@ class Train {
       len = 22.2; hRoof = 3.95; prof = [[-11, 0.85], [-11, 3.4], [-10.3, 3.95], [10.3, 3.95], [11, 3.4], [11, 0.85]];
       nWin = 8; ww = 1.5; wh = 1.05; wy = 2.8; wStep = 1.95; wStart = -7.3; doorZ = [-9.7, 9.7]; bs = 15.6;
     }
-    const shell = new THREE.Mesh(this.extrudeBody(prof, style === 'talgo' ? 2.9 : 3.0), M.cream);
+    const shell = new THREE.Mesh(this.bodyLoft(prof, style === 'talgo' ? 2.9 : 3.0, 6, 1), M.cream);
     shell.castShadow = true; shell.receiveShadow = true; body.add(shell);
     const low = style === 'talgo' ? 0.55 : 0.85;
     this.box(3.2, low, len + 0.1, M.blue, 0, 0.85 + low / 2 - (style === 'talgo' ? 0.2 : 0), 0, body);
@@ -323,6 +359,13 @@ class Train {
     return { body, len, bs, bogies: [this.makeBogie(2, 2.5), this.makeBogie(2, 2.5)], loco: false };
   }
 
+  /* weathering overlay on one flat side wall (both sides) of a freight vehicle */
+  grime(body, zc, len, x, y0, y1) {
+    const tex = Tex.weather().clone(); tex.needsUpdate = true; tex.repeat.set(Math.max(1, len / 8), 1);
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(len, y1 - y0), mat); p.position.set(sx * x, (y0 + y1) / 2, zc); p.rotation.y = sx * Math.PI / 2; p.renderOrder = 2; body.add(p); }
+  }
+
   /* Freight wagons: tank, covered box, hopper, open gondola, flat car with containers. */
   buildWagon(kind, i) {
     const M = this.cm, body = new THREE.Group(), len = 13.6;
@@ -334,6 +377,9 @@ class Train {
       const g = new THREE.CylinderGeometry(1.3, 1.3, len - 1.6, 20); g.rotateX(Math.PI / 2);
       const t = new THREE.Mesh(g, mat(cols[i % cols.length], 0.5, 0.4)); t.position.y = 2.55; t.castShadow = true; body.add(t);
       this.box(0.8, 0.3, 0.8, M.dark, 0, 3.9, 0, body);
+      for (const e of [-1, 1]) { const cap = new THREE.Mesh(new THREE.SphereGeometry(1.3, 20, 12), mat(cols[i % cols.length], 0.5, 0.4)); cap.scale.z = 0.32; cap.position.set(0, 2.55, e * (len - 1.6) / 2); cap.castShadow = true; body.add(cap); }
+      for (let k = -2; k <= 2; k++) { const bd = new THREE.Mesh(new THREE.CylinderGeometry(1.33, 1.33, 0.12, 20), M.dark); bd.rotation.x = Math.PI / 2; bd.position.set(0, 2.55, k * 2.3); body.add(bd); }
+      { const dm = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.35, 14), mat(0x55595c, 0.5, 0.6)); dm.position.set(0, 3.8, 1.5); body.add(dm); }
       this.box(0.5, 0.06, len - 2.5, M.steel, 0, 3.86, 0, body);      // walkway
       for (const sx of [-1, 1]) this.box(0.06, 1.5, 0.5, M.steel, sx * 1.55, 2.1, len / 2 - 1.2, body);   // ladder
     } else if (kind === 'box') {
@@ -342,16 +388,20 @@ class Train {
       this.box(2.9, 2.8, len - 1, bm, 0, 2.7, 0, body);
       for (const sx of [-1, 1]) { this.box(0.06, 2.4, 2.4, M.dark, sx * 1.46, 2.7, 0, body); this.box(0.07, 2.4, 0.08, M.steel, sx * 1.47, 2.7, 1.2, body); this.box(0.07, 2.4, 0.08, M.steel, sx * 1.47, 2.7, -1.2, body); }
       this.box(3.0, 0.14, len - 0.6, M.roof, 0, 4.15, 0, body);
+      for (const sx of [-1, 1]) for (let k = -5; k <= 5; k++) { if (Math.abs(k * 1.1) < 1.6) continue; this.box(0.05, 2.7, 0.12, bm, sx * 1.46, 2.7, k * 1.1, body); }   // corrugated ribs
+      this.grime(body, 0, len - 1, 1.52, 1.35, 4.05);
     } else if (kind === 'hopper') {
       const cols = [0xcfc8b4, 0x7a7a74, 0x8a5a38], c = cols[i % cols.length];
       this.box(3.0, 1.5, len - 1.2, mat(c, 0.75), 0, 3.4, 0, body);
       for (const z of [-3.3, 3.3]) { const f = new THREE.Mesh(new THREE.CylinderGeometry(1.98, 0.45, 1.3, 4, 1), mat(c, 0.75)); f.rotation.y = Math.PI / 4; f.scale.z = 2.0; f.position.set(0, 1.95, z); f.castShadow = true; body.add(f); }
       for (const z of [-3.3, 3.3]) this.box(0.8, 0.12, 0.8, M.dark, 0, 4.18, z, body);   // loading hatches
+      this.grime(body, 0, len - 1.2, 1.52, 2.65, 4.15);
     } else if (kind === 'gond') {
       const cols = [0x5a4a3a, 0x3f4b57, 0x6a3b2a], c = cols[i % cols.length];
       this.box(3.0, 0.2, len, mat(c), 0, 1.35, 0, body);
       for (const sx of [-1, 1]) this.box(0.12, 1.9, len, mat(c), sx * 1.44, 2.35, 0, body);
       for (const e of [-1, 1]) this.box(3.0, 1.9, 0.12, mat(c), 0, 2.35, e * (len / 2 - 0.06), body);
+      this.grime(body, 0, len, 1.51, 1.4, 3.3);
       const pile = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.9, len - 1.0), mat(i % 2 ? 0x1b1a19 : 0x8a8579, 0.95, 0)); pile.position.y = 2.7; body.add(pile);   // coal or aggregate
     } else {
       const cols = ['#2a4f86', '#c8571a', '#3c7a4a', '#a8262d', '#d8d3c6', '#5d646b'], labels = ['NILE', 'DELTA', 'SUEZ', 'CAIRO', 'ALEX', 'SINAI'];
