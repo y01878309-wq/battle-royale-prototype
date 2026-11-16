@@ -359,6 +359,29 @@ const Tex = {
     g.fillStyle = 'rgba(255,255,255,0.22)'; for (const x of [18, 70]) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 22, 0); g.lineTo(x - 30, 128); g.lineTo(x - 52, 128); g.closePath(); g.fill(); }
     const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return (this._gr = t);
   },
+  /* GE cab: dark navy side panel with small switches, a little display and rows of labels (as blocks, the text itself is too small to read) */
+  cabNavy() {
+    if (this._cn) return this._cn;
+    const c = U.canvas(340, 230), g = c.getContext('2d'); g.fillStyle = '#141c33'; g.fillRect(0, 0, 340, 230); g.fillStyle = '#0c1122'; g.fillRect(0, 0, 340, 18);
+    g.fillStyle = '#d8dde6'; g.fillRect(96, 60, 54, 26); g.fillStyle = '#26303a'; g.fillRect(100, 64, 46, 18); g.fillStyle = '#9fe08f'; g.fillRect(104, 68, 18, 10);
+    for (let r = 0; r < 3; r++) for (let k = 0; k < 7; k++) { const x = 20 + k * 44, y = 112 + r * 36; g.fillStyle = '#7d8696'; g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill(); g.fillStyle = '#c9d0db'; g.fillRect(x - 12, y + 12, 24, 3); }
+    g.fillStyle = '#aeb6c4'; g.fillRect(250, 56, 70, 40); g.fillStyle = '#1b2442'; g.fillRect(254, 60, 62, 32); g.strokeStyle = '#7d8696'; g.lineWidth = 2; g.beginPath(); g.arc(285, 76, 12, 0, 7); g.stroke();
+    for (let i = 0; i < 5; i++) { g.fillStyle = '#7d8696'; g.fillRect(14 + i * 22, 36, 14, 10); }
+    for (let i = 0; i < 24; i++) { g.fillStyle = '#9aa3b4'; g.beginPath(); g.arc(8 + i * 14, 224, 2, 0, 7); g.fill(); }
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return (this._cn = t);
+  },
+  /* GE cab: centre display with blue and green data blocks and a button row underneath */
+  cabCentre() {
+    if (this._cc2) return this._cc2;
+    const c = U.canvas(420, 300), g = c.getContext('2d'); g.fillStyle = '#0a0b0d'; g.fillRect(0, 0, 420, 300);
+    g.fillStyle = '#05080c'; g.fillRect(24, 22, 372, 196); g.strokeStyle = '#8a929c'; g.lineWidth = 2; g.strokeRect(24, 22, 372, 196);
+    g.fillStyle = '#2d7bd6'; g.fillRect(40, 38, 46, 22); g.fillRect(40, 68, 46, 22); g.fillStyle = '#41c46a'; g.fillRect(250, 38, 54, 18); g.fillRect(310, 38, 54, 18); g.fillRect(250, 62, 54, 18);
+    g.strokeStyle = '#41c46a'; g.strokeRect(248, 100, 118, 54); g.strokeStyle = '#d8dde6'; for (let i = 0; i < 7; i++) { g.beginPath(); g.moveTo(40, 112 + i * 12); g.lineTo(200, 112 + i * 12); g.stroke(); }
+    g.beginPath(); g.arc(310, 190, 26, Math.PI, 0); g.stroke(); g.beginPath(); g.moveTo(310, 190); g.lineTo(326, 168); g.stroke();
+    g.fillStyle = '#2d7bd6'; g.fillRect(150, 180, 60, 18); g.fillStyle = '#d8dde6'; g.fillRect(40, 190, 70, 6);
+    for (let i = 0; i < 11; i++) { g.fillStyle = i % 4 === 0 ? '#e8d6a0' : '#d9c98a'; g.fillRect(34 + i * 33, 244, 24, 16); }
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return (this._cc2 = t);
+  },
   dial(max, label) {
     const S = 256, c = U.canvas(S, S), g = c.getContext('2d');
     g.fillStyle = '#0c0b09'; g.beginPath(); g.arc(128, 128, 124, 0, 7); g.fill();
