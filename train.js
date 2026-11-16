@@ -196,9 +196,21 @@ class Train {
       body.add(this.spot, this.spot.target);
       this.eye = eye; this.nose = nose;
     }
+    this.finish(hull, spec.len, W, 1.0, 3.9);
     this.scene.add(body);
     const ax = dmu || vel ? 2 : 3, sp = dmu || vel ? 2.5 : 1.9;
     return { body, len: spec.len, bs: vel ? 17.4 : dmu ? 15.6 : 11.4, bogies: [this.makeBogie(ax, sp), this.makeBogie(ax, sp)], loco: driver };
+  }
+
+  /* Finishing pass for every loco and coach: weathering overlay on both sides, underframe tanks and boxes, roof walkway strip. */
+  finish(body, len, W, y0, y1) {
+    const tex = Tex.weather().clone(); tex.needsUpdate = true; tex.repeat.set(Math.max(1, len / 8), 1);
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(len - 0.3, y1 - y0), mat); p.position.set(sx * (W / 2 + 0.115), (y0 + y1) / 2, 0); p.rotation.y = sx * Math.PI / 2; p.renderOrder = 2; body.add(p); }
+    const M = this.lm, tank = new THREE.MeshStandardMaterial({ color: 0x2a2826, roughness: 0.6, metalness: 0.5 });
+    for (let k = 0; k < 2; k++) { const t = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.5, 12), tank); t.rotation.x = Math.PI / 2; t.position.set(-0.7 + k * 1.4, 0.82, -len * 0.18 + k * len * 0.1); body.add(t); }
+    this.box(0.9, 0.35, 1.2, M.dark, 0.3, 0.78, len * 0.12, body);
+    for (const sx of [-1, 1]) { const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, len * 0.5, 6), M.steel); pipe.rotation.x = Math.PI / 2; pipe.position.set(sx * 0.5, 0.66, 0); body.add(pipe); }
   }
 
   /* Cairo-metro style car: rounded black glass nose on the driving cars, doors and big windows along the sides, coloured stripes. */
@@ -306,6 +318,7 @@ class Train {
     this.addDoors(body, M, doorZ, style === 'talgo' ? 1.85 : 2.3, style === 'talgo' ? 2.0 : 2.4);
     for (const e of [-1, 1]) this.box(2.5, hRoof - 0.9, 0.4, M.dark, 0, (hRoof + 0.6) / 2, e * (len / 2 + 0.1), body);
     this.box(2.2, 0.4, len * 0.66, M.dark, 0, 0.78, 0, body);
+    this.finish(body, len, 3.0, 0.9, hRoof - 0.1);
     this.scene.add(body);
     return { body, len, bs, bogies: [this.makeBogie(2, 2.5), this.makeBogie(2, 2.5)], loco: false };
   }

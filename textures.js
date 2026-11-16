@@ -352,6 +352,18 @@ const Tex = {
     const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return (this._cs2 = t);
   },
   /* reflective window glass: sky tint at the top, dark interior below, soft diagonal glare streaks */
+  /* Transparent weathering overlay for vehicle sides: panel seams, rivet rows, rain streaks, soot near the roof, grime and brake dust near the skirt. Tiles along the length. */
+  weather() {
+    if (this._wea) return this._wea;
+    const c = U.canvas(1024, 256), g = c.getContext('2d'); let sd = 7; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, 'rgba(20,16,12,0.30)'); gr.addColorStop(0.12, 'rgba(20,16,12,0.0)'); gr.addColorStop(0.62, 'rgba(30,24,18,0.0)'); gr.addColorStop(1, 'rgba(25,20,14,0.55)'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 256);
+    for (let i = 0; i < 70; i++) { const x = rnd() * 1024, w = 2 + rnd() * 6, y = rnd() * 80, h = 60 + rnd() * 150; const s = g.createLinearGradient(0, y, 0, y + h); s.addColorStop(0, 'rgba(30,24,18,0.22)'); s.addColorStop(1, 'rgba(30,24,18,0)'); g.fillStyle = s; g.fillRect(x, y, w, h); }
+    g.fillStyle = 'rgba(0,0,0,0.38)'; for (const x of [0, 256, 512, 768]) g.fillRect(x, 0, 2, 256);
+    g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(0, 128, 1024, 1.5); g.fillRect(0, 30, 1024, 1.5);
+    g.fillStyle = 'rgba(0,0,0,0.3)'; for (let x = 8; x < 1024; x += 16) { g.beginPath(); g.arc(x, 10, 1.3, 0, 7); g.fill(); g.beginPath(); g.arc(x, 246, 1.3, 0, 7); g.fill(); }
+    for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(110,70,40,' + (0.06 + rnd() * 0.1) + ')'; g.beginPath(); g.ellipse(rnd() * 1024, 180 + rnd() * 76, 10 + rnd() * 40, 3 + rnd() * 8, 0, 0, 7); g.fill(); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return (this._wea = t);
+  },
   glassRefl() {
     if (this._gr) return this._gr;
     const c = U.canvas(128, 128), g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 128);
