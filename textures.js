@@ -258,11 +258,14 @@ const Tex = {
 
   /* Radiator / engine-room grille: dark panel with vertical louvres. */
   grille(w, h) {
-    const W = 256, H = Math.round(256 * h / w), c = U.canvas(W, H), g = c.getContext('2d');
-    g.fillStyle = '#141311'; g.fillRect(0, 0, W, H);
-    g.strokeStyle = '#3a3935'; g.lineWidth = 3;
-    for (let x = 10; x < W - 4; x += 12) { g.beginPath(); g.moveTo(x, 6); g.lineTo(x, H - 6); g.stroke(); }
-    g.lineWidth = 6; g.strokeStyle = '#2a2926'; g.strokeRect(3, 3, W - 6, H - 6);
+    const W = 512, H = Math.round(512 * h / w), c = U.canvas(W, H), g = c.getContext('2d');
+    g.fillStyle = '#6c6f72'; g.fillRect(0, 0, W, H);                       // frame
+    g.fillStyle = '#26282a'; g.fillRect(14, 14, W - 28, H - 28);          // dark opening
+    for (let y = 18; y < H - 22; y += 14) {                                // louvre slats: bright top edge, grey face, dark shadow underneath
+      g.fillStyle = '#b8bcbf'; g.fillRect(16, y, W - 32, 2.5); g.fillStyle = '#8b8f93'; g.fillRect(16, y + 2.5, W - 32, 6); g.fillStyle = '#17181a'; g.fillRect(16, y + 8.5, W - 32, 4);
+    }
+    g.fillStyle = '#55585b'; g.fillRect(W / 2 - 3, 14, 6, H - 28);       // centre divider
+    g.fillStyle = '#9a9da0'; for (const [x, y] of [[7, 7], [W - 7, 7], [7, H - 7], [W - 7, H - 7]]) { g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); }
     return this._wrap(c, false, true, 4);
   },
 
