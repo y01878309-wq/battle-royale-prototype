@@ -252,7 +252,7 @@ const TRAIN_TYPES = [
 /* CABS: driver's-cab interiors. 'ge' is free (tan walls, slanted barred windscreen); 'terra' (terracotta) is gems-only. The metro always uses its own cab. */
 const CABS = [
   { id: 'ge', item: 'cab', price: 0, emoji: '🟫', name: 'كابينة الجنرال إلكتريك', desc: 'الكابينة العادية: جدران بيج وإزاز مائل بأسياخ وشاشتين' },
-  { id: 'terra', item: 'cab', gems: 25, emoji: '🟧', name: 'كابينة الطوب الأحمر (فاخرة)', desc: 'كابينة بنية محمرة بسقف مخرّم وشبابيك مدورة وشاشة وأزرار' }
+  { id: 'terra', item: 'cab', price: 0, emoji: '🟧', name: 'كابينة الطوب الأحمر (الأساسية)', desc: 'كابينة بنية محمرة بسقف مخرّم وشبابيك مدورة وشاشة وأزرار' }
 ];
 
 /* STICKERS: cosmetic badges bought in the store; the chosen one shows next to the player's name. */

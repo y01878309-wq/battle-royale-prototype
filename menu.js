@@ -125,7 +125,7 @@ const Menu = {
           grid.appendChild(c);
         }
       } else if (tab === 'cabs') {
-        let cur = 'ge'; try { cur = localStorage.getItem('qs-cab') || 'ge'; } catch (e) { /* */ }
+        let cur = 'terra'; try { cur = localStorage.getItem('qs-cab') || 'terra'; } catch (e) { /* */ }
         const note = this.el('p', 'dim', 'الكابينة بتظهر لما تسوق بكاميرا «من جوه». المترو ليه كابينته الخاصة.'); grid.appendChild(note);
         for (const t of CABS) {
           const own = Account.owns(t), c = this.el('div', 'item' + (own ? ' own' : ''));

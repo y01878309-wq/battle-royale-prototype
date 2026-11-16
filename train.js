@@ -26,8 +26,8 @@ class Train {
   /* Which interior this train shows: the metro always has its own; otherwise the one the player picked in the store (the terracotta one is gems-only). */
   static cabStyleFor(type) {
     if (type.loco.kind === 'metro') return 'metro';
-    try { const c = localStorage.getItem('qs-cab'); if (c === 'terra' && typeof Account !== 'undefined' && Account.d && Account.owns({ item: 'cab', id: 'terra', gems: 1 })) return 'terra'; } catch (e) { /* */ }
-    return 'ge';
+    try { if (localStorage.getItem('qs-cab') === 'ge') return 'ge'; } catch (e) { /* */ }
+    return 'terra';
   }
 
   /* Total length in metres, known before anything is built (the route needs it for platforms). */
@@ -188,7 +188,7 @@ class Train {
         cab.add(grp); grp.lookAt(ey.x, ey.y, ey.z); this.dials.push({ needle, max });
       }
       this.buildCabControls(cab);
-      if (this.cabStyle === 'ge') this.dials.forEach((d) => { d.needle.parent.visible = false; });   // the GE cab shows speed on its display, not on round dials
+      if (this.cabStyle !== 'metro') this.dials.forEach((d) => { d.needle.parent.visible = false; });   // the GE cab shows speed on its display, not on round dials
       cab.position.z = h - 9.8; cab.visible = false; body.add(cab); this.cab = cab;
       eye = new THREE.Object3D(); eye.position.set(ey.x, ey.y, ey.z + h - 9.8); eye.rotation.y = Math.PI; body.add(eye);
       nose = new THREE.Object3D(); nose.position.set(0, 1.6, h + 0.6); nose.rotation.y = Math.PI; body.add(nose);
@@ -514,11 +514,22 @@ class Train {
       this.box(2.9, 1.0, 0.7, terra, 0, 1.6, 6.9, cab);                                                                       // lower front
       if (metro) { this.box(2.92, 0.05, 0.05, new THREE.MeshStandardMaterial({ color: 0x1f8f86, roughness: 0.5 }), 0, 2.45, 7.28, cab); this.box(0.06, 2.0, 0.9, new THREE.MeshStandardMaterial({ color: 0x1f8f86, roughness: 0.6 }), -1.43, 2.2, 4.1, cab); this.box(0.06, 2.0, 0.9, new THREE.MeshStandardMaterial({ color: 0x1f8f86, roughness: 0.6 }), 1.43, 2.2, 4.1, cab); }
       { // black driver's screen set into the dash, with a row of yellow buttons under it
-        const bez = this.box(1.0, 0.04, 0.72, dk, -0.1, 2.745, 6.62, cab); bez.rotation.x = -0.33;
-        const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.58), new THREE.MeshBasicMaterial({ map: Tex.cabScreen() })); sc.rotation.set(-Math.PI / 2 - 0.33, 0, 0); sc.position.set(-0.1, 2.775, 6.62); cab.add(sc);
-        for (let i = 0; i < 11; i++) { const bt = this.box(0.055, 0.02, 0.035, new THREE.MeshStandardMaterial({ color: 0xe9c25a, emissive: 0x5a4210, roughness: 0.5 }), -0.52 + i * 0.085, 2.72, 6.22, cab); bt.rotation.x = -0.33; }
-        const side = this.box(0.34, 0.04, 0.62, dk, 0.66, 2.745, 6.62, cab); side.rotation.x = -0.33;                          // side button panel
-        const side2 = this.box(0.34, 0.04, 0.62, dk, -0.86, 2.745, 6.62, cab); side2.rotation.x = -0.33;
+        const bez = this.box(1.0, 0.04, 0.72, dk, -0.55, 2.745, 6.62, cab); bez.rotation.x = -0.33;
+        const sc = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.58), new THREE.MeshBasicMaterial({ map: Tex.cabScreen() })); sc.rotation.set(-Math.PI / 2 - 0.33, 0, 0); sc.position.set(-0.55, 2.775, 6.62); cab.add(sc);
+        for (let i = 0; i < 11; i++) { const bt = this.box(0.055, 0.02, 0.035, new THREE.MeshStandardMaterial({ color: 0xe9c25a, emissive: 0x5a4210, roughness: 0.5 }), -0.97 + i * 0.085, 2.72, 6.22, cab); bt.rotation.x = -0.33; }
+        const side = this.box(0.3, 0.04, 0.62, dk, -1.07, 2.745, 6.62, cab); side.rotation.x = -0.33;                          // side button panel
+        const side2 = this.box(0.7, 0.04, 0.62, new THREE.MeshStandardMaterial({ color: metro ? 0x5a636a : 0x8f4a2c, roughness: 0.75 }), 0.45, 2.745, 6.62, cab); side2.rotation.x = -0.33;
+      }
+      { // overhead panel with a round fan grille and a switch, as in the reference
+        const pm = new THREE.MeshStandardMaterial({ color: metro ? 0x8c969c : 0x8a4630, roughness: 0.8 }); const hang = this.box(1.0, 0.5, 0.5, pm, -0.5, 3.9, 6.5, cab);
+        const c = U.canvas(512, 256), g = c.getContext('2d'); g.fillStyle = '#1b2220'; g.fillRect(0, 0, 512, 256); const cx = 190, cy = 128;
+        g.strokeStyle = '#c9ccc9'; g.lineWidth = 5; for (let r = 28; r <= 100; r += 14) { g.beginPath(); g.arc(cx, cy, r, 0, 7); g.stroke(); }
+        g.lineWidth = 3; for (let k = 0; k < 12; k++) { const t = k / 12 * 6.283; g.beginPath(); g.moveTo(cx + Math.cos(t) * 26, cy + Math.sin(t) * 26); g.quadraticCurveTo(cx + Math.cos(t + 0.5) * 70, cy + Math.sin(t + 0.5) * 70, cx + Math.cos(t + 0.9) * 106, cy + Math.sin(t + 0.9) * 106); g.stroke(); }
+        g.fillStyle = '#e8e6df'; g.beginPath(); g.arc(cx, cy, 24, 0, 7); g.fill();
+        g.fillStyle = '#d9d6cc'; g.fillRect(350, 70, 110, 120); g.fillStyle = '#222'; g.beginPath(); g.arc(405, 112, 26, 0, 7); g.fill(); g.fillStyle = '#d9d6cc'; g.beginPath(); g.arc(405, 112, 10, 0, 7); g.fill(); g.fillStyle = '#222'; g.fillRect(380, 156, 50, 10);
+        g.fillStyle = '#9a9a96'; for (const [x, y] of [[12, 12], [500, 12], [12, 244], [500, 244]]) { g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); }
+        const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; const face = new THREE.Mesh(new THREE.PlaneGeometry(0.92, 0.42), new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 })); face.position.set(-0.5, 3.9, 6.24); face.rotation.y = Math.PI; cab.add(face);
+        
       }
       for (const wx of [-0.55, 0.15]) { const w = this.box(0.025, 0.04, 1.0, dk, wx, 3.55, 7.33, cab); w.rotation.z = 0.5; }      // wipers
       { // driver's seat
@@ -578,38 +589,33 @@ class Train {
   buildCabControls(cab) {
     if (this.cabStyle === 'ge') return this.cabControlsGE(cab);
     this.cabHits = []; const C = this.cabCtl = {};
-    const plate = new THREE.CanvasTexture((() => {
-      const c = U.canvas(512, 160), g = c.getContext('2d'); g.fillStyle = '#2c2f33'; g.fillRect(0, 0, 512, 160);
-      g.strokeStyle = '#555a60'; g.lineWidth = 2; for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(70 + i * 95, 52, 30, 0, 7); g.stroke(); }
-      g.fillStyle = '#d8a82a'; g.fillRect(20, 112, 150, 34); g.fillStyle = '#222'; g.font = '700 15px sans-serif'; g.fillText('CAUTION · POWER THROTTLE', 26, 134);
-      g.fillStyle = '#777'; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc(12 + i * 12.5, 8, 2, 0, 7); g.fill(); }
-      return c; })());
-    plate.encoding = THREE.sRGBEncoding;
-    const desk = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.05, 0.7), [0, 0, 1, 0, 0, 0].map((x) => x ? new THREE.MeshStandardMaterial({ map: plate, roughness: 0.6 }) : new THREE.MeshStandardMaterial({ color: 0x6d4a30, roughness: 0.7 })));
-    desk.position.set(0, 2.5, 5.78); cab.add(desk);
+    const std = (col, r, m) => new THREE.MeshStandardMaterial({ color: col, roughness: r === undefined ? 0.6 : r, metalness: m || 0 });
+    const blk = std(0x17181a, 0.55), steel = std(0xb9bcc0, 0.3, 0.7), metro = this.cabStyle === 'metro';
+    this.box(2.3, 0.05, 0.7, std(metro ? 0x4a535a : 0x9a4a2a, 0.75), 0, 2.5, 5.78, cab);                      // desk
     const lab = (txt, x, z) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.05), new THREE.MeshBasicMaterial({ map: Tex.sign(txt, 160, 40, '#1b1d20', '#e8e4d6'), transparent: true })); m.rotation.x = -Math.PI / 2; m.position.set(x, 2.528, z); cab.add(m); };
     const hit = (mesh, act) => { mesh.userData.act = act; this.cabHits.push(mesh); };
-    const lever = (x, col, act, name) => {
-      const piv = new THREE.Group(); piv.position.set(x, 2.53, 5.95); cab.add(piv);
-      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, 0.32, 8), new THREE.MeshStandardMaterial({ color: 0x9a9da0, metalness: 0.7, roughness: 0.3 })); rod.position.y = 0.16; piv.add(rod);
-      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), new THREE.MeshStandardMaterial({ color: col, roughness: 0.4 })); knob.position.y = 0.34; piv.add(knob);
-      const big = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); big.position.y = 0.25; piv.add(big);
-      hit(big, act); hit(knob, act); hit(rod, act); lab(name, x, 5.62); return piv;
-    };
-    C.throttle = lever(-0.45, 0x101010, 'throttle', 'القوة'); C.brake = lever(-0.05, 0xd01c1c, 'brake', 'فرامل');
-    const button = (x, col, act, name, r) => {
-      const b = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.035, 16), new THREE.MeshStandardMaterial({ color: col, roughness: 0.4, emissive: col, emissiveIntensity: 0.15 })); b.position.set(x, 2.55, 5.98); cab.add(b);
-      const big = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); big.position.set(x, 2.56, 5.98); cab.add(big);
-      hit(b, act); hit(big, act); lab(name, x, 5.78); return b;
-    };
-    C.horn = button(0.35, 0xe8d21a, 'horn', 'زمارة', 0.04); C.door = button(0.6, 0x2a7fe0, 'door', 'أبواب', 0.04);
-    C.emerg = button(0.85, 0xd32020, 'emerg', 'طوارئ', 0.06); C.light = button(1.1, 0xe8e8e0, 'light', 'أنوار', 0.04);
-    // small screen with speed, limit and the next stop
-    this.scrC = U.canvas(256, 128); this.scrT = new THREE.CanvasTexture(this.scrC); this.scrT.encoding = THREE.sRGBEncoding;
-    const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.31), new THREE.MeshBasicMaterial({ map: this.scrT })); scr.position.set(0.6, 2.9, 6.4); scr.rotation.x = -0.35; cab.add(scr);
-    this.box(0.7, 0.4, 0.06, new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: 0.5 }), 0.6, 2.9, 6.44, cab).rotation.x = -0.35;
-    // lamps: doors, brake, emergency
-    C.lamps = [0x2e9a58, 0xe0a82a, 0xd32020].map((c, i) => { const l = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), new THREE.MeshBasicMaterial({ color: 0x222222 })); l.position.set(-1.1 + i * 0.1, 2.54, 6.0); l.userData.on = c; cab.add(l); return l; });
+    const bigHit = (g, y, act, x, z) => { const big = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); big.position.set(x === undefined ? 0 : x, y, z === undefined ? 0 : z); g.add(big); hit(big, act); };
+    // right: black lever box with the red mushroom-handled throttle on a short stem
+    this.box(0.5, 0.14, 0.62, blk, -1.18, 2.57, 5.85, cab); this.box(0.12, 0.012, 0.36, std(0xe8e6de, 0.5), -1.18, 2.645, 5.85, cab);
+    { const piv = new THREE.Group(); piv.position.set(-1.18, 2.64, 5.9); cab.add(piv);
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.018, 0.16, 8), steel); st.position.y = 0.08; piv.add(st); hit(st, 'throttle');
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.075, 18, 12), std(0xc01822, 0.4)); cap.scale.set(1.15, 0.7, 1.0); cap.position.y = 0.19; piv.add(cap); hit(cap, 'throttle'); bigHit(piv, 0.15, 'throttle'); C.throttle = piv; lab('القوة', -1.18, 5.52); }
+    // brake: short black gear-lever on its own black box next to the screen column
+    this.box(0.5, 0.1, 0.4, blk, -0.82, 2.55, 5.95, cab);
+    { const piv = new THREE.Group(); piv.position.set(-0.82, 2.6, 5.95); cab.add(piv);
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, 0.2, 8), steel); st.position.y = 0.1; piv.add(st); hit(st, 'brake');
+      const kn = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), std(0x0f0f10, 0.35)); kn.scale.y = 1.25; kn.position.y = 0.23; piv.add(kn); hit(kn, 'brake'); bigHit(piv, 0.15, 'brake'); C.brake = piv; lab('فرامل', -0.82, 5.62); }
+    const push = (x, z, col, act, name) => {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.03, 18), steel); base.position.set(x, 2.54, z); cab.add(base);
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.04, 18), new THREE.MeshStandardMaterial({ color: col, roughness: 0.35, emissive: col, emissiveIntensity: 0.15 })); b.position.set(x, 2.55, z); cab.add(b);
+      const big = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); big.position.set(x, 2.56, z); cab.add(big); hit(b, act); hit(big, act); lab(name, x, z - 0.14); return b; };
+    this.box(0.9, 0.012, 0.3, std(0x25272a, 0.4, 0.5), -0.3, 2.527, 5.62, cab);                                // plate for the push buttons
+    C.horn = push(-0.5, 5.62, 0xe8d21a, 'horn', 'زمارة'); C.door = push(-0.3, 5.62, 0x2a7fe0, 'door', 'أبواب'); C.emerg = push(-0.1, 5.62, 0xd32020, 'emerg', 'طوارئ'); C.light = push(0.1, 5.62, 0xeeeeea, 'light', 'أنوار');
+    // live display over the big screen: speed, limit and the next stop
+    this.scrC = U.canvas(256, 128); this.scrT = new THREE.CanvasTexture(this.scrC); this.scrT.encoding = THREE.sRGBEncoding; this._scrKey = null;
+    { const g = this.scrC.getContext('2d'); g.fillStyle = '#05080a'; g.fillRect(0, 0, 256, 128); g.fillStyle = '#7fe0ff'; g.font = '700 54px monospace'; g.fillText('  0', 10, 62); g.font = '16px monospace'; g.fillText('KM/H', 14, 84); this.scrT.needsUpdate = true; }
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.84, 0.56), new THREE.MeshBasicMaterial({ map: this.scrT })); scr.rotation.set(-Math.PI / 2 - 0.33, 0, 0); scr.position.set(-0.55, 2.78, 6.62); cab.add(scr);
+    C.lamps = [0x2e9a58, 0xe0a82a, 0xd32020].map((c, i) => { const l = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), new THREE.MeshBasicMaterial({ color: 0x222222 })); l.position.set(-1.07 + i * 0.07, 2.76, 6.44); l.userData.on = c; cab.add(l); return l; });
   }
 
   /* info: { notch, brake, doors (0..1), emerg, lights, horn, kmh, limit, dist, name } */
