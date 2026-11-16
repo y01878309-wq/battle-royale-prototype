@@ -60,6 +60,7 @@ class Scenery {
       if (left) lat = -(minLat + Math.pow(R(), 1.6) * maxLeft);
       else { const edge = World.riverLat(s) - World.riverWidth(s) / 2 - 28; if (edge <= minLat + 8) continue; lat = minLat + R() * (edge - minLat); }
       if (R() < this.sandAt(s) * 0.55) continue;   // fewer trees and houses in the desert
+      if (left && lat > -42 && this.urban(s) > 0.4) continue;   // keep the highway strip beside built-up stretches free of trees
       if (Math.abs(lat) < 14 + 0 && this.inStation(s)) continue;
       if (this.inStation(s) && Math.abs(lat) < 60) continue;
       return { s, lat };
@@ -99,6 +100,7 @@ class Scenery {
       else { const p = this.spot(16, 420, R); if (!p) continue; s = p.s; lat = p.lat; }
       if (lat > 0 && lat > World.riverLat(s) - World.riverWidth(s) / 2 - 22) continue;
       if (Math.abs(lat) < 11 || (this.inStation(s) && Math.abs(lat) < 60)) continue;
+      if (lat < 0 && lat > -42 && this.urban(s) > 0.4) continue;   // no palms on the highway
       const w = tr.at(s, lat, 0), h = 6 + R() * 9, sc = 0.8 + R() * 0.5;
       const lx = (R() - 0.5) * 0.12, lz = (R() - 0.5) * 0.12;
       o.position.copy(w); o.rotation.set(lx, R() * 6.28, lz); o.scale.set(sc, h, sc); o.updateMatrix(); trunk.setMatrixAt(c, o.matrix);

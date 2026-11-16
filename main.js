@@ -199,7 +199,7 @@
     applyCamera(S.cam || 0); ui.setMuteLabel(Sound.muted); bindTilt();
     if (netNote) setTimeout(() => ui.toast(netNote, net ? 'good' : 'bad', 4500), 6200);
     ui.toast('اضغط W علشان تزود القوة، وابدأ الفرملة قبل علامة «قف» بـ 300 م', '', 5600);
-    window.__game = { game, track, train, stations, world, sky, renderer, scene, camera, route };
+    window.__game = { game, track, train, stations, world, sky, renderer, scene, camera, route }; Object.defineProperty(window.__game, 'crowd', { get: () => crowd });
     last = performance.now(); requestAnimationFrame(frame);
   }
 
@@ -392,8 +392,8 @@
     if (net) { net.setState(game, train.length); const hit = net.update(dt, game.t, train.length); if (hit && !game.derailed) handle(game.derail([], 'collision')); updateNetBox(); }
     { const idn = game.nextIdx, dd = game.distToStop(); if (idn < stations.list.length && dd < 1200 && dd > -150) crowd.prepare(idn); crowd.update(dt, game, train); }
     if (traffic) traffic.update(dt, game.s, game.t);
-    { const nx = stations.list[game.nextIdx]; if (nx && game.phase === 'running') { const dd = game.distToStop(); if (dd < 900 && dd > 500) Commentary.arriving(nx, line, type.name); else if (dd < 350 && dd > 60 && game.kmh > 70) Commentary.tip('قرّب من المحطة. فرمل دلوقتي.', 'brk' + game.nextIdx); }
-      if (game.phase === 'dwell' && game.dwellT > 9 && game.doors > 0.5 && stations.list[game.nextIdx + 1]) Commentary.depart(stations.list[game.nextIdx + 1].name); }
+    { const nx = stations.list[game.nextIdx]; if (nx && game.phase === 'running') { const dd = game.distToStop(); if (dd < 900 && dd > 500) Commentary.arriving(nx, line, type, dd / Math.max(8, game.v), stations.list[stations.list.length - 1].name); else if (dd < 350 && dd > 60 && game.kmh > 70) Commentary.tip('قرّب من المحطة. فرمل دلوقتي.', 'brk' + game.nextIdx); }
+      if (game.phase === 'dwell' && game.dwellT > 9 && game.doors > 0.5 && stations.list[game.nextIdx + 1]) Commentary.depart(stations.list[game.nextIdx + 1].name, type, line, 10, stations.list[stations.list.length - 1].name); }
     const L = track.L, near = world.scenery.crossings.some((c) => { const a = ((c.s - game.s) % L + L) % L; return a < 320 || a > L - train.length - 20; });
     Sound.update({ v: game.v, throttle: game.power, brake: game.brake, d: game.d || 0, bell: near, over: game.over });
     updateCamera(dt);

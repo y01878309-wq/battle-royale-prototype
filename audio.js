@@ -27,15 +27,15 @@ const Sound = {
     };
     // engine
     this.eng = { g: c.createGain(), f: c.createBiquadFilter(), o: [] };
-    this.eng.g.gain.value = 0; this.eng.f.type = 'lowpass'; this.eng.f.frequency.value = 300;
+    this.eng.g.gain.value = 0; this.eng.f.type = 'lowpass'; this.eng.f.frequency.value = 200;
     const am = c.createGain(); am.gain.value = 1; this.eng.am = am;
     // Diesel firing comb. A recording of a GE loco showed a steady comb at multiples of 41.8 Hz (3x to 6x strongest),
     // so the oscillators are the fundamental plus those harmonics, with a little sub-octave rumble.
-    for (const [type, mul, vol] of [['sine', 0.5, 0.35], ['sawtooth', 1, 0.3], ['sine', 3, 0.5], ['sine', 4, 0.55], ['sine', 5, 0.7], ['sine', 6, 0.62], ['sine', 8, 0.2]]) {
+    for (const [type, mul, vol] of [['sine', 0.5, 0.5], ['sine', 1, 0.45], ['sine', 2, 0.32], ['sine', 3, 0.2], ['sine', 4, 0.1]]) {
       const o = c.createOscillator(); o.type = type; const g = c.createGain(); g.gain.value = vol * 0.8; o.connect(g); g.connect(this.eng.f); o.start(); this.eng.o.push({ o, mul });
     }
     this.eng.f.connect(am); am.connect(this.eng.g); this.eng.g.connect(out);
-    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 12; lg.gain.value = 0.35; lfo.connect(lg); lg.connect(am.gain); lfo.start(); this.eng.lfo = lfo;
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 12; lg.gain.value = 0.2; lfo.connect(lg); lg.connect(am.gain); lfo.start(); this.eng.lfo = lfo;
     this.turbo = noise('bandpass', 1800, 2); this.rumble = noise('lowpass', 160, 0.7);
     this.wheel = noise('bandpass', 700, 0.6); this.wind = noise('highpass', 1400, 0.4); this.squeal = noise('bandpass', 2600, 12); this.hiss = noise('highpass', 4200, 0.5);
     // Horn: one saw + one slightly detuned square per chime, through a low-pass, plus a breath of noise.
@@ -46,7 +46,7 @@ const Sound = {
     this.rev = c.createConvolver(); this.rev.buffer = rb; this.revG = c.createGain(); this.revG.gain.value = 0.5; this.rev.connect(this.revG); this.revG.connect(out);
     this.hornOscs = [];
     this.horns = this.prof.horn.map((fq, i) => {
-      const f = c.createBiquadFilter(), g = c.createGain(); f.type = 'lowpass'; f.frequency.value = 1900; f.Q.value = 0.9; g.gain.value = 0; f.connect(g); g.connect(out); g.connect(this.rev);
+      const f = c.createBiquadFilter(), g = c.createGain(); f.type = 'lowpass'; f.frequency.value = 1300; f.Q.value = 0.5; g.gain.value = 0; f.connect(g); g.connect(out); g.connect(this.rev);
       for (const [type, mul, vol] of [['sawtooth', 1, 0.5], ['sawtooth', 1.006, 0.3], ['square', 0.5, 0.12], ['sine', 2, 0.2]]) { const o = c.createOscillator(), og = c.createGain(); o.type = type; o.frequency.value = fq * mul; og.gain.value = vol; o.connect(og); og.connect(f); o.start(); this.hornOscs.push({ o, f: fq * mul }); }
       return g;
     });
@@ -75,11 +75,11 @@ const Sound = {
     const rpm = 0.25 + 0.75 * Math.max(st.throttle, Math.min(1, kmh / 140) * 0.35);
     const P = this.prof, synth = this.engSrc ? 0 : 1, base = P.base + rpm * P.span;   // fundamental in Hz, about 42 at a working notch
     for (const o of this.eng.o) sm(o.o.frequency, base * o.mul, 0.15);
-    sm(this.eng.lfo.frequency, 6 + rpm * 16, 0.2);
-    sm(this.eng.f.frequency, 380 + rpm * 500 + st.throttle * 500, 0.2);
+    sm(this.eng.lfo.frequency, 4 + rpm * 8, 0.3);
+    sm(this.eng.f.frequency, 170 + rpm * 160 + st.throttle * 140, 0.3);
     const ev = this.vol('vEngine'); sm(this.eng.g.gain, ev * synth * (0.16 + 0.22 * st.throttle + 0.05 * rpm), 0.2);
     if (this.engSrc) { sm(this.engSrc.src.playbackRate, 0.55 + 0.9 * rpm, 0.15); sm(this.engSrc.g.gain, ev * (0.35 + 0.55 * st.throttle), 0.2); }
-    sm(this.turbo.g.gain, ev * synth * (0.012 + P.turbo * st.throttle * st.throttle), 0.3); sm(this.turbo.f.frequency, 1400 + 2200 * st.throttle, 0.3);
+    sm(this.turbo.g.gain, ev * synth * (0.004 + 0.3 * P.turbo * st.throttle * st.throttle), 0.3); sm(this.turbo.f.frequency, 900 + 900 * st.throttle, 0.3);
     const sp = Math.min(1, v / 38);
     sm(this.wheel.g.gain, 0.004 + 0.22 * sp * (0.4 + 0.6 * sp), 0.2); sm(this.wheel.f.frequency, 400 + 1100 * sp, 0.2);
     sm(this.rumble.g.gain, ev * synth * (0.22 + 0.25 * st.throttle) + 0.25 * sp, 0.3);
@@ -167,7 +167,7 @@ const Sound = {
       try {
         const v = this.voice(), u = new SpeechSynthesisUtterance(text);
         if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'ar-EG';   // no Arabic voice listed: still ask for Arabic and let the browser choose
-        u.rate = 0.92; u.volume = Math.min(1, this.vol('vVoice'));
+        u.rate = 0.88; u.pitch = 0.95; u.volume = Math.min(1, this.vol('vVoice'));
         const talk = () => { try { ss.resume(); ss.speak(u); } catch (e) { /* no voice available */ } };
         if (ss.speaking || ss.pending) { ss.cancel(); setTimeout(talk, 150); } else talk();
       } catch (e) { /* no voice available */ }

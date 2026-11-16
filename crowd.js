@@ -14,11 +14,16 @@ class Crowd {
     this.o = new THREE.Object3D(); this.fr = Track.makeFrame(); this.tmp = new THREE.Vector3();
     const N = this.N, geo = (g, tx, ty, tz) => { g.translate(tx || 0, ty || 0, tz || 0); return g; };
     const mat = new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0 });
-    const shirtMat = new THREE.MeshStandardMaterial({ roughness: 0.88, metalness: 0 });
+    // fabric: soft vertical folds and weave noise, multiplied with the per-person colour
+    const fab = (() => { const c = U.canvas(256, 128), g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 128); let sd = 11; const rn = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+      for (let i = 0; i < 34; i++) { const x = rn() * 256, w = 3 + rn() * 10, gr = g.createLinearGradient(x, 0, x + w, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, 'rgba(0,0,0,' + (0.10 + rn() * 0.16) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x, 0, w, 128); }
+      for (let i = 0; i < 900; i++) { g.fillStyle = 'rgba(0,0,0,' + (rn() * 0.05) + ')'; g.fillRect(rn() * 256, rn() * 128, 2, 2); }
+      const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t; })();
+    const shirtMat = new THREE.MeshStandardMaterial({ roughness: 0.88, metalness: 0, map: fab }), clothMat = new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0, map: fab });
     const im = (g, cast, mt) => { const m = new THREE.InstancedMesh(g, mt || mat, N); m.frustumCulled = false; m.castShadow = !!cast; m.count = N; scene.add(m); return m; };
     this.m = {
-      legL: im(geo(new THREE.CylinderGeometry(0.085, 0.07, 0.82, 8), 0, -0.41, 0), true),
-      legR: im(geo(new THREE.CylinderGeometry(0.085, 0.07, 0.82, 8), 0, -0.41, 0), true),
+      legL: im(geo(new THREE.CylinderGeometry(0.085, 0.07, 0.82, 8), 0, -0.41, 0), true, clothMat),
+      legR: im(geo(new THREE.CylinderGeometry(0.085, 0.07, 0.82, 8), 0, -0.41, 0), true, clothMat),
       armL: im(geo(new THREE.CylinderGeometry(0.055, 0.045, 0.5, 8), 0, -0.25, 0), false, shirtMat),
       armR: im(geo(new THREE.CylinderGeometry(0.055, 0.045, 0.5, 8), 0, -0.25, 0), false, shirtMat),
       handL: im(new THREE.SphereGeometry(0.052, 8, 6), false),
@@ -34,7 +39,7 @@ class Crowd {
       brow: im(new THREE.BoxGeometry(0.1, 0.012, 0.012), false),
       nose: im(new THREE.SphereGeometry(0.02, 6, 5), false),
       mouth: im(new THREE.BoxGeometry(0.044, 0.01, 0.01), false),
-      robe: im(geo(new THREE.CylinderGeometry(0.22, 0.3, 1.28, 14).scale(1.2, 1, 0.85), 0, 0.64, 0), true),
+      robe: im(geo(new THREE.CylinderGeometry(0.22, 0.3, 1.28, 24).scale(1.2, 1, 0.85), 0, 0.64, 0), true, clothMat),
       head: im(new THREE.SphereGeometry(0.115, 14, 10), true),
       hair: im(new THREE.SphereGeometry(0.128, 8, 6), false),
       bag: im(new THREE.BoxGeometry(1, 1, 1), false)
