@@ -387,14 +387,14 @@ class Train {
     } else if (kind === 'box') {
       const cols = [0xcdc7b6, 0x8f3a2e, 0x4c6a8c, 0x6b4a35];
       const bm = mat(cols[i % cols.length], 0.7);
-      this.box(2.9, 2.8, len - 1, bm, 0, 2.7, 0, body);
+      const lh = (len - 1) / 2, ls = new THREE.Mesh(this.bodyLoft([[-lh, 1.3], [-lh, 3.95], [-lh + 0.2, 4.1], [lh - 0.2, 4.1], [lh, 3.95], [lh, 1.3]], 2.95, 7, 1), bm); ls.castShadow = true; ls.receiveShadow = true; body.add(ls);
       for (const sx of [-1, 1]) { this.box(0.06, 2.4, 2.4, M.dark, sx * 1.46, 2.7, 0, body); this.box(0.07, 2.4, 0.08, M.steel, sx * 1.47, 2.7, 1.2, body); this.box(0.07, 2.4, 0.08, M.steel, sx * 1.47, 2.7, -1.2, body); }
-      this.box(3.0, 0.14, len - 0.6, M.roof, 0, 4.15, 0, body);
       for (const sx of [-1, 1]) for (let k = -5; k <= 5; k++) { if (Math.abs(k * 1.1) < 1.6) continue; this.box(0.05, 2.7, 0.12, bm, sx * 1.46, 2.7, k * 1.1, body); }   // corrugated ribs
       this.grime(body, 0, len - 1, 1.52, 1.35, 4.05);
     } else if (kind === 'hopper') {
       const cols = [0xcfc8b4, 0x7a7a74, 0x8a5a38], c = cols[i % cols.length];
-      this.box(3.0, 1.5, len - 1.2, mat(c, 0.75), 0, 3.4, 0, body);
+      { const hm = mat(c, 0.75), lh = (len - 1.2) / 2, hs = new THREE.Mesh(this.bodyLoft([[-lh, 2.65], [-lh, 4.0], [-lh + 0.15, 4.15], [lh - 0.15, 4.15], [lh, 4.0], [lh, 2.65]], 3.0, 7, 1), hm); hs.castShadow = true; hs.receiveShadow = true; body.add(hs);
+        for (const sx of [-1, 1]) { const rl = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, len - 1.8, 6), M.steel); rl.rotation.x = Math.PI / 2; rl.position.set(sx * 1.3, 4.35, 0); body.add(rl); } }
       for (const z of [-3.3, 3.3]) { const f = new THREE.Mesh(new THREE.CylinderGeometry(1.98, 0.45, 1.3, 4, 1), mat(c, 0.75)); f.rotation.y = Math.PI / 4; f.scale.z = 2.0; f.position.set(0, 1.95, z); f.castShadow = true; body.add(f); }
       for (const z of [-3.3, 3.3]) this.box(0.8, 0.12, 0.8, M.dark, 0, 4.18, z, body);   // loading hatches
       this.grime(body, 0, len - 1.2, 1.52, 2.65, 4.15);
@@ -404,6 +404,7 @@ class Train {
       for (const sx of [-1, 1]) this.box(0.12, 1.9, len, mat(c), sx * 1.44, 2.35, 0, body);
       for (const e of [-1, 1]) this.box(3.0, 1.9, 0.12, mat(c), 0, 2.35, e * (len / 2 - 0.06), body);
       this.grime(body, 0, len, 1.51, 1.4, 3.3);
+      for (const sx of [-1, 1]) { this.box(0.14, 0.1, len, M.steel, sx * 1.46, 3.33, 0, body); for (let k = -5; k <= 5; k++) this.box(0.08, 1.9, 0.16, M.steel, sx * 1.5, 2.35, k * 1.2, body); }
       const pile = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.9, len - 1.0), mat(i % 2 ? 0x1b1a19 : 0x8a8579, 0.95, 0)); pile.position.y = 2.7; body.add(pile);   // coal or aggregate
     } else {
       const cols = ['#2a4f86', '#c8571a', '#3c7a4a', '#a8262d', '#d8d3c6', '#5d646b'], labels = ['NILE', 'DELTA', 'SUEZ', 'CAIRO', 'ALEX', 'SINAI'];
