@@ -306,8 +306,8 @@
       camera.position.y += Math.sin(game.t * 17) * 0.004 * f + Math.sin(game.t * 5.3) * 0.006 * f; camera.position.x += Math.sin(game.t * 3.1) * 0.004 * f;
       if (game.derailed) { const q = Math.min(1, game.derailT) * 0.12 * Math.max(0, 1 - game.derailT / 4); camera.position.x += (Math.random() - 0.5) * q; camera.position.y += (Math.random() - 0.5) * q; camera.rotateZ(Math.min(1, game.derailT / 1.5) * 0.5); }
       eq.setFromEuler(eu.set(cam.pitch, cam.yaw + Math.PI * 0, 0, 'YXZ')); camera.quaternion.multiply(eq); camera.fov = U.clamp(baseFov / cam.zoom, 28, 100);
-    } else if (k === 'front') { orbit(13, 0, dt, 2.0); }
-    else if (k === 'chase') { orbit(27, Math.PI, dt, 2.4); }
+    } else if (k === 'front') { orbit(10.5, 0, dt, 2.2); }
+    else if (k === 'chase') { orbit(21, Math.PI, dt, 2.7); }
     else if (k === 'top') { orbit(60, Math.PI, dt, 1.0); }
     else {
       const d = ((sideS - game.s) % track.L + track.L) % track.L;
