@@ -142,6 +142,16 @@ const Hub = {
     const roof = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.25, 120), new THREE.MeshStandardMaterial({ color: 0x2f6a3e, roughness: 0.7 })); roof.position.set(5.2, 5.4, 0); roof.castShadow = true; g.add(roof);
     for (let z = -55; z <= 55; z += 22) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 4.4, 8), new THREE.MeshStandardMaterial({ color: 0x595c60, metalness: 0.6, roughness: 0.5 })); p.position.set(3.0, 3.2, z); g.add(p); }
     g.position.copy(f.pos); g.position.y = 0; g.rotation.y = Math.atan2(f.fwd.x, f.fwd.z); b.scene.add(g); b.added.push(g);
+    this.bgModels(g);
+  },
+  /* real 3D trains standing on neighbouring tracks behind the player's train (loaded on demand; skipped silently if unavailable) */
+  bgModels(g) {
+    if (typeof Models === 'undefined') return; const b = this.bg, sig = b.shown;
+    const rails = (x) => { const w = new THREE.Group(), bal = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.25, 420), new THREE.MeshStandardMaterial({ color: 0x6f6a60, roughness: 1 })); bal.position.set(x, 0.1, 0); bal.receiveShadow = true; w.add(bal);
+      for (const dx of [-0.72, 0.72]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 420), new THREE.MeshStandardMaterial({ color: 0x8a8d90, metalness: 0.7, roughness: 0.4 })); r.position.set(x + dx, 0.3, 0); w.add(r); } return w; };
+    const place = (name, x, z, flip) => Models.clone(name).then((m) => { if (!this.bg || this.bg.shown !== sig || !g.parent) return; m.position.set(x, 0.3, z); m.rotation.y = flip ? Math.PI : 0; g.add(m); }).catch(() => { /* optional */ });
+    g.add(rails(-8.5)); g.add(rails(14));
+    place(['ge777', 'ge767', 'f59', 'sd40'][Math.floor(Math.random() * 4)], -8.5, -6, false); place('waratah', 14, 40, true);
   },
   bgFail(e) { try { console.warn('hub background', e); } catch (x) { /* */ } if (this.bg) { this.bg.run = false; this.bg.dead = true; } },
   stopBg() { const b = this.bg; if (!b) return; b.run = false; },
@@ -349,6 +359,7 @@ const SetUI = {
     let c = this.card(m, L('حقوق النشر والطباعة', 'Copyright'), '©');
     row(c, 'لعبة قطارات مصر', 'إعداد يوسف فرج، ومساعدة يوسف خربوش.');
     row(c, 'حقوق النشر والطباعة محفوظة', 'حقوق النشر والطباعة ملك ليوسف فرج ويوسف خربوش. © ٢٠٢٦ جميع الحقوق محفوظة.');
+    if (typeof Models !== 'undefined') { c = this.card(m, L('موديلات ثلاثية الأبعاد', '3D models credits'), '🚆'); for (const t of Models.CREDITS()) row(c, t, ''); }
     c = this.card(m, L('ممنوع', 'Not allowed'), '⛔');
     for (const t of ['نسخ اللعبة أو أي جزء منها (الكود أو الرسومات أو الأصوات أو النصوص).', 'إعادة نشرها أو رفعها على أي موقع أو متجر تطبيقات باسم غير اسم أصحابها.', 'تعديلها أو فك تغليفها أو استخراج ملفاتها وبيعها أو إعادة استخدامها.', 'بيع حسابات اللاعبين أو العملات أو التلاعب بالرصيد أو الغش بأي طريقة.', 'الطباعة أو التصوير لأغراض تجارية من غير إذن مكتوب.']) row(c, '✖ ' + t, '');
     row(c, 'المخالفة', 'أي نسخ أو استغلال من غير إذن بيعرّض صاحبه للمساءلة القانونية، وبنحتفظ بحقنا في إيقاف أي حساب مخالف.');
