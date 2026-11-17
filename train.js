@@ -115,8 +115,8 @@ class Train {
     const body = new THREE.Group(), hull = new THREE.Group(), W = vel ? 2.95 : 3.0, X = W / 2 + 0.06;
     let prof, win;   // win: windscreen centre, size and tilt
     if (vel) { prof = [[-h, 0.9], [-h, 3.8], [-h + 0.5, 4.0], [h - 9, 4.0], [h - 4.2, 3.55], [h - 1.2, 2.45], [h, 1.7], [h, 0.9]]; win = { y: 3.0, z: h - 2.7, th: -Math.atan2(0.939, 0.344), w: 2.3, h: 2.5, n: [0.939, 0.344] }; }
-    else if (hood) { prof = [[-h, 1.0], [-h, 3.2], [-h + 0.3, 3.4], [h - 4.6, 3.4], [h - 4.6, 4.25], [h - 0.3, 4.25], [h, 3.95], [h, 1.0]]; win = { y: 3.45, z: h + 0.02, th: 0, w: 2.4, h: 1.15, n: [0, 1] }; }
-    else if (boxy) { prof = [[-h, 1.0], [-h, 3.7], [-h + 0.4, 3.95], [h - 0.4, 3.95], [h, 3.7], [h, 1.0]]; win = { y: 3.25, z: h + 0.02, th: 0, w: 2.4, h: 1.2, n: [0, 1] }; }
+    else if (hood) { prof = [[-h, 1.0], [-h, 3.2], [-h + 0.3, 3.4], [h - 4.6, 3.4], [h - 4.6, 4.25], [h - 0.3, 4.25], [h, 3.95], [h, 1.0]]; win = { y: 3.45, z: h + 0.02, th: 0, w: 2.2, h: 1.15, n: [0, 1] }; }
+    else if (boxy) { prof = [[-h, 1.0], [-h, 3.7], [-h + 0.4, 3.95], [h - 0.4, 3.95], [h, 3.7], [h, 1.0]]; win = { y: 3.25, z: h + 0.02, th: 0, w: 2.2, h: 1.2, n: [0, 1] }; }
     else { prof = [[-h, 1.0], [-h, 3.95], [-h + 0.3, 4.2], [h - 2.4, 4.2], [h, 2.6], [h, 1.0]]; win = { y: 3.4, z: h - 1.2, th: -Math.atan2(0.832, 0.555), w: 2.55, h: 2.1, n: [0.832, 0.555] }; }
     const main = vel ? M.cream : M.blue;
     const loftOn = diesel;
@@ -130,7 +130,7 @@ class Train {
     } else if (loftOn) {
       const bp = boxy ? [[-h, 1.45], [-h, 2.5], [h + 0.02, 2.5], [h + 0.02, 1.45]] : [[-h, 1.45], [-h, 2.5], [h - 9.5, 2.5], [h - 4.2, 2.95], [h + 0.02, 2.25], [h + 0.02, 1.45]];
       const tex = this.liveryTex(spec.len, spec.top, [[spec.low, bp], [0x1b1a19, [[-h - 1, 0.9], [h + 1, 0.9], [h + 1, 1.45], [-h - 1, 1.45]]], [spec.trim, boxy ? [[-h, 2.5], [h + 0.02, 2.5]] : [[-h, 2.5], [h - 9.5, 2.5], [h - 4.2, 2.95], [h + 0.02, 2.25]], 0.06]]);
-      shell = new THREE.Mesh(this.bodyLoft(prof, W, 5.5, boxy ? 0.92 : 0.9), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, metalness: 0.25 }));
+      shell = new THREE.Mesh(this.bodyLoft(prof, W, boxy ? 4.4 : 5.5, boxy ? 0.8 : 0.9), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38, metalness: 0.25 }));
     } else shell = new THREE.Mesh(this.extrudeBody(prof, W), main);
     shell.castShadow = true; shell.receiveShadow = true; hull.add(shell);
     if (diesel) {
@@ -211,6 +211,17 @@ class Train {
     if (diesel) this.box(2.3, 0.7, 6.4, M.dark, 0, 0.78, 0, hull);
     if (!vel && !boxy) for (const wx of [-0.65, 0.65]) { const w = this.box(0.03, 0.9, 0.04, M.dark, wx, 3.4, h - 1.3, hull); w.rotation.x = 0.97; w.rotation.z = 0.5 * Math.sign(wx); }   // wipers
     body.add(hull);
+    if (!vel) {   // mirrors, coupler, air hoses, stanchions
+      const mz = boxy ? h - 0.9 : h - 2.9, my = boxy ? 3.4 : 3.2;
+      for (const sx of [-1, 1]) {
+        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.3, 6), M.steel); arm.rotation.z = Math.PI / 2; arm.position.set(sx * (W / 2 + 0.12), my, mz); hull.add(arm);
+        const mir = this.box(0.04, 0.3, 0.2, M.dark, sx * (W / 2 + 0.28), my, mz, hull); const gl = this.box(0.01, 0.26, 0.17, M.glass, sx * (W / 2 + 0.3), my, mz, hull);
+        for (const e of [0.12, -0.12]) { const hs = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.34, 8), M.dark); hs.position.set(sx * 0.62 + e * 0.5, 1.08, h + 0.34); hs.rotation.x = 0.5; hull.add(hs); }
+        const st = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.9, 6), M.steel); st.position.set(sx * 1.32, 1.75, h + 0.12); hull.add(st);
+      }
+      this.box(0.34, 0.3, 0.75, M.dark, 0, 1.02, h + 0.5, hull);
+      const kn = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.34, 10), M.steel); kn.position.set(0, 1.02, h + 0.9); kn.rotation.x = Math.PI / 2; hull.add(kn);
+    }
     if (dmu || vel) this.addDoors(body, M, [-h + 2.4, h - 8.4], 2.3, 2.4);
     let eye = null, nose = null;
     if (driver) {
@@ -277,7 +288,7 @@ class Train {
     let eye = null, nose = null;
     if (cab) {
       // black glass front over the slope, yellow destination strip, headlights and tail lights
-      const fr = new THREE.Mesh(this.extrudeBody([[h - 1.92, 3.7], [h - 0.55, 3.32], [h + 0.02, 2.56], [h + 0.02, 1.3], [h - 1.92, 1.3]], W - 0.5), M.glass); fr.castShadow = true; body.add(fr);
+      const fr = new THREE.Mesh(this.extrudeBody([[h - 1.92, 3.7], [h - 0.55, 3.32], [h + 0.02, 2.56], [h + 0.02, 1.3], [h - 1.92, 1.3]], W - 0.5), new THREE.MeshStandardMaterial({ color: 0x35566e, roughness: 0.1, metalness: 0.85 })); fr.castShadow = true; body.add(fr);
       this.box(W - 0.9, 0.06, 0.05, new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xffd21f, emissiveIntensity: 1.4 }), 0, 3.12, h - 0.34, body).rotation.x = -0.55;
       for (const sx of [-1, 1]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.08, 16), M.lamp); l.rotation.x = Math.PI / 2; l.position.set(sx * 0.95, 1.55, h + 0.06); body.add(l); }
       this.box(W - 0.2, 0.2, 0.1, trim, 0, 1.34, h + 0.04, body);
@@ -411,7 +422,8 @@ class Train {
       this.box(2.6, 0.12, len - 0.4, M.dark, 0, 1.36, 0, body);
       for (const z of [-3.3, 3.3]) {
         const k = (i + (z > 0 ? 2 : 0)) % cols.length, cm = new THREE.MeshStandardMaterial({ color: cols[k], roughness: 0.6, metalness: 0.2 });
-        this.box(2.5, 2.6, 6.0, cm, 0, 2.72, z, body);
+        { const cg = new THREE.Mesh(this.bodyLoft([[-3, 1.42], [-3, 4.02], [3, 4.02], [3, 1.42]], 2.5, 12, 1), cm); cg.position.set(0, 0, z); cg.castShadow = true; cg.receiveShadow = true; body.add(cg);
+          for (const sx of [-1, 1]) for (const ez of [-1, 1]) for (const cy of [1.5, 3.94]) this.box(0.2, 0.14, 0.2, M.dark, sx * 1.15, cy, z + ez * 2.9, body); }
         for (const sx of [-1, 1]) this.plane(Tex.container(cols[k], labels[k]), 5.9, 2.5, sx * 1.255, 2.72, z, sx > 0 ? Math.PI / 2 : -Math.PI / 2, body);
       }
     }
