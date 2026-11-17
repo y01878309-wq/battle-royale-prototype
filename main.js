@@ -176,6 +176,7 @@
     if (S.reflect <= 0) scene.environment = null;
     scene.fog.density *= Settings.fogMul(); weather = new Weather(scene, sky); weather.rebase(); weather.on = !!S.weather;
     track.buildMeshes(scene, quality); await U.tick();
+    if (typeof Models !== 'undefined' && quality !== 'low') await Models.preload(['honda', 'signal']);
     world = new World(scene, track, sky, quality, route); await world.build();
     U.setProgress(0.9, 'المحطات والقطر…'); await U.tick();
     stations = new Stations(scene, track, quality, route, type.vmax, type.brake); stations.build();

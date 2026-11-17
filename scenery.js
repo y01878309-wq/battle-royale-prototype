@@ -314,9 +314,10 @@ class Scenery {
     const paints = [0xf0c020, 0xf2f2ee, 0x2a2a2d, 0xc43a2e, 0x3a6ac4, 0x8a9096, 0x2f7a4a];
     const classOf = (k) => (k === 1 ? 1 : k === 5 ? 2 : 0), geos = [sedan, pick, bus], cnt = [0, 0, 0];
     this.cars.forEach((car) => { if (car.kind === 'road' && car.k % 7 === 6) car.k = 5; car.cls = classOf(car.k); car.ci = cnt[car.cls]++; });
-    this.carMesh = geos.map((g, i) => { const m = new THREE.InstancedMesh(g, mat, Math.max(1, cnt[i])); m.count = cnt[i]; m.frustumCulled = false; m.castShadow = true; m.setColorAt(0, new THREE.Color(1, 1, 1)); m.visible = cnt[i] > 0; return m; });   // a vehicle class with no cars still needs its colour buffer, or the whole frame stops drawing at this mesh
+    const hb = typeof Models !== 'undefined' && Models.ready.honda ? Models.bake('honda', 4.5) : null;   // the real sedan replaces the box one
+    this.carMesh = geos.map((g, i) => { const m = new THREE.InstancedMesh(i === 0 && hb ? hb.geo : g, i === 0 && hb ? hb.mats : mat, Math.max(1, cnt[i])); m.count = cnt[i]; m.frustumCulled = false; m.castShadow = true; m.setColorAt(0, new THREE.Color(1, 1, 1)); m.visible = cnt[i] > 0; return m; });   // a vehicle class with no cars still needs its colour buffer, or the whole frame stops drawing at this mesh
     const c = new THREE.Color();
-    this.cars.forEach((car) => { const m = this.carMesh[car.cls]; m.setColorAt(car.ci, c.setHex(car.k === 5 ? 0xf2f2ee : paints[car.k % 5])); });
+    this.cars.forEach((car) => { const m = this.carMesh[car.cls]; m.setColorAt(car.ci, c.setHex(car.k === 5 ? 0xf2f2ee : (car.cls === 0 && hb ? 0xffffff : paints[car.k % 5]))); });
     this.carMesh.forEach((m) => { if (m.instanceColor) m.instanceColor.needsUpdate = true; this.scene.add(m); });
     this.carH = [0, 0, 0]; this._o = new THREE.Object3D(); this._p = new THREE.Vector3(); this._p2 = new THREE.Vector3();
   }
@@ -445,6 +446,10 @@ class Scenery {
           const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), lm);
           lamp.position.set(p.x, 3.5, p.z).addScaledVector(fr.fwd, k * 0.35); this.scene.add(lamp); lamps.push({ lm, k });
         }
+      }
+      if (typeof Models !== 'undefined' && Models.ready.signal) for (const side of [-1, 1]) {   // real road traffic lights beside the road, facing the oncoming cars
+        const sg = Models.get('signal', 4.6), px = fr.pos.x + fr.right.x * (side * 8.6 + (side > 0 ? TX() : 0)) - fr.fwd.x * 3.9, pz = fr.pos.z + fr.right.z * (side * 8.6 + (side > 0 ? TX() : 0)) - fr.fwd.z * 3.9;
+        sg.position.set(px, 0.43, pz); sg.rotation.y = Math.atan2(-side * fr.right.x, -side * fr.right.z); this.scene.add(sg);
       }
       this.crossings.push({ s, arms, lamps, ang: 0, closed: false });
     }
