@@ -9,7 +9,7 @@ class Crowd {
   constructor(scene, track, quality, stations, trainLen) {
     this.scene = scene; this.track = track; this.stations = stations; this.trainLen = trainLen;
     this.N = Math.min(240, Math.ceil(Math.max(...stations.list.map((s) => s.crowdN || 0)) * 1.55) + 6);
-    this.cur = -1; this.st = null; this.started = false; this.agents = [];
+    this.cur = -1; this.st = null; this.started = false; this.agents = []; this.real = []; this.quality = quality;
     this.base = new THREE.Vector3(); this.fwd = new THREE.Vector3(); this.right = new THREE.Vector3();
     this.o = new THREE.Object3D(); this.fr = Track.makeFrame(); this.tmp = new THREE.Vector3();
     const N = this.N, geo = (g, tx, ty, tz) => { g.translate(tx || 0, ty || 0, tz || 0); return g; };
@@ -56,7 +56,7 @@ class Crowd {
     this.hideAll();
   }
 
-  hideAll() { for (const k in this.m) { for (let i = 0; i < this.N; i++) this.m[k].setMatrixAt(i, this.hide); this.m[k].instanceMatrix.needsUpdate = true; } for (const a of this.agents) a.vis = false; }
+  hideAll() { this.clearReal(); for (const k in this.m) { for (let i = 0; i < this.N; i++) this.m[k].setMatrixAt(i, this.hide); this.m[k].instanceMatrix.needsUpdate = true; } for (const a of this.agents) a.vis = false; }
 
   /* Fill the pool with the waiting passengers of station idx. Called when the train is a few hundred metres away. */
   prepare(idx) {
@@ -75,7 +75,7 @@ class Crowd {
     const pick = (a) => a[Math.floor(R() * a.length)], c = new THREE.Color();
     const zLo = st.pl / 2 - 12 - this.trainLen - 6, zHi = st.pl / 2 - 12 + 6;   // along the stopped train
     this.agents.forEach((a, i) => {
-      Object.assign(a, { vis: false, role: 'stay', go: false, way: null, moving: false, phase: R() * 6, speed: 0 });
+      Object.assign(a, { vis: false, real: false, role: 'stay', go: false, way: null, moving: false, phase: R() * 6, speed: 0 });
       if (i >= n) return;
       const side = -1, kind = R(), child = kind > 0.93, woman = kind > 0.62 && !child, robe = !woman && !child && kind < 0.2;
       Object.assign(a, {
@@ -94,7 +94,26 @@ class Crowd {
     });
     for (const k in this.m) this.m[k].instanceColor.needsUpdate = true;
     for (const a of this.agents) a.dirty = true; this.dirtyAll = true;
+    this.setupReal();
     this.pose();
+  }
+
+  /* A few real (Mixamo) people stand and walk on the platform close to the stopped train; the rest of the crowd stays procedural and cheap. */
+  clearReal() { for (const r of this.real) { this.scene.remove(r.fig); } this.real = []; }
+  setupReal() {
+    this.clearReal();
+    if (this.quality === 'low' || typeof People === 'undefined' || !People.ready.father || !People.ready.police) return;
+    const list = this.agents.filter((a) => a.vis && !a.child).slice(0, 6);
+    list.forEach((a, k) => { const walk = k % 3 !== 0, fig = People.make(walk ? 'father' : 'police'); if (!fig) return; a.vis = false; a.real = true; this.scene.add(fig); this.real.push({ fig, a, walk, ph: k * 1.3 }); });
+  }
+  updateReal(dt) {
+    const ph = (this.st && this.st.ph) || 1, B = this.base; this.rt = (this.rt || 0) + dt;
+    for (const r of this.real) {
+      const a = r.a, u = r.fig.userData; let z = a.z, yaw;
+      if (r.walk) { const s = Math.sin(this.rt * 0.18 + r.ph); z = a.z + s * 7; yaw = this.yawOf(0, Math.cos(this.rt * 0.18 + r.ph) >= 0 ? 1 : -1); u.set(Math.floor(this.rt * u.K / u.dur)); }
+      else yaw = this.yawOf(1, 0);
+      r.fig.position.set(B.x + this.right.x * a.x + this.fwd.x * z, ph, B.z + this.right.z * a.x + this.fwd.z * z); r.fig.rotation.y = yaw; r.fig.visible = true;
+    }
   }
 
   yawOf(dx, dz) { const wx = this.right.x * dx + this.fwd.x * dz, wz = this.right.z * dx + this.fwd.z * dz; return Math.atan2(wx, wz); }
@@ -125,7 +144,7 @@ class Crowd {
       a.way = [[side * 1.95, best.z + (R() - 0.5) * 0.5], [side * 1.3, best.z]]; a.door = best;
     }
     // alighters appear at random doors, a few seconds apart
-    const free = this.agents.filter((a) => !a.vis); let k = 0; const dl = doors.filter((q) => q.side < 0);   // double track: only the platform on the player's side is used
+    const free = this.agents.filter((a) => !a.vis && !a.real); let k = 0; const dl = doors.filter((q) => q.side < 0);   // double track: only the platform on the player's side is used
     for (let j = 0; dl.length && j < nAl && j < free.length; j++) {
       const a = free[j], d = dl[Math.floor(R() * dl.length)], kind = R(), child = kind > 0.94, woman = kind > 0.6 && !child, robe = !woman && !child && kind < 0.2, cols = this.cols, pick = (arr) => arr[Math.floor(R() * arr.length)];
       const toBuilding = d.side < 0, way = toBuilding ? [[d.side * 2.6, d.z], [d.side * 4.5, d.z * 0.5 + 4], [-9.4, 10]] : [[d.side * 2.6, d.z], [4.5, d.z + (R() < 0.5 ? 1 : -1) * 6], [4.5, (R() < 0.5 ? 1 : -1) * (st.pl / 2 - 4)]];
@@ -149,6 +168,7 @@ class Crowd {
 
   update(dt, game, train) {
     if (!this.st) return;
+    if (this.real.length) this.updateReal(dt);
     const dwell = game.phase === 'dwell' && game.nextIdx === this.cur;
     if (dwell && !this.started && game.dwellT >= 2.2) this.startDwell(train);
     if (!dwell && this.started) this.endDwell();
