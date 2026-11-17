@@ -16,31 +16,37 @@ class Crowd {
     const mat = new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0 });
     // fabric: soft vertical folds and weave noise, multiplied with the per-person colour
     const fab = (() => { const c = U.canvas(256, 128), g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 128); let sd = 11; const rn = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-      for (let i = 0; i < 34; i++) { const x = rn() * 256, w = 3 + rn() * 10, gr = g.createLinearGradient(x, 0, x + w, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, 'rgba(0,0,0,' + (0.10 + rn() * 0.16) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x, 0, w, 128); }
+      for (let i = 0; i < 34; i++) { const x = rn() * 256, w = 3 + rn() * 10, gr = g.createLinearGradient(x, 0, x + w, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, 'rgba(0,0,0,' + (0.05 + rn() * 0.1) + ')'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x, 0, w, 128); }
       for (let i = 0; i < 900; i++) { g.fillStyle = 'rgba(0,0,0,' + (rn() * 0.05) + ')'; g.fillRect(rn() * 256, rn() * 128, 2, 2); }
       const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; return t; })();
     const shirtMat = new THREE.MeshStandardMaterial({ roughness: 0.88, metalness: 0, map: fab }), clothMat = new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0, map: fab });
+    const lathe = (pts, sx, sz, seg) => { const g = new THREE.LatheGeometry(pts.map((p) => new THREE.Vector2(p[0], p[1])), seg || 14); g.scale(sx || 1, 1, sz || 1); return g; };
+    const gLeg = lathe([[0, 0.02], [0.092, 0.02], [0.1, -0.1], [0.088, -0.3], [0.068, -0.52], [0.058, -0.72], [0.056, -0.81], [0, -0.82]], 1, 1.05), gArm = lathe([[0, 0.03], [0.072, 0.02], [0.074, -0.1], [0.06, -0.34], [0.05, -0.47], [0.047, -0.5], [0, -0.5]], 1, 1, 10);
+    const gTorso = lathe([[0, -0.02], [0.17, -0.02], [0.185, 0.1], [0.2, 0.28], [0.225, 0.44], [0.215, 0.54], [0.15, 0.6], [0.07, 0.625], [0, 0.63]], 1.3, 0.74, 18);
+    const gShoe = new THREE.SphereGeometry(0.075, 10, 8); gShoe.scale(1, 0.62, 1.95); gShoe.translate(0, 0, 0.07);
+    const gHand = new THREE.SphereGeometry(0.05, 8, 6); gHand.scale(0.75, 1.15, 0.9);
+    const gHead = new THREE.SphereGeometry(0.115, 18, 14); gHead.scale(0.92, 1.1, 1.0);
     const im = (g, cast, mt) => { const m = new THREE.InstancedMesh(g, mt || mat, N); m.frustumCulled = false; m.castShadow = !!cast; m.count = N; scene.add(m); return m; };
     this.m = {
-      legL: im(geo(new THREE.CylinderGeometry(0.085, 0.07, 0.82, 8), 0, -0.41, 0), true, clothMat),
-      legR: im(geo(new THREE.CylinderGeometry(0.085, 0.07, 0.82, 8), 0, -0.41, 0), true, clothMat),
-      armL: im(geo(new THREE.CylinderGeometry(0.055, 0.045, 0.5, 8), 0, -0.25, 0), false, shirtMat),
-      armR: im(geo(new THREE.CylinderGeometry(0.055, 0.045, 0.5, 8), 0, -0.25, 0), false, shirtMat),
-      handL: im(new THREE.SphereGeometry(0.052, 8, 6), false),
-      handR: im(new THREE.SphereGeometry(0.052, 8, 6), false),
-      shoeL: im(geo(new THREE.BoxGeometry(0.14, 0.09, 0.28), 0, 0, 0.04), false),
-      shoeR: im(geo(new THREE.BoxGeometry(0.14, 0.09, 0.28), 0, 0, 0.04), false),
-      neck: im(geo(new THREE.CylinderGeometry(0.05, 0.06, 0.1, 8), 0, 0, 0), false),
-      torso: im(geo(new THREE.CylinderGeometry(0.22, 0.19, 0.6, 14).scale(1.3, 1, 0.74), 0, 0.3, 0), true, shirtMat),
-      shL: im(new THREE.SphereGeometry(0.068, 8, 6), false, shirtMat),
-      shR: im(new THREE.SphereGeometry(0.068, 8, 6), false, shirtMat),
+      legL: im(gLeg, true, clothMat),
+      legR: im(gLeg, true, clothMat),
+      armL: im(gArm, false, shirtMat),
+      armR: im(gArm, false, shirtMat),
+      handL: im(gHand, false),
+      handR: im(gHand, false),
+      shoeL: im(gShoe, false),
+      shoeR: im(gShoe, false),
+      neck: im(geo(new THREE.CylinderGeometry(0.055, 0.065, 0.12, 10), 0, 0, 0), false),
+      torso: im(gTorso, true, shirtMat),
+      shL: im(new THREE.SphereGeometry(0.06, 10, 8), false, shirtMat),
+      shR: im(new THREE.SphereGeometry(0.06, 10, 8), false, shirtMat),
       eyeL: im(new THREE.SphereGeometry(0.013, 6, 5), false),
       eyeR: im(new THREE.SphereGeometry(0.013, 6, 5), false),
       brow: im(new THREE.BoxGeometry(0.1, 0.012, 0.012), false),
       nose: im(new THREE.SphereGeometry(0.02, 6, 5), false),
       mouth: im(new THREE.BoxGeometry(0.044, 0.01, 0.01), false),
       robe: im(geo(new THREE.CylinderGeometry(0.22, 0.3, 1.28, 24).scale(1.2, 1, 0.85), 0, 0.64, 0), true, clothMat),
-      head: im(new THREE.SphereGeometry(0.115, 14, 10), true),
+      head: im(gHead, true),
       hair: im(new THREE.SphereGeometry(0.128, 8, 6), false),
       bag: im(new THREE.BoxGeometry(1, 1, 1), false)
     };
