@@ -299,19 +299,19 @@
 
   function updateCamera(dt) {
     const k = CAMERAS[camIdx][0], body = train.loco.body; body.updateMatrixWorld(true);
-    baseFov = (k === 'cab' ? 70 : 60) * Settings.d.fov; camera.fov = baseFov; camera.near = k === 'cab' ? 0.12 : 0.8; const f = Math.min(1, game.v / 25) * (Settings.d.shake ? 1 : 0);
+    baseFov = (k === 'cab' ? 70 : 48) * Settings.d.fov; camera.fov = baseFov; camera.near = k === 'cab' ? 0.12 : 0.8; const f = Math.min(1, game.v / 25) * (Settings.d.shake ? 1 : 0);
     if (k === 'cab') {
       train.eye.getWorldPosition(camera.position); train.eye.getWorldQuaternion(camera.quaternion);
       camera.position.y += Math.sin(game.t * 17) * 0.004 * f + Math.sin(game.t * 5.3) * 0.006 * f; camera.position.x += Math.sin(game.t * 3.1) * 0.004 * f;
       if (game.derailed) { const q = Math.min(1, game.derailT) * 0.12 * Math.max(0, 1 - game.derailT / 4); camera.position.x += (Math.random() - 0.5) * q; camera.position.y += (Math.random() - 0.5) * q; camera.rotateZ(Math.min(1, game.derailT / 1.5) * 0.5); }
       eq.setFromEuler(eu.set(cam.pitch, cam.yaw + Math.PI * 0, 0, 'YXZ')); camera.quaternion.multiply(eq); camera.fov = U.clamp(baseFov / cam.zoom, 28, 100);
-    } else if (k === 'front') { orbit(20, 0, dt, 2.2); }
-    else if (k === 'chase') { orbit(42, Math.PI, dt, 2.6); }
+    } else if (k === 'front') { orbit(13, 0, dt, 2.0); }
+    else if (k === 'chase') { orbit(27, Math.PI, dt, 2.4); }
     else if (k === 'top') { orbit(60, Math.PI, dt, 1.0); }
     else {
       const d = ((sideS - game.s) % track.L + track.L) % track.L;
-      if (sideS < -1e8 || d > track.L / 2) sideS = game.s + 90 + game.v * 4;
-      track.at(sideS, -11, 2.1, camera.position); body.getWorldPosition(tgt); tgt.y += 2.2;
+      if (sideS < -1e8 || d > track.L / 2) sideS = game.s + 70 + game.v * 4;
+      track.at(sideS, -8, 1.9, camera.position); body.getWorldPosition(tgt); tgt.y += 2.2;
       camera.lookAt(tgt); camera.fov = U.clamp(baseFov / cam.zoom, 20, 90);
       camera.rotateY(cam.yaw * 0.3); camera.rotateX(-cam.pitch * 0.3);
     }
