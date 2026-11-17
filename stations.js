@@ -1,5 +1,6 @@
 'use strict';
 /* Stations (four sizes), signals, speed zones and lineside signs. Positions come from the Route. */
+const PX = 0.6;   // platforms stand this much further from the track so the enlarged trains clear them
 const STOP_BACK = 12;   // the stop mark sits this far before the end of the platform
 
 /* Look of a station by region (see regionOf in data.js): wall colours, roof shape and colour, platform canopy colour, front colonnade, extras. */
@@ -217,38 +218,38 @@ class Stations {
     const half = st.pl / 2, ph = st.type === 'halt' ? 0.6 : 1.0;
     const canopy = { terminal: 1, major: 0.7, town: 0.4, halt: 0 }[st.type];
     for (const side of [-1, 1]) {
-      const off = side < 0 ? -TX() : 0, x = side * 4.5 + off;   // double track: the left-hand platform stands beyond the second track
+      const off = side < 0 ? -TX() : 0, x = side * (4.5 + PX) + off;   // double track: the left-hand platform stands beyond the second track
       this.mesh(new THREE.BoxGeometry(5.4, ph, st.pl), M.concrete, root, x, ph / 2, 0);
-      { const tm = new THREE.Mesh(new THREE.PlaneGeometry(0.7, st.pl), M.tactile); tm.rotation.x = -Math.PI / 2; tm.position.set(side * 2.2 + off, ph + 0.014, 0); tm.receiveShadow = true; const g2 = tm.geometry, uv = g2.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.7 / 1.0, uv.getY(i) * st.pl / 1.0); root.add(tm); }
+      { const tm = new THREE.Mesh(new THREE.PlaneGeometry(0.7, st.pl), M.tactile); tm.rotation.x = -Math.PI / 2; tm.position.set(side * (2.2 + PX) + off, ph + 0.014, 0); tm.receiveShadow = true; const g2 = tm.geometry, uv = g2.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.7 / 1.0, uv.getY(i) * st.pl / 1.0); root.add(tm); }
       if (st.type !== 'halt') {   // terracotta tile surface
         const tt = this.tileTex.clone(); tt.needsUpdate = true; tt.repeat.set(2.4 / 2, st.pl / 2);
         const tp = new THREE.Mesh(new THREE.PlaneGeometry(4.8, st.pl), new THREE.MeshStandardMaterial({ map: tt, roughness: 0.85 }));
-        tp.rotation.x = -Math.PI / 2; tp.position.set((side * 4.8 + off), ph + 0.004, 0); tp.receiveShadow = true; root.add(tp);
+        tp.rotation.x = -Math.PI / 2; tp.position.set((side * (4.8 + PX) + off), ph + 0.004, 0); tp.receiveShadow = true; root.add(tp);
       }
       if (canopy > 0) {
         const cl = (st.pl - 30) * canopy, c0 = st.type === 'terminal' ? 0 : 10;
-        for (let z = -cl / 2 + 5; z <= cl / 2 - 5; z += 15) this.mesh(new THREE.BoxGeometry(0.25, 4.2, 0.25), M.metal, root, (side * 6.6 + off), 3.1, c0 + z);
-        if (st.type !== 'terminal') this.mesh(new THREE.BoxGeometry(6.2, 0.18, cl), M.roofRed, root, (side * 5.3 + off), 5.25, c0);
-        for (let z = -cl / 2 + 8; z <= cl / 2 - 8; z += 30) this.mesh(new THREE.BoxGeometry(2.4, 0.08, 0.7), M.lamp, root, (side * 5.6 + off), 5.0, c0 + z);
+        for (let z = -cl / 2 + 5; z <= cl / 2 - 5; z += 15) this.mesh(new THREE.BoxGeometry(0.25, 4.2, 0.25), M.metal, root, (side * (6.6 + PX) + off), 3.1, c0 + z);
+        if (st.type !== 'terminal') this.mesh(new THREE.BoxGeometry(6.2, 0.18, cl), M.roofRed, root, (side * (5.3 + PX) + off), 5.25, c0);
+        for (let z = -cl / 2 + 8; z <= cl / 2 - 8; z += 30) this.mesh(new THREE.BoxGeometry(2.4, 0.08, 0.7), M.lamp, root, (side * (5.6 + PX) + off), 5.0, c0 + z);
       } else {
-        for (const z of [-30, 30]) { this.mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.2, 6), M.dark, root, (side * 6.6 + off), 2.7, z); this.mesh(new THREE.BoxGeometry(0.5, 0.2, 0.5), M.lamp, root, (side * 6.6 + off), 4.9, z); }
+        for (const z of [-30, 30]) { this.mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.2, 6), M.dark, root, (side * (6.6 + PX) + off), 2.7, z); this.mesh(new THREE.BoxGeometry(0.5, 0.2, 0.5), M.lamp, root, (side * (6.6 + PX) + off), 4.9, z); }
       }
       for (let z = -half + 25; z <= half - 25; z += 40) {
-        this.mesh(new THREE.BoxGeometry(1.6, 0.1, 0.45), M.dark, root, (side * 5.7 + off), ph + 0.5, z + 6);
-        this.mesh(new THREE.BoxGeometry(1.6, 0.5, 0.06), M.dark, root, (side * 5.95 + off), ph + 0.8, z + 6);
+        this.mesh(new THREE.BoxGeometry(1.6, 0.1, 0.45), M.dark, root, (side * (5.7 + PX) + off), ph + 0.5, z + 6);
+        this.mesh(new THREE.BoxGeometry(1.6, 0.5, 0.06), M.dark, root, (side * (5.95 + PX) + off), ph + 0.8, z + 6);
       }
       // name boards facing the track (hung from the canopy, or on posts at halts)
       for (const z of [-60, 0, 60]) {
         const t = Tex.board(st.name, EN_NAMES[st.name], 512, 160);
         const sign = new THREE.Mesh(new THREE.PlaneGeometry(4, 1.25), new THREE.MeshBasicMaterial({ map: t }));
         const yy = canopy > 0 ? 4.55 : 3.2;
-        sign.position.set((side * 2.9 + off), yy, z); sign.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
-        const back = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.1, 4.1), M.dark); back.position.set((side * 2.95 + off) + side * 0.06, yy, z);
+        sign.position.set((side * (2.9 + PX) + off), yy, z); sign.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+        const back = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.1, 4.1), M.dark); back.position.set((side * (2.95 + PX) + off) + side * (0.06 + PX), yy, z);
         root.add(sign, back);
       }
       if (canopy === 0 || idx % 2 === 0) { // ticket kiosk with awning
-        this.mesh(new THREE.BoxGeometry(2.4, 2.4, 2.4), new THREE.MeshStandardMaterial({ color: 0x6c8a7c, roughness: 0.8 }), root, (side * 6.1 + off), ph + 1.2, -half + 14);
-        this.mesh(new THREE.BoxGeometry(3.2, 0.12, 3.2), M.roofRed, root, (side * 5.6 + off), ph + 2.6, -half + 14);
+        this.mesh(new THREE.BoxGeometry(2.4, 2.4, 2.4), new THREE.MeshStandardMaterial({ color: 0x6c8a7c, roughness: 0.8 }), root, (side * (6.1 + PX) + off), ph + 1.2, -half + 14);
+        this.mesh(new THREE.BoxGeometry(3.2, 0.12, 3.2), M.roofRed, root, (side * (5.6 + PX) + off), ph + 2.6, -half + 14);
       }
     }
     if (st.type === 'terminal') this.buildVault(root, st);

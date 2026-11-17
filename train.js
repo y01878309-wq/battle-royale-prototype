@@ -322,6 +322,10 @@ class Train {
   /* Passenger coaches in three styles. */
   buildCoach(style, ci) {
     const M = this.cm, body = new THREE.Group();
+    if (style === 'std' && !this.type.real && typeof Models !== 'undefined' && Models.ready.coach1) {   // real passenger carriage
+      const len = 25, mdl = Models.get('coach1', len); body.add(mdl); this.scene.add(body);
+      return { body, len, bs: len * 0.68, bogies: [this.makeBogie(2, 2.5), this.makeBogie(2, 2.5)].map((b) => { b.g.visible = false; return b; }), loco: false };
+    }
     if (style === 'velaro' && this.type.real && typeof Models !== 'undefined') {
       const nm = this.type.real.mid[ci % this.type.real.mid.length], len = Models.DEFS[nm].len, mdl = Models.get(nm, len);
       if (mdl) { body.add(mdl); this.scene.add(body); return { body, len, bs: len * 0.68, bogies: [this.makeBogie(2, 2.5), this.makeBogie(2, 2.5)].map((b) => { b.g.visible = false; return b; }), loco: false }; }
@@ -448,6 +452,7 @@ class Train {
       else v = this.buildCoach(k === 'old' ? 'old' : k === 'talgo' ? 'talgo' : k === 'vcoach' ? 'velaro' : 'std', i);
       this.vehicles.push(v);
     });
+    if (Train.BIG !== 1) for (const v of this.vehicles) { v.body.scale.setScalar(Train.BIG); v.len *= Train.BIG; v.bs *= Train.BIG; for (const b of v.bogies) b.g.scale.setScalar(Train.BIG); }   // every train is drawn bigger than life so it fills the screen
     this.length = this.vehicles.reduce((a, v) => a + v.len + 0.9, 0);
     this.vehicles.forEach((v) => v.body.traverse((o) => { if (o.isMesh) o.castShadow = true; }));
     this.fa = Track.makeFrame(); this.fb = Track.makeFrame(); this.tmp = new THREE.Vector3();
@@ -730,3 +735,4 @@ class Train {
 
   setHeadlights(on) { if (this.spot) this.spot.intensity = on ? 0.8 : 0; this.lm.lamp.emissiveIntensity = on ? 1.8 : 0.8; }
 }
+Train.BIG = 1.25;

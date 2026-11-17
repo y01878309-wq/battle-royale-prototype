@@ -12,6 +12,7 @@ const Models = {
     ge777: { len: 21.6, credit: 'GE AC4400CW "Awvr 777" by zairiq-zairiq-123-pixar-cars-bfdi (CC BY 4.0, Sketchfab)' },
     f59: { len: 17.5, credit: 'Metrolink EMD F59PH by Trashbulldogproductions (CC BY 4.0, Sketchfab)' },
     sd40: { len: 20.5, credit: 'BNSF EMD SD40 by zairiq zairiq 8 (CC BY 4.0, Sketchfab)' },
+    coach1: { len: 26.2, credit: 'Simple Train Passenger Carriage by maryssoul24 (CC BY 4.0, Sketchfab)' },
     wh: { len: 20.4, credit: 'Sydney Trains Waratah (head car) by PolyDucky (CC BY 4.0, Sketchfab)' },
     wm: { len: 19.0, credit: 'Sydney Trains Waratah (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
     wn: { len: 19.0, credit: 'Sydney Trains Waratah (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
