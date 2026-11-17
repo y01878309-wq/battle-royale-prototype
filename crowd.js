@@ -103,8 +103,8 @@ class Crowd {
   setupReal() {
     this.clearReal();
     if (this.quality === 'low' || typeof People === 'undefined' || !People.ready.father || !People.ready.police) return;
-    const list = this.agents.filter((a) => a.vis && !a.child).slice(0, 6);
-    list.forEach((a, k) => { const walk = k % 3 !== 0, fig = People.make(walk ? 'father' : 'police'); if (!fig) return; a.vis = false; a.real = true; this.scene.add(fig); this.real.push({ fig, a, walk, ph: k * 1.3 }); });
+    const list = this.agents.filter((a) => a.vis && !a.child).slice(0, this.quality === 'high' ? 28 : 14);
+    list.forEach((a, k) => { const walk = k % 4 !== 0, fig = People.make(walk ? 'father' : 'police'); if (!fig) return; a.vis = false; a.real = true; this.scene.add(fig); this.real.push({ fig, a, walk, ph: k * 1.3 }); });
   }
   updateReal(dt) {
     const ph = (this.st && this.st.ph) || 1, B = this.base; this.rt = (this.rt || 0) + dt;
