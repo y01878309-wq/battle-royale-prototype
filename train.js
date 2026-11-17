@@ -247,9 +247,12 @@ class Train {
       this.eye = eye; this.nose = nose;
     }
     this.finish(hull, spec.len, W, 1.0, 3.9);
+    const real = typeof Models !== 'undefined' && Models.REAL[kind] ? Models.get(Models.REAL[kind], spec.len) : null;   // a real 3D model replaces the procedural shell once it is loaded
+    if (real) { hull.children.forEach((c) => { c.visible = false; }); hull.add(real); }
     this.scene.add(body);
-    const ax = dmu || vel ? 2 : 3, sp = dmu || vel ? 2.5 : 1.9;
-    return { body, len: spec.len, bs: vel ? 17.4 : dmu ? 15.6 : 11.4, bogies: [this.makeBogie(ax, sp), this.makeBogie(ax, sp)], loco: driver };
+    const ax = dmu || vel ? 2 : 3, sp = dmu || vel ? 2.5 : 1.9, bg = [this.makeBogie(ax, sp), this.makeBogie(ax, sp)];
+    if (real) bg.forEach((b) => { b.g.visible = false; });
+    return { body, len: spec.len, bs: real ? spec.len * 0.55 : vel ? 17.4 : dmu ? 15.6 : 11.4, bogies: bg, loco: driver };
   }
 
   /* Finishing pass for every loco and coach: weathering overlay on both sides, underframe tanks and boxes, roof walkway strip. */
