@@ -129,6 +129,7 @@ const Hub = {
       // look at the loco from its left-front corner; the home screen shifts the train to the right of the screen where the buttons are not
       const ax = f.fwd.x * Math.cos(ang) - f.right.x * Math.sin(ang), az = f.fwd.z * Math.cos(ang) - f.right.z * Math.sin(ang);
       camera.position.set(c.x + ax * d, c.y + (garage ? 7 : 5.5), c.z + az * d); camera.lookAt(c.x - f.fwd.x * 4, c.y + 2.2, c.z - f.fwd.z * 4);
+      if (b.people) for (const q of b.people) { const u = q.g.userData; if (q.walk) { u.set(Math.floor(b.t * u.K / u.dur)); q.g.position.z = q.z0 + ((b.t * 1.15) % 40); q.g.rotation.y = 0; } }
       try { sky.update(camera, c, b.t); b.train.setDoors(0.0); r.render(scene, camera); } catch (e) { this.bgFail(e); }
     };
     requestAnimationFrame(loop);
@@ -151,6 +152,12 @@ const Hub = {
       for (const dx of [-0.72, 0.72]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 420), new THREE.MeshStandardMaterial({ color: 0x8a8d90, metalness: 0.7, roughness: 0.4 })); r.position.set(x + dx, 0.3, 0); w.add(r); } return w; };
     const place = (name, x, z, flip) => Models.clone(name).then((m) => { if (!this.bg || this.bg.shown !== sig || !g.parent) return; m.position.set(x, 0.3, z); m.rotation.y = flip ? Math.PI : 0; g.add(m); }).catch(() => { /* optional */ });
     g.add(rails(-8.5)); g.add(rails(14));
+    if (typeof People !== 'undefined') Promise.all([People.load('father'), People.load('police')]).then(() => {
+      if (!this.bg || this.bg.shown !== sig || !g.parent) return; this.bg.people = [];
+      const f = People.make('father'), p = People.make('police');
+      if (f) { f.position.set(3.2, 1.0, 6); g.add(f); this.bg.people.push({ g: f, walk: true, z0: -14 }); }
+      if (p) { p.position.set(6.1, 1.0, -4); p.rotation.y = -Math.PI / 2; g.add(p); this.bg.people.push({ g: p, walk: false }); }
+    }).catch(() => { /* optional */ });
     place(['ge777', 'ge767', 'f59', 'sd40'][Math.floor(Math.random() * 4)], -8.5, -6, false); place('waratah', 14, 40, true);
   },
   bgFail(e) { try { console.warn('hub background', e); } catch (x) { /* */ } if (this.bg) { this.bg.run = false; this.bg.dead = true; } },
@@ -359,7 +366,7 @@ const SetUI = {
     let c = this.card(m, L('حقوق النشر والطباعة', 'Copyright'), '©');
     row(c, 'لعبة قطارات مصر', 'إعداد يوسف فرج، ومساعدة يوسف خربوش.');
     row(c, 'حقوق النشر والطباعة محفوظة', 'حقوق النشر والطباعة ملك ليوسف فرج ويوسف خربوش. © ٢٠٢٦ جميع الحقوق محفوظة.');
-    if (typeof Models !== 'undefined') { c = this.card(m, L('موديلات ثلاثية الأبعاد', '3D models credits'), '🚆'); for (const t of Models.CREDITS()) row(c, t, ''); }
+    if (typeof Models !== 'undefined') { c = this.card(m, L('موديلات ثلاثية الأبعاد', '3D models credits'), '🚆'); for (const t of Models.CREDITS().concat(typeof People !== 'undefined' ? People.CREDITS() : [])) row(c, t, ''); }
     c = this.card(m, L('ممنوع', 'Not allowed'), '⛔');
     for (const t of ['نسخ اللعبة أو أي جزء منها (الكود أو الرسومات أو الأصوات أو النصوص).', 'إعادة نشرها أو رفعها على أي موقع أو متجر تطبيقات باسم غير اسم أصحابها.', 'تعديلها أو فك تغليفها أو استخراج ملفاتها وبيعها أو إعادة استخدامها.', 'بيع حسابات اللاعبين أو العملات أو التلاعب بالرصيد أو الغش بأي طريقة.', 'الطباعة أو التصوير لأغراض تجارية من غير إذن مكتوب.']) row(c, '✖ ' + t, '');
     row(c, 'المخالفة', 'أي نسخ أو استغلال من غير إذن بيعرّض صاحبه للمساءلة القانونية، وبنحتفظ بحقنا في إيقاف أي حساب مخالف.');

@@ -39,3 +39,44 @@ const Models = {
   /* a fresh independent copy (shares geometry/textures) */
   clone(name) { return this.load(name).then((g) => g.clone(true)); }
 };
+
+/* People: skinned Mixamo figures baked into a few vertex-animation frames (models/<name>.pbin), cheap to draw and no skeleton code needed. */
+const People = {
+  cache: {}, ready: {},
+  DEFS: {
+    father: { credit: 'FATHER Walking From Mixamo by lukuta (CC BY 4.0, Sketchfab)' },
+    police: { credit: 'Police Man from the U.S.A. (T-pose rig mixamo) by ustoopia (CC BY 4.0, Sketchfab)' }
+  },
+  CREDITS() { return Object.keys(this.DEFS).map((k) => this.DEFS[k].credit); },
+  load(name) {
+    if (this.cache[name]) return this.cache[name];
+    return (this.cache[name] = fetch('models/' + name + '.pbin').then((r) => { if (!r.ok) throw new Error('person ' + name); return r.arrayBuffer(); }).then((buf) => {
+      const hl = new DataView(buf).getUint32(0, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl))); let off = 4 + hl;
+      const K = head.frames, parts = [], waits = [], loader = new THREE.TextureLoader();
+      for (const m of head.mats) {
+        const UV = new Float32Array(buf, off, m.n * 2); off += m.n * 8; const I = new Uint32Array(buf, off, m.ni); off += m.ni * 4;
+        const pos = [], nor = [];
+        for (let k = 0; k < K; k++) { pos.push(new THREE.BufferAttribute(new Int16Array(buf, off, m.n * 3), 3, true)); off += m.n * 6; }
+        for (let k = 0; k < K; k++) { nor.push(new THREE.BufferAttribute(new Int8Array(buf, off, m.n * 3), 3, true)); off += m.n * 3; }
+        off = (off + 3) & ~3;
+        const c = m.color, mat = new THREE.MeshStandardMaterial({ color: m.tex ? 0xffffff : new THREE.Color(c[0], c[1], c[2]), roughness: 0.85, metalness: 0, side: m.ds || m.alpha ? THREE.DoubleSide : THREE.FrontSide });
+        if (m.tex) { let ok; waits.push(new Promise((res) => { ok = res; })); const t = loader.load('models/' + m.tex, () => ok(), undefined, () => ok()); t.encoding = THREE.sRGBEncoding; t.flipY = false; t.anisotropy = 2; mat.map = t; }
+        if (m.alpha) { mat.alphaTest = 0.5; mat.transparent = false; }
+        parts.push({ UV: new THREE.BufferAttribute(UV, 2), I: new THREE.BufferAttribute(I, 1), pos, nor, mat });
+      }
+      const def = { K, rad: head.rad, dur: head.dur || 1, parts };
+      return Promise.all(waits).then(() => { this.ready[name] = def; return def; });
+    }));
+  },
+  /* one independent figure (shares buffers and materials); height in metres is already baked */
+  make(name) {
+    const d = this.ready[name]; if (!d) return null; const g = new THREE.Group(), meshes = [];
+    for (const p of d.parts) {
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', p.pos[0]); geo.setAttribute('normal', p.nor[0]); geo.setAttribute('uv', p.UV); geo.setIndex(p.I); geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.2);
+      const m = new THREE.Mesh(geo, p.mat); m.scale.setScalar(d.rad); m.castShadow = true; m.frustumCulled = false; g.add(m); meshes.push([m, p]);
+    }
+    g.userData.frame = -1;
+    g.userData.set = (k) => { k = ((k % d.K) + d.K) % d.K; if (k === g.userData.frame) return; g.userData.frame = k; for (const [m, p] of meshes) { m.geometry.setAttribute('position', p.pos[k]); m.geometry.setAttribute('normal', p.nor[k]); } };
+    g.userData.K = d.K; g.userData.dur = d.dur; g.userData.set(0); return g;
+  }
+};
