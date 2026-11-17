@@ -12,7 +12,28 @@ const Models = {
   },
   preload(names) { return Promise.all(names.map((n) => this.load(n).catch(() => null))); },
   /* synchronous copy, only if already loaded; scaled to len metres */
-  get(name, len) { const g = this.ready[name]; if (!g) return null; const c = g.clone(true), d = this.DEFS[name]; c.scale.setScalar(len / (d.h || d.len)); return c; },
+  get(name, len, tint) {
+    const g = this.ready[name]; if (!g) return null; const c = g.clone(true), d = this.DEFS[name]; c.scale.setScalar(len / (d.h || d.len));
+    if (tint) c.traverse((o) => { if (o.isMesh && o.material.map) { const t = this.tinted(o.material.map, tint); if (t) { o.material = o.material.clone(); o.material.map = t; } } });
+    return c;
+  },
+  /* repaint the saturated livery pixels of a texture with the train's own colours (red/orange -> top, yellow -> trim, blue -> low); greys, blacks and whites are kept */
+  tinted(map, tint) {
+    const img = map.image; if (!img || !img.width || typeof document === 'undefined') return null;
+    const key = (tint.top | 0) + '_' + (tint.low | 0) + '_' + (tint.trim | 0); map.userData = map.userData || {}; const cache = map.userData.tints || (map.userData.tints = {});
+    if (cache[key]) return cache[key];
+    const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+    const id = cx.getImageData(0, 0, cv.width, cv.height), p = id.data, hex = (h) => [(h >> 16) & 255, (h >> 8) & 255, h & 255];
+    const T = tint.top != null ? hex(tint.top) : null, L = tint.low != null ? hex(tint.low) : null, R = tint.trim != null ? hex(tint.trim) : null;
+    for (let i = 0; i < p.length; i += 4) {
+      const r = p[i], g = p[i + 1], b = p[i + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b), v = mx / 255, s = mx ? (mx - mn) / mx : 0;
+      if (s < 0.38 || v < 0.22) continue;
+      let h = 0; const d = mx - mn; if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h = (h * 60 + 360) % 360;
+      const tg = h >= 190 && h <= 270 ? L : h >= 20 && h <= 75 ? R : T; if (!tg) continue;
+      const k = Math.min(1.25, v / 0.85); p[i] = Math.min(255, tg[0] * k); p[i + 1] = Math.min(255, tg[1] * k); p[i + 2] = Math.min(255, tg[2] * k);
+    }
+    cx.putImageData(id, 0, 0); const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.flipY = map.flipY; t.wrapS = map.wrapS; t.wrapT = map.wrapT; t.anisotropy = map.anisotropy; return (cache[key] = t);
+  },
   /* length: the model is scaled so its long axis (z) is this many metres */
   DEFS: {
     ge767: { len: 21.6, credit: 'GE AC4400CW "Awvr 767" by zairiq-zairiq-123-pixar-cars-bfdi (CC BY 4.0, Sketchfab)' },

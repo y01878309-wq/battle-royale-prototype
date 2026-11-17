@@ -247,7 +247,7 @@ class Train {
       this.eye = eye; this.nose = nose;
     }
     this.finish(hull, spec.len, W, 1.0, 3.9);
-    const rn = this.type.real ? (kind === 'velaro' ? this.type.real.head : null) : (typeof Models !== 'undefined' ? Models.pickFor(this.type) : null), real = rn && typeof Models !== 'undefined' ? Models.get(rn, spec.len) : null;   // a real 3D model replaces the procedural shell once it is loaded
+    const rn = this.type.real ? (kind === 'velaro' ? this.type.real.head : null) : (typeof Models !== 'undefined' ? Models.pickFor(this.type) : null), real = rn && typeof Models !== 'undefined' ? Models.get(rn, spec.len, { top: spec.top, low: spec.low, trim: spec.trim }) : null;   // a real 3D model replaces the procedural shell once it is loaded
     if (real) { hull.children.forEach((c) => { c.visible = false; }); hull.add(real); }
     this.scene.add(body);
     const ax = dmu || vel ? 2 : 3, sp = dmu || vel ? 2.5 : 1.9, bg = [this.makeBogie(ax, sp), this.makeBogie(ax, sp)];
@@ -323,7 +323,7 @@ class Train {
   buildCoach(style, ci) {
     const M = this.cm, body = new THREE.Group();
     if (style === 'std' && !this.type.real && typeof Models !== 'undefined' && Models.ready.coach1) {   // real passenger carriage
-      const len = 25, mdl = Models.get('coach1', len); body.add(mdl); this.scene.add(body);
+      const len = 25, cs = this.type.coach || {}, mdl = Models.get('coach1', len, { trim: cs.band != null ? cs.band : cs.trim }); body.add(mdl); this.scene.add(body);
       return { body, len, bs: len * 0.68, bogies: [this.makeBogie(2, 2.5), this.makeBogie(2, 2.5)].map((b) => { b.g.visible = false; return b; }), loco: false };
     }
     if (style === 'velaro' && this.type.real && typeof Models !== 'undefined') {
