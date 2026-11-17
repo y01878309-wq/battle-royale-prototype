@@ -3,6 +3,13 @@ const Models = {
   cache: {}, ready: {},
   /* which real model stands in for each procedural loco kind (the procedural one stays as a fallback while the file loads or if it is missing) */
   REAL: { ge: 'ge777', box: 'f59', hood: 'sd40' },
+  /* which real loco model a train type uses: a stable variety so the different types in the shop do not all look the same */
+  pickFor(type) {
+    if (type.real) return type.real.head;
+    const k = type.loco.kind; if (k !== 'ge' && k !== 'box' && k !== 'hood') return null;
+    let h = 0; for (const c of type.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return k === 'box' ? 'f59' : k === 'hood' ? 'sd40' : ['ge777', 'ge767', 'sd40', 'f59'][h % 4];
+  },
   preload(names) { return Promise.all(names.map((n) => this.load(n).catch(() => null))); },
   /* synchronous copy, only if already loaded; scaled to len metres */
   get(name, len) { const g = this.ready[name]; if (!g) return null; const c = g.clone(true), d = this.DEFS[name]; c.scale.setScalar(len / d.len); return c; },

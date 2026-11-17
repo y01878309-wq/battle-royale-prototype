@@ -247,7 +247,7 @@ class Train {
       this.eye = eye; this.nose = nose;
     }
     this.finish(hull, spec.len, W, 1.0, 3.9);
-    const rn = this.type.real ? (kind === 'velaro' ? this.type.real.head : null) : (typeof Models !== 'undefined' ? Models.REAL[kind] : null), real = rn && typeof Models !== 'undefined' ? Models.get(rn, spec.len) : null;   // a real 3D model replaces the procedural shell once it is loaded
+    const rn = this.type.real ? (kind === 'velaro' ? this.type.real.head : null) : (typeof Models !== 'undefined' ? Models.pickFor(this.type) : null), real = rn && typeof Models !== 'undefined' ? Models.get(rn, spec.len) : null;   // a real 3D model replaces the procedural shell once it is loaded
     if (real) { hull.children.forEach((c) => { c.visible = false; }); hull.add(real); }
     this.scene.add(body);
     const ax = dmu || vel ? 2 : 3, sp = dmu || vel ? 2.5 : 1.9, bg = [this.makeBogie(ax, sp), this.makeBogie(ax, sp)];
