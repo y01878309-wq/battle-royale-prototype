@@ -247,12 +247,12 @@ class Train {
       this.eye = eye; this.nose = nose;
     }
     this.finish(hull, spec.len, W, 1.0, 3.9);
-    const real = typeof Models !== 'undefined' && Models.REAL[kind] ? Models.get(Models.REAL[kind], spec.len) : null;   // a real 3D model replaces the procedural shell once it is loaded
+    const rn = this.type.real ? (kind === 'velaro' ? this.type.real.head : null) : (typeof Models !== 'undefined' ? Models.REAL[kind] : null), real = rn && typeof Models !== 'undefined' ? Models.get(rn, spec.len) : null;   // a real 3D model replaces the procedural shell once it is loaded
     if (real) { hull.children.forEach((c) => { c.visible = false; }); hull.add(real); }
     this.scene.add(body);
     const ax = dmu || vel ? 2 : 3, sp = dmu || vel ? 2.5 : 1.9, bg = [this.makeBogie(ax, sp), this.makeBogie(ax, sp)];
     if (real) bg.forEach((b) => { b.g.visible = false; });
-    return { body, len: spec.len, bs: real ? spec.len * 0.55 : vel ? 17.4 : dmu ? 15.6 : 11.4, bogies: bg, loco: driver };
+    return { body, len: spec.len, bs: real ? spec.len * (kind === 'velaro' ? 0.68 : 0.55) : vel ? 17.4 : dmu ? 15.6 : 11.4, bogies: bg, loco: driver };
   }
 
   /* Finishing pass for every loco and coach: weathering overlay on both sides, underframe tanks and boxes, roof walkway strip. */
@@ -322,6 +322,10 @@ class Train {
   /* Passenger coaches in three styles. */
   buildCoach(style, ci) {
     const M = this.cm, body = new THREE.Group();
+    if (style === 'velaro' && this.type.real && typeof Models !== 'undefined') {
+      const nm = this.type.real.mid[ci % this.type.real.mid.length], len = Models.DEFS[nm].len, mdl = Models.get(nm, len);
+      if (mdl) { body.add(mdl); this.scene.add(body); return { body, len, bs: len * 0.68, bogies: [this.makeBogie(2, 2.5), this.makeBogie(2, 2.5)].map((b) => { b.g.visible = false; return b; }), loco: false }; }
+    }
     if (style === 'velaro') {
       const len = 24, W = 2.95, sh = new THREE.Mesh(this.extrudeBody([[-12, 0.9], [-12, 3.6], [-11.3, 3.95], [11.3, 3.95], [12, 3.6], [12, 0.9]], W), M.cream);
       sh.castShadow = true; sh.receiveShadow = true; body.add(sh);

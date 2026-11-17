@@ -180,7 +180,7 @@
     U.setProgress(0.9, 'المحطات والقطر…'); await U.tick();
     stations = new Stations(scene, track, quality, route, type.vmax, type.brake); stations.build();
     planJunctions();
-    if (typeof Models !== 'undefined') { const rn = Models.REAL[type.loco.kind]; if (rn) await Models.preload([rn]); }
+    if (typeof Models !== 'undefined') { const names = type.real ? [type.real.head].concat(type.real.mid) : [Models.REAL[type.loco.kind]].filter(Boolean); if (names.length) await Models.preload(names); }
     train = new Train(scene, track, quality, type);
     crowd = new Crowd(scene, track, quality, stations, train.length); crowd.prepare(0);
     traffic = new Traffic(scene, track, quality);
