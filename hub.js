@@ -363,9 +363,16 @@ const SetUI = {
   },
   t_credits(m) {
     const L = (a, e) => this.L(a, e), row = (c, a, b) => c.appendChild(Menu.el('div', 'set-row', `<span><b>${a}</b>${b ? `<small>${b}</small>` : ''}</span>`));
+    const TX = [['name', 'اسم اللعبة', 'لعبة قطارات مصر'], ['made', 'سطر الإعداد', 'إعداد يوسف فرج، ومساعدة يوسف خربوش.'], ['rightsHead', 'عنوان الحقوق', 'حقوق النشر والطباعة محفوظة'], ['rights', 'نص الحقوق', 'حقوق النشر والطباعة ملك ليوسف فرج ويوسف خربوش. © ٢٠٢٦ جميع الحقوق محفوظة.']];
+    const T = (k) => { const t = (Settings.d.texts || {})[k]; const d = TX.find((x) => x[0] === k); return t != null && t !== '' ? t : d[2]; };
     let c = this.card(m, L('حقوق النشر والطباعة', 'Copyright'), '©');
-    row(c, 'لعبة قطارات مصر', 'إعداد يوسف فرج، ومساعدة يوسف خربوش.');
-    row(c, 'حقوق النشر والطباعة محفوظة', 'حقوق النشر والطباعة ملك ليوسف فرج ويوسف خربوش. © ٢٠٢٦ جميع الحقوق محفوظة.');
+    row(c, this.esc(T('name')), this.esc(T('made')));
+    row(c, this.esc(T('rightsHead')), this.esc(T('rights')));
+    { const e = this.card(m, L('تعديل الكتابات', 'Edit the texts'), '✏️'); this.note(e, L('غيّر أي كتابة من اللي فوق. اللي بتكتبه بيتحفظ على الجهاز. سيب الخانة فاضية عشان ترجع للأصلي.', 'Edit any text above. Leave a box empty to restore the original.'));
+      for (const [k, lab, def] of TX) {
+        const w = Menu.el('div', 'set-row', `<span><b>${lab}</b></span>`), inp = document.createElement('textarea'); inp.rows = 2; inp.value = (Settings.d.texts || {})[k] || ''; inp.placeholder = def; inp.style.cssText = 'width:100%;margin-top:6px;border-radius:10px;border:1px solid #556;background:#10151c;color:#fff;padding:8px;font:inherit';
+        inp.addEventListener('change', () => { const t = Object.assign({}, Settings.d.texts || {}); t[k] = inp.value.trim(); Settings.set('texts', t); this.render(); });
+        w.appendChild(inp); e.appendChild(w); } }
     if (typeof Models !== 'undefined') { c = this.card(m, L('موديلات ثلاثية الأبعاد', '3D models credits'), '🚆'); for (const t of Models.CREDITS().concat(typeof People !== 'undefined' ? People.CREDITS() : [])) row(c, t, ''); }
     c = this.card(m, L('ممنوع', 'Not allowed'), '⛔');
     for (const t of ['نسخ اللعبة أو أي جزء منها (الكود أو الرسومات أو الأصوات أو النصوص).', 'إعادة نشرها أو رفعها على أي موقع أو متجر تطبيقات باسم غير اسم أصحابها.', 'تعديلها أو فك تغليفها أو استخراج ملفاتها وبيعها أو إعادة استخدامها.', 'بيع حسابات اللاعبين أو العملات أو التلاعب بالرصيد أو الغش بأي طريقة.', 'الطباعة أو التصوير لأغراض تجارية من غير إذن مكتوب.']) row(c, '✖ ' + t, '');
