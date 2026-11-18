@@ -100,7 +100,7 @@ class Crowd {
 
   /* Everyone on the platform is a real (Mixamo) figure: walkers use the animated man, people standing use the policeman or the man frozen mid-step. The number is capped by quality; the rest of the cast simply stays out of view. */
   clearReal() { for (const r of this.real) { this.scene.remove(r.fig); } this.real = []; for (const a of this.agents) { a.fig = null; a.real = false; } }
-  cap() { return this.quality === 'high' ? 44 : this.quality === 'low' ? 14 : 26; }
+  cap() { const n = this.quality === 'high' ? 24 : this.quality === 'low' ? 6 : 12, r = typeof Settings !== 'undefined' && Settings.remote && Settings.remote.crowdMax; return r >= 0 && r != null && r !== false ? Math.min(n, r) : n; }
   setupReal() {
     this.clearReal(); this.useReal = typeof People !== 'undefined' && !!People.ready.father && !!People.ready.police;
     if (!this.useReal) return;

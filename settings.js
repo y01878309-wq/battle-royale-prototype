@@ -7,8 +7,9 @@ const Settings = {
     route: true, limits: true, notif: true, ctl: 'lever', sens: 1, invert: false,
     vMaster: 1, vEngine: 1, vVoice: 1, cam: 0, fov: 1, shake: true, uiScale: 1, uiAlpha: 1, atc: false, cine: false, tracks: 3, paint: {}, texts: {}
   },
-  d: null,
+  d: null, remote: {},
   load() {
+    try { this.remote = JSON.parse(localStorage.getItem('qs-remote') || '{}') || {}; } catch (e) { this.remote = {}; }
     let v = null; try { v = JSON.parse(localStorage.getItem('qs-set') || 'null'); } catch (e) { /* no storage */ }
     this.d = Object.assign({}, this.def, v || {}); this.d.paint = Object.assign({}, (v && v.paint) || {});
     return this.d;
@@ -24,7 +25,7 @@ const Settings = {
 
   /* Quality values the 3D code understands. */
   quality() { const n = this.d.detail; return n <= 0 ? 'low' : n === 1 ? 'medium' : 'high'; },
-  pixelRatio() { return Math.min(window.devicePixelRatio || 1, [1, 1.5, 2, 2.5][this.d.detail] || 2); },
+  pixelRatio() { const dt = this.remote.maxDetail != null ? Math.min(this.d.detail, this.remote.maxDetail) : this.d.detail; return Math.min(window.devicePixelRatio || 1, [1, 1.5, 2, 2.5][dt] || 2); },
   shadowQ() { const n = this.d.shadows; return n <= 0 ? 'low' : n >= 3 ? 'high' : 'medium'; },
   fogMul() { return [2.2, 1.5, 1, 0.7][this.d.view] || 1; },
 

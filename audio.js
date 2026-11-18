@@ -81,7 +81,8 @@ const Sound = {
     if (this.engSrc) { sm(this.engSrc.src.playbackRate, 0.55 + 0.9 * rpm, 0.15); sm(this.engSrc.g.gain, ev * (0.35 + 0.55 * st.throttle), 0.2); }
     sm(this.turbo.g.gain, ev * synth * (0.004 + 0.3 * P.turbo * st.throttle * st.throttle), 0.3); sm(this.turbo.f.frequency, 900 + 900 * st.throttle, 0.3);
     const sp = Math.min(1, v / 38);
-    sm(this.wheel.g.gain, 0.004 + 0.22 * sp * (0.4 + 0.6 * sp), 0.2); sm(this.wheel.f.frequency, 400 + 1100 * sp, 0.2);
+    if (this.rollSrc) { sm(this.rollSrc.g.gain, this.vol('vEngine') * Math.min(1.1, 0.04 + 1.0 * sp), 0.25); sm(this.rollSrc.src.playbackRate, 0.6 + 0.7 * sp, 0.25); }
+    sm(this.wheel.g.gain, (this.rollSrc ? 0.35 : 1) * (0.004 + 0.22 * sp * (0.4 + 0.6 * sp)), 0.2); sm(this.wheel.f.frequency, 400 + 1100 * sp, 0.2);
     sm(this.rumble.g.gain, ev * synth * (0.22 + 0.25 * st.throttle) + 0.25 * sp, 0.3);
     sm(this.wind.g.gain, 0.05 * sp + 0.16 * sp * sp * sp, 0.3); sm(this.wind.f.frequency, 900 + 1800 * sp, 0.3);
     sm(this.squeal.g.gain, st.brake > 0.15 && v > 0.8 && v < 9 ? 0.03 * st.brake * (1 - v / 9) : 0, 0.1); sm(this.squeal.f.frequency, 2200 + v * 120, 0.1);
@@ -131,10 +132,11 @@ const Sound = {
     try {
       const r = await fetch('audio/manifest.json'); if (!r.ok) return;
       const m = await r.json();
-      for (const k of ['engine', 'horn', 'clack', 'chime']) {
+      for (const k of ['engine', 'horn', 'clack', 'chime', 'roll']) {
         if (!m[k]) continue;
         try { const rr = await fetch('audio/' + m[k]); this.buf[k] = await c.decodeAudioData(await rr.arrayBuffer()); } catch (e) { /* skip this file */ }
       }
+      if (this.buf.roll) { const src = c.createBufferSource(), g = c.createGain(); src.buffer = this.buf.roll; src.loop = true; g.gain.value = 0; src.connect(g); g.connect(this.master); src.start(); this.rollSrc = { src, g }; }   // recorded running sound
       if (this.buf.engine) { const src = c.createBufferSource(), g = c.createGain(); src.buffer = this.buf.engine; src.loop = true; g.gain.value = 0.3; src.connect(g); g.connect(this.master); src.start(); this.engSrc = { src, g }; }
     } catch (e) { /* no recordings, keep the synthesised sounds */ }
   },

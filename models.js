@@ -66,7 +66,7 @@ const Models = {
         const mat = new THREE.MeshStandardMaterial({ color: m.tex ? 0xffffff : new THREE.Color(c[0], c[1], c[2]), roughness: glass ? 0.12 : Math.max(0.55, m.rough), metalness: glass ? 0.6 : 0.1, side: m.ds ? THREE.DoubleSide : THREE.FrontSide });
         if (glass && !m.tex) { mat.color = new THREE.Color(0x1c2a33); }
         if (m.tex) { let ok; waits.push(new Promise((res) => { ok = res; })); const t = loader.load('models/' + m.tex, () => ok(), undefined, () => ok()); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; t.flipY = false; t.wrapS = t.wrapT = THREE.RepeatWrapping; mat.map = t; }
-        const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.receiveShadow = true; inner.add(mesh); mats.push(mat); (root.userData.parts = root.userData.parts || []).push({ g, mat });
+        const mesh = new THREE.Mesh(g, mat); mesh.castShadow = !(name === 'tgm' || name === 'wm' || name === 'wn' || name === 'coach1' || name === 'wh'); mesh.receiveShadow = true; inner.add(mesh); mats.push(mat); (root.userData.parts = root.userData.parts || []).push({ g, mat });
       }
       root.userData.bake = { s, ox: -cx * s, oy: -y0 * s, oz: -cz * s }; root.userData.size = [(bb[1][0] - bb[0][0]) * s, (bb[1][1] - bb[0][1]) * s, def.len];
       return Promise.all(waits).then(() => { this.ready[name] = root; return root; });   // only 'ready' once the textures are in, so a model never shows up black
@@ -132,7 +132,7 @@ const People = {
         P[i * 3] = x; P[i * 3 + 1] = y - sh; P[i * 3 + 2] = z; N[i * 3] = nx; N[i * 3 + 1] = ny; N[i * 3 + 2] = nz;
       }
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(N, 3)); geo.setAttribute('uv', p.UV); geo.setIndex(p.I);
-      const m = new THREE.Mesh(geo, p.mat); m.castShadow = true; m.frustumCulled = false; g.add(m);
+      const m = new THREE.Mesh(geo, p.mat); m.castShadow = false; m.frustumCulled = false; g.add(m);
     }
     return g;
   },
@@ -141,7 +141,7 @@ const People = {
     const d = this.ready[name]; if (!d) return null; const g = new THREE.Group(), meshes = [];
     for (const p of d.parts) {
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', p.pos[0]); geo.setAttribute('normal', p.nor[0]); geo.setAttribute('uv', p.UV); geo.setIndex(p.I); geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.2);
-      const m = new THREE.Mesh(geo, p.mat); m.scale.setScalar(d.rad); m.castShadow = true; m.frustumCulled = false; g.add(m); meshes.push([m, p]);
+      const m = new THREE.Mesh(geo, p.mat); m.scale.setScalar(d.rad); m.castShadow = false; m.frustumCulled = false; g.add(m); meshes.push([m, p]);
     }
     g.userData.frame = -1;
     g.userData.set = (k) => { k = ((k % d.K) + d.K) % d.K; if (k === g.userData.frame) return; g.userData.frame = k; for (const [m, p] of meshes) { m.geometry.setAttribute('position', p.pos[k]); m.geometry.setAttribute('normal', p.nor[k]); } };

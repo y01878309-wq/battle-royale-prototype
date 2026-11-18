@@ -77,7 +77,7 @@ const Hub = {
       </div></div>`;
     this.wire(this.ui, (act) => this.act(act));
     let k = 0; const tick = this.$('hbTick');
-    this.every(() => { const n = nw[k++ % nw.length]; tick.textContent = n.tag + ': ' + n.title + ' — ' + n.text; }, 6000);
+    this.every(() => { if (Settings.remote.news && k % (nw.length + 1) === nw.length) { k++; tick.textContent = Settings.remote.news; return; } const n = nw[k++ % (nw.length + 1) % nw.length]; tick.textContent = n.tag + ': ' + n.title + ' — ' + n.text; }, 6000);
     this.every(() => { const T = this.$('hbTimer'); if (!T) return; const left = Math.max(0, Math.floor((Date.now() + this.TZ) / 86400000 + 1) * 86400000 - this.TZ - Date.now()), p = (n) => String(n).padStart(2, '0'); T.textContent = p(Math.floor(left / 3600000)) + ':' + p(Math.floor(left % 3600000 / 60000)) + ':' + p(Math.floor(left % 60000 / 1000)); }, 1000);
   },
 
@@ -85,7 +85,7 @@ const Hub = {
     const A = this.api;
     if (a === 'home') this.show('home');
     else if (a === 'play') A.setup(false);
-    else if (a === 'online') { if (navigator.onLine === false) { A.toast('سباق الأونلاين محتاج إنترنت'); return; } FB._p = FB.ok ? FB._p : null; if (!window.firebase) { A.toast('سباق الأونلاين محتاج إنترنت. افتح اللعبة وإنت متصل بالنت'); return; } FB.init().then((ok) => { if (ok && FB.ok) A.setup(true); else A.toast('سباق الأونلاين محتاج إنترنت. مفيش اتصال بالسيرفر'); }).catch(() => A.toast('سباق الأونلاين محتاج إنترنت')); }
+    else if (a === 'online') { if (Settings.remote.race === false) { A.toast('سباق الأونلاين مقفول دلوقتي للصيانة'); return; } if (navigator.onLine === false) { A.toast('سباق الأونلاين محتاج إنترنت'); return; } FB._p = FB.ok ? FB._p : null; if (!window.firebase) { A.toast('سباق الأونلاين محتاج إنترنت. افتح اللعبة وإنت متصل بالنت'); return; } FB.init().then((ok) => { if (ok && FB.ok) A.setup(true); else A.toast('سباق الأونلاين محتاج إنترنت. مفيش اتصال بالسيرفر'); }).catch(() => A.toast('سباق الأونلاين محتاج إنترنت')); }
     else if (a === 'continue') { const l = this.last(); if (l) A.setup(false, l); }
     else if (a === 'hideLast') { try { localStorage.removeItem('qs-last'); } catch (e) { /* */ } this.show('home'); }
     else if (a === 'trains') Menu.shop('trains');
@@ -364,7 +364,7 @@ const SetUI = {
   t_credits(m) {
     const L = (a, e) => this.L(a, e), row = (c, a, b) => c.appendChild(Menu.el('div', 'set-row', `<span><b>${a}</b>${b ? `<small>${b}</small>` : ''}</span>`));
     const TX = [['name', 'اسم اللعبة', 'لعبة قطارات مصر'], ['made', 'سطر الإعداد', 'إعداد يوسف فرج، ومساعدة يوسف خربوش.'], ['rightsHead', 'عنوان الحقوق', 'حقوق النشر والطباعة محفوظة'], ['rights', 'نص الحقوق', 'حقوق النشر والطباعة ملك ليوسف فرج ويوسف خربوش. © ٢٠٢٦ جميع الحقوق محفوظة.']];
-    const T = (k) => { const t = (Settings.d.texts || {})[k]; const d = TX.find((x) => x[0] === k); return t != null && t !== '' ? t : d[2]; };
+    const T = (k) => { const t = (Settings.d.texts || {})[k], r = (Settings.remote.texts || {})[k]; const d = TX.find((x) => x[0] === k); return t != null && t !== '' ? t : r ? r : d[2]; };
     let c = this.card(m, L('حقوق النشر والطباعة', 'Copyright'), '©');
     row(c, this.esc(T('name')), this.esc(T('made')));
     row(c, this.esc(T('rightsHead')), this.esc(T('rights')));
@@ -373,6 +373,7 @@ const SetUI = {
         const w = Menu.el('div', 'set-row', `<span><b>${lab}</b></span>`), inp = document.createElement('textarea'); inp.rows = 2; inp.value = (Settings.d.texts || {})[k] || ''; inp.placeholder = def; inp.style.cssText = 'width:100%;margin-top:6px;border-radius:10px;border:1px solid #556;background:#10151c;color:#fff;padding:8px;font:inherit';
         inp.addEventListener('change', () => { const t = Object.assign({}, Settings.d.texts || {}); t[k] = inp.value.trim(); Settings.set('texts', t); this.render(); });
         w.appendChild(inp); e.appendChild(w); } }
+    c = this.card(m, L('أصوات', 'Sounds'), '🔊'); row(c, 'Freight Train Passing By by Alex_Jauk · Loud Train Horn by u_c0ee1mc2q3 (Pixabay)', '');
     if (typeof Models !== 'undefined') { c = this.card(m, L('موديلات ثلاثية الأبعاد', '3D models credits'), '🚆'); for (const t of Models.CREDITS().concat(typeof People !== 'undefined' ? People.CREDITS() : [])) row(c, t, ''); }
     c = this.card(m, L('ممنوع', 'Not allowed'), '⛔');
     for (const t of ['نسخ اللعبة أو أي جزء منها (الكود أو الرسومات أو الأصوات أو النصوص).', 'إعادة نشرها أو رفعها على أي موقع أو متجر تطبيقات باسم غير اسم أصحابها.', 'تعديلها أو فك تغليفها أو استخراج ملفاتها وبيعها أو إعادة استخدامها.', 'بيع حسابات اللاعبين أو العملات أو التلاعب بالرصيد أو الغش بأي طريقة.', 'الطباعة أو التصوير لأغراض تجارية من غير إذن مكتوب.']) row(c, '✖ ' + t, '');

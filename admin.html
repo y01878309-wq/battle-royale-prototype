@@ -21,6 +21,8 @@ button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
 #out{white-space:pre-wrap;font:14px/1.7 Tahoma,Arial;background:#0b0e14;border:1px solid var(--line);border-radius:10px;padding:10px;min-height:48px}
 .ok{color:var(--green)}.bad{color:var(--red)}.dim{color:var(--dim);font-size:14px}
 #panel{display:none}
+#tabs{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5}#tabs button{margin:0;flex:1;background:#2a3347;color:var(--ink);font-size:14px;padding:10px 8px}#tabs button.on{background:var(--gold);color:#1a1408}
+section[hidden]{display:none}textarea{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:#0d1017;color:var(--ink);font:inherit}h3{font-size:16px;margin:16px 0 4px;color:var(--gold)}
 </style>
 </head>
 <body>
@@ -37,6 +39,8 @@ button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
 </div>
 
 <div id="panel">
+  <nav id="tabs"><button data-t="players" class="on">👤 اللاعبين</button><button data-t="contests">🏆 المسابقات</button><button data-t="prices">🏷️ الأسعار</button><button data-t="game">⚙️ إعدادات اللعبة</button></nav>
+  <section data-sec="players">
   <div class="card">
     <h2>شحن لاعب بالـ ID</h2>
     <label>الـ ID بتاع اللاعب (6 أرقام)</label>
@@ -58,6 +62,8 @@ button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
     <button id="btnGift">اعمل الكود</button>
   </div>
 
+  </section>
+  <section data-sec="contests" hidden>
   <div class="card">
     <h2>صرف جوايز المسابقات</h2>
     <p class="dim">اضغط مرة واحدة بعد ما المسابقة تخلص (اليومية بعد 12 بالليل، والأسبوعية بعد نهاية الأسبوع). بيدفع جوايز أول 25 ويسجّل النتيجة، ومبيدفعش مرتين.</p>
@@ -65,6 +71,8 @@ button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
     <button id="btnSettle">اصرف الجوايز</button>
   </div>
 
+  </section>
+  <section data-sec="prices" hidden>
   <div class="card">
     <h2>الكتالوج (أسعار القطارات ومكافآت المهام)</h2>
     <p class="dim">لازم تضغط الزرار ده مرة واحدة على الأقل، ومرة تاني كل ما تتغير الأسعار. من غيره الشراء واستلام المكافآت مش هيشتغلوا.</p>
@@ -78,6 +86,27 @@ button.alt{background:#2a3347;color:var(--ink)}button:disabled{opacity:.5}
     <div id="priceBox"></div>
     <button id="btnSavePrices" style="display:none">احفظ الأسعار</button>
   </div>
+  </section>
+  <section data-sec="game" hidden>
+  <div class="card">
+    <h2>⚙️ إعدادات اللعبة (بتتطبق على كل اللاعبين أول ما يفتحوا بنت)</h2>
+    <p class="dim">اللاعب من غير نت بيستخدم آخر إعدادات وصلته. اللي تسيبه فاضي بيرجع للأصلي.</p>
+    <button class="alt" id="btnLoadGame">اعرض الإعدادات الحالية</button>
+    <h3>الكتابات (الحقوق والاسم)</h3>
+    <label>اسم اللعبة</label><input id="gx_name" placeholder="لعبة قطارات مصر">
+    <label>سطر الإعداد</label><input id="gx_made" placeholder="إعداد يوسف فرج، ومساعدة يوسف خربوش.">
+    <label>عنوان الحقوق</label><input id="gx_rightsHead" placeholder="حقوق النشر والطباعة محفوظة">
+    <label>نص الحقوق</label><textarea id="gx_rights" rows="3" placeholder="حقوق النشر والطباعة ملك ..."></textarea>
+    <label>إعلان يظهر للاعبين في الرئيسية (اختياري)</label><textarea id="gx_news" rows="2"></textarea>
+    <h3>الأداء (عشان اللعبة متهنجش)</h3>
+    <label>أعلى جودة رسوميات مسموحة</label><select id="gx_gfx"><option value="">بدون حد</option><option value="0">منخفضة</option><option value="1">متوسطة</option><option value="2">عالية</option></select>
+    <label>أقصى عدد ناس حقيقيين في المحطة</label><input id="gx_crowd" inputmode="numeric" dir="ltr" placeholder="مثلاً 12">
+    <h3>الصوت</h3>
+    <label>التعليق الصوتي</label><select id="gx_comm"><option value="1">شغال</option><option value="0">مقفول</option></select>
+    <label>سباق الأونلاين</label><select id="gx_race"><option value="1">مفتوح</option><option value="0">مقفول (صيانة)</option></select>
+    <button id="btnSaveGame">احفظ إعدادات اللعبة</button>
+  </div>
+  </section>
 
   <div class="card"><h2>النتيجة</h2><div id="out">—</div></div>
 </div>
@@ -183,6 +212,22 @@ $('btnSavePrices').onclick = async () => {
     await db.collection('config').doc('catalog').set(cat); await db.collection('config').doc('shop').set({ packs, stickers, trains });
     log('اتحفظت الأسعار ✔\n' + Object.keys(cat.prices).length + ' سعر بالجنيه · ' + Object.keys(cat.gems).length + ' سعر بالماس · ' + packs.length + ' باكدج', 'ok');
   } catch (e) { log('فشل الحفظ: ' + why(e), 'bad'); }
+};
+
+/* ---- sections ---- */
+document.querySelectorAll('#tabs button').forEach((b) => { b.onclick = () => { document.querySelectorAll('#tabs button').forEach((x) => x.classList.toggle('on', x === b)); document.querySelectorAll('section[data-sec]').forEach((s) => { s.hidden = s.dataset.sec !== b.dataset.t; }); }; });
+/* ---- game settings: config/game is read by every player when online and kept for offline play ---- */
+$('btnLoadGame').onclick = async () => {
+  try { const s = await db.collection('config').doc('game').get(), g = s.exists ? s.data() : {}, t = g.texts || {};
+    for (const k of ['name', 'made', 'rightsHead', 'rights']) $('gx_' + k).value = t[k] || '';
+    $('gx_news').value = g.news || ''; $('gx_gfx').value = g.maxDetail == null ? '' : String(g.maxDetail); $('gx_crowd').value = g.crowdMax == null ? '' : g.crowdMax; $('gx_comm').value = g.commentary === false ? '0' : '1'; $('gx_race').value = g.race === false ? '0' : '1'; log('اتحمّلت إعدادات اللعبة', 'ok'); }
+  catch (e) { log('مقدرتش أحمّل: ' + why(e), 'bad'); }
+};
+$('btnSaveGame').onclick = async () => {
+  const t = {}; for (const k of ['name', 'made', 'rightsHead', 'rights']) { const v = $('gx_' + k).value.trim(); if (v) t[k] = v; }
+  const g = { texts: t, news: $('gx_news').value.trim(), commentary: $('gx_comm').value === '1', race: $('gx_race').value === '1' };
+  if ($('gx_gfx').value !== '') g.maxDetail = parseInt($('gx_gfx').value, 10); const c = parseInt($('gx_crowd').value, 10); if (c >= 0) g.crowdMax = c;
+  try { await db.collection('config').doc('game').set(g); log('اتحفظت إعدادات اللعبة ✔', 'ok'); } catch (e) { log('فشل الحفظ: ' + why(e), 'bad'); }
 };
 
 function fillSettle() {

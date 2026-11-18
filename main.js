@@ -376,10 +376,14 @@
     ui.results(rows, Math.round(game.score), game.grade(), line.name);
   }
 
+  const afr = { t: 0, n: 0 };
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (paused) return;
+    /* adaptive resolution: if the phone can't keep up, draw fewer pixels (and give them back when it can) */
+    afr.t += dt; afr.n++; if (afr.t > 2.5) { const fps = afr.n / afr.t, pr = renderer.getPixelRatio(), top = Settings.pixelRatio(); afr.t = 0; afr.n = 0;
+      if (fps < 38 && pr > 0.7) { renderer.setPixelRatio(Math.max(0.7, pr - 0.2)); onResize(); } else if (fps > 56 && pr < top) { renderer.setPixelRatio(Math.min(top, pr + 0.1)); onResize(); } }
     const inp = Object.assign({}, ui.input);
     if (Settings.d.atc && !game.derailed && game.phase === 'running') {   // ATC: brake alone when over the limit, or when the train could not stop before the starter signal
       const dd = game.distToStop(), need = dd > -26 && dd < 1600 && game.v * game.v > 2 * 0.75 * type.brake * Math.max(0, dd + 24);

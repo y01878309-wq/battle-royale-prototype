@@ -6,7 +6,7 @@ const Commentary = {
   toggle() { this.on = !this.on; try { localStorage.setItem('qs-comm', this.on ? '1' : '0'); } catch (e) { /* */ } if (!this.on && this.box) this.box.hidden = true; return this.on; },
   /* kind: 'pa' station announcer, 'coach' tips from the instructor; key avoids repeating the same line. */
   say(text, kind, key) {
-    if (!this.on || !this.box) return;
+    if (!this.on || !this.box || (typeof Settings !== 'undefined' && Settings.remote && Settings.remote.commentary === false)) return;
     const now = performance.now(); if (key && this._key === key && now - this.last < 20000) return;
     this._key = key; this.last = now;
     this.box.textContent = (kind === 'pa' ? '📢 ' : '🎙️ ') + text; this.box.className = 'caption ' + (kind || 'coach'); this.box.hidden = false;

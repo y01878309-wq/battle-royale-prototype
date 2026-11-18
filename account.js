@@ -17,6 +17,7 @@ const Account = {
   /* The owner's price list (admin.html) overrides the default prices and the top-up packages in the store. */
   async applyCatalog() {
     if (!FB.ok) return;
+    try { const g = await this.col('config').doc('game').get(); if (g.exists) { Settings.remote = g.data() || {}; try { localStorage.setItem('qs-remote', JSON.stringify(Settings.remote)); } catch (e) { /* */ } } } catch (e) { /* keep the saved copy */ }
     try {
       const s = await this.col('config').doc('shop').get();
       if (s.exists) {
