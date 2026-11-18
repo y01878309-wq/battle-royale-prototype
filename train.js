@@ -32,7 +32,7 @@ class Train {
 
   /* Total length in metres, known before anything is built (the route needs it for platforms). */
   static lengthOf(type) {
-    const L = { coach: 22.2, old: 20.4, talgo: 14.6, vcoach: 24, tank: 13.6, box: 13.6, flat: 13.6, hopper: 13.6, gond: 13.6, cont: 13.6, cab: type.loco.len, mcoach: type.loco.len };
+    const L = { coach: type.real && type.real.head === 'tgh' ? 26 : 22.2, old: type.real && type.real.head === 'tgh' ? 26 : 25, talgo: 25, vcoach: type.real && type.real.head === 'tgh' ? 26 : 24, tank: 13.6, box: 13.6, flat: 13.6, hopper: 13.6, gond: 13.6, cont: 13.6, cab: type.loco.len, mcoach: type.loco.len };
     return type.loco.len + type.consist.reduce((a, k) => a + (L[k] || 22.2) + 0.9, 0);
   }
 
@@ -110,7 +110,11 @@ class Train {
    * kind 'dmu'   diesel multiple unit cab car
    * 'driver' adds the cab interior, view anchors and the headlight beam. */
   buildLoco(spec, driver) {
-    if (spec.kind === 'metro') return this.buildMetroCar(spec, driver, true);
+    if (spec.kind === 'metro') {
+      const v = this.buildMetroCar(spec, driver, true), rn = this.type.real && this.type.real.head, real = rn && typeof Models !== 'undefined' ? Models.get(rn, spec.len, { top: spec.top, low: spec.low, trim: spec.trim }) : null;   // a real electric-train shell replaces the boxy metro body (the cab interior stays)
+      if (real) { const pb = v.body.children[0]; pb.visible = false; pb.userData.skip = true; v.body.add(real); v.bogies.forEach((b) => { b.g.visible = false; }); v.bs = spec.len * 0.68; }
+      return v;
+    }
     const M = this.lm, h = spec.len / 2, kind = spec.kind, dmu = kind === 'dmu', vel = kind === 'velaro', hood = kind === 'hood', boxy = kind === 'box' || hood, diesel = !dmu && !vel, ry = hood ? -0.8 : 0;
     const body = new THREE.Group(), hull = new THREE.Group(), W = vel ? 2.95 : 3.0, X = W / 2 + 0.06;
     let prof, win;   // win: windscreen centre, size and tilt
@@ -227,7 +231,7 @@ class Train {
     if (driver) {
       this.locoHull = hull;
       const cab = new THREE.Group(), ic = new THREE.MeshStandardMaterial({ color: 0xcdb089, roughness: 0.92 }), dk = new THREE.MeshStandardMaterial({ color: 0x1c1b1a, roughness: 0.7 }), wood = new THREE.MeshStandardMaterial({ color: 0x6d4a30, roughness: 0.75 }), trimM = new THREE.MeshStandardMaterial({ color: 0x8a5a2c, roughness: 0.8 });
-      this.cabShell(cab, this.cabStyle);
+      this.cabShell(cab, this.cabStyle); this.addDriver(body, h - 9.8);
       const ey = new THREE.Vector3(-0.75, 3.05, 5.0);
       this.dials = [];
       for (const [x, max, lab, big] of [[-0.75, this.dialMax, 'كم/س', 0.34], [-0.15, 10, 'بار', 0.26], [0.35, 10, 'قوة', 0.26]]) {
@@ -298,7 +302,7 @@ class Train {
       this.box(0.04, 1.15, 0.05, M.dark, 0, 2.2, h + 0.045, body);
       if (driver) {
         this.locoHull = body; const cabG = new THREE.Group(); this.cabStyle = 'metro';
-        this.cabShell(cabG, 'metro'); this.cabParts = cabG;
+        this.cabShell(cabG, 'metro'); this.cabParts = cabG; this.addDriver(root, h - 9.8);
         const ey = new THREE.Vector3(-0.75, 3.05, 5.0), ofs = h - 9.8;
         this.dials = [];
         for (const [x, max, lab, big] of [[-0.75, this.dialMax, 'كم/س', 0.34], [-0.15, 10, 'بار', 0.26], [0.35, 10, 'قوة', 0.26]]) {
@@ -322,11 +326,11 @@ class Train {
   /* Passenger coaches in three styles. */
   buildCoach(style, ci) {
     const M = this.cm, body = new THREE.Group();
-    if (style === 'std' && !this.type.real && typeof Models !== 'undefined' && Models.ready.coach1) {   // real passenger carriage
+    if ((style === 'std' || style === 'old' || style === 'talgo') && !this.type.real && typeof Models !== 'undefined' && Models.ready.coach1) {   // real passenger carriage
       const len = 25, cs = this.type.coach || {}, mdl = Models.get('coach1', len, { trim: cs.band != null ? cs.band : cs.trim }); body.add(mdl); this.scene.add(body);
       return { body, len, bs: len * 0.68, bogies: [this.makeBogie(2, 2.5), this.makeBogie(2, 2.5)].map((b) => { b.g.visible = false; return b; }), loco: false };
     }
-    if ((style === 'velaro' || style === 'std') && this.type.real && typeof Models !== 'undefined') {
+    if (this.type.real && typeof Models !== 'undefined') {
       const nm = this.type.real.mid[ci % this.type.real.mid.length], len = Models.DEFS[nm].len, lc = this.type.loco, mdl = Models.get(nm, len, { top: lc.top, low: lc.low, trim: lc.trim });
       if (mdl) { body.add(mdl); this.scene.add(body); return { body, len, bs: len * 0.68, bogies: [this.makeBogie(2, 2.5), this.makeBogie(2, 2.5)].map((b) => { b.g.visible = false; return b; }), loco: false }; }
     }
@@ -447,7 +451,7 @@ class Train {
     this.type.consist.forEach((k, i) => {
       let v;
       if (k === 'cab') { v = this.buildLoco(this.type.loco, false); v.flip = true; }
-      else if (k === 'mcoach') v = this.buildMetroCar(this.type.loco, false, false);
+      else if (k === 'mcoach') v = this.type.real ? this.buildCoach('std', i) : this.buildMetroCar(this.type.loco, false, false);
       else if (['tank', 'box', 'flat', 'cont', 'hopper', 'gond'].includes(k)) v = this.buildWagon(k, i);
       else v = this.buildCoach(k === 'old' ? 'old' : k === 'talgo' ? 'talgo' : k === 'vcoach' ? 'velaro' : 'std', i);
       this.vehicles.push(v);
@@ -458,9 +462,15 @@ class Train {
     this.fa = Track.makeFrame(); this.fb = Track.makeFrame(); this.tmp = new THREE.Vector3();
   }
 
+  /* the driver sits on his seat (behind the player's eye, so he shows from the outside cameras) */
+  addDriver(parent, ofs) {
+    if (typeof People === 'undefined' || !People.ready.police) return;
+    const f = People.makeSeated('police'); if (!f) return; f.scale.setScalar(1.15); f.position.set(-0.75, 1.08, 3.95 + ofs); parent.add(f); this.driverFig = f;
+  }
+
   setCabView(on) {
     this.cabMode = on; this.cab.visible = on;
-    if (this.metroRoot) { const keep = new Set([this.cab, this.eye, this.nose, this.spot, this.spot && this.spot.target]); this.metroRoot.children.forEach((c) => { if (!keep.has(c)) c.visible = !on; }); }   // the metro car is a group of parts, so hide every part except the cab
+    if (this.metroRoot) { const keep = new Set([this.cab, this.eye, this.nose, this.spot, this.spot && this.spot.target]); this.metroRoot.children.forEach((c) => { if (!keep.has(c) && !c.userData.skip) c.visible = !on; }); }   // the metro car is a group of parts, so hide every part except the cab
     else this.locoHull.visible = !on;
   }
 

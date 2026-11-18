@@ -46,8 +46,8 @@ const Models = {
     wh: { len: 20.4, credit: 'Sydney Trains Waratah (head car) by PolyDucky (CC BY 4.0, Sketchfab)' },
     wm: { len: 19.0, credit: 'Sydney Trains Waratah (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
     wn: { len: 19.0, credit: 'Sydney Trains Waratah (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
-    tgh: { len: 20, fy: 0.74, credit: 'Tangara Sydney Trains T set (head car) by PolyDucky (CC BY 4.0, Sketchfab)' },
-    tgm: { len: 20, fy: 0.74, credit: 'Tangara Sydney Trains T set (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
+    tgh: { len: 26, fy: 0.74, credit: 'Tangara Sydney Trains T set (head car) by PolyDucky (CC BY 4.0, Sketchfab)' },
+    tgm: { len: 26, fy: 0.74, credit: 'Tangara Sydney Trains T set (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
     waratah: { len: 150, credit: 'Sydney Trains Waratah by PolyDucky (CC BY 4.0, Sketchfab)' }
   },
   CREDITS() { return Object.keys(this.DEFS).map((k) => this.DEFS[k].credit).filter((c, i, a) => c.indexOf('(head car)') < 0 && c.indexOf('(car)') < 0 && a.indexOf(c) === i); },
@@ -64,7 +64,7 @@ const Models = {
         const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); g.setAttribute('uv', new THREE.BufferAttribute(U, 2)); g.setIndex(new THREE.BufferAttribute(I, 1));
         const glass = /glass|window/i.test(m.name), c = m.color;
         const mat = new THREE.MeshStandardMaterial({ color: m.tex ? 0xffffff : new THREE.Color(c[0], c[1], c[2]), roughness: glass ? 0.12 : Math.max(0.55, m.rough), metalness: glass ? 0.6 : 0.1, side: m.ds ? THREE.DoubleSide : THREE.FrontSide });
-        if (glass) { mat.color = new THREE.Color(0x1c2a33); }
+        if (glass && !m.tex) { mat.color = new THREE.Color(0x1c2a33); }
         if (m.tex) { let ok; waits.push(new Promise((res) => { ok = res; })); const t = loader.load('models/' + m.tex, () => ok(), undefined, () => ok()); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; t.flipY = false; t.wrapS = t.wrapT = THREE.RepeatWrapping; mat.map = t; }
         const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.receiveShadow = true; inner.add(mesh); mats.push(mat); (root.userData.parts = root.userData.parts || []).push({ g, mat });
       }
@@ -115,6 +115,26 @@ const People = {
       const def = { K, rad: head.rad, dur: head.dur || 1, parts };
       return Promise.all(waits).then(() => { this.ready[name] = def; return def; });
     }));
+  },
+  /* a figure sitting on a chair (hips at 0.5 m, thighs forward, shins down), made by folding the legs of a standing one */
+  makeSeated(name) {
+    const d = this.ready[name]; if (!d) return null; const g = new THREE.Group(), R = d.rad;
+    let y0 = 1e9, y1 = -1e9; for (const p of d.parts) { const a = p.pos[0]; for (let i = 0; i < a.count; i++) { const y = a.getY(i) / 32767 * R; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+    const H = y1 - y0, hip = y0 + 0.52 * H, knee = y0 + 0.285 * H, lim = 0.19 * H, sh = hip - 0.5, fwd = hip - knee;
+    for (const p of d.parts) {
+      const a = p.pos[0], nn = p.nor[0], n = a.count, P = new Float32Array(n * 3), N = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        let x = a.getX(i) / 32767 * R, y = a.getY(i) / 32767 * R, z = a.getZ(i) / 32767 * R, nx = nn.getX(i) / 127, ny = nn.getY(i) / 127, nz = nn.getZ(i) / 127;
+        if (y < hip && Math.abs(x) < lim) {
+          if (y >= knee) { const dy = y - hip, ty = ny; y = hip + z; z = -dy; ny = nz; nz = -ty; }
+          else { y = hip + (y - knee); z += fwd; }
+        }
+        P[i * 3] = x; P[i * 3 + 1] = y - sh; P[i * 3 + 2] = z; N[i * 3] = nx; N[i * 3 + 1] = ny; N[i * 3 + 2] = nz;
+      }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(N, 3)); geo.setAttribute('uv', p.UV); geo.setIndex(p.I);
+      const m = new THREE.Mesh(geo, p.mat); m.castShadow = true; m.frustumCulled = false; g.add(m);
+    }
+    return g;
   },
   /* one independent figure (shares buffers and materials); height in metres is already baked */
   make(name) {
