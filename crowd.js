@@ -98,21 +98,29 @@ class Crowd {
     this.pose();
   }
 
-  /* A few real (Mixamo) people stand and walk on the platform close to the stopped train; the rest of the crowd stays procedural and cheap. */
-  clearReal() { for (const r of this.real) { this.scene.remove(r.fig); } this.real = []; }
+  /* Everyone on the platform is a real (Mixamo) figure: walkers use the animated man, people standing use the policeman or the man frozen mid-step. The number is capped by quality; the rest of the cast simply stays out of view. */
+  clearReal() { for (const r of this.real) { this.scene.remove(r.fig); } this.real = []; for (const a of this.agents) { a.fig = null; a.real = false; } }
+  cap() { return this.quality === 'high' ? 44 : this.quality === 'low' ? 14 : 26; }
   setupReal() {
-    this.clearReal();
-    if (this.quality === 'low' || typeof People === 'undefined' || !People.ready.father || !People.ready.police) return;
-    const list = this.agents.filter((a) => a.vis && !a.child).slice(0, this.quality === 'high' ? 28 : 14);
-    list.forEach((a, k) => { const walk = k % 4 !== 0, fig = People.make(walk ? 'father' : 'police'); if (!fig) return; a.vis = false; a.real = true; this.scene.add(fig); this.real.push({ fig, a, walk, ph: k * 1.3 }); });
+    this.clearReal(); this.useReal = typeof People !== 'undefined' && !!People.ready.father && !!People.ready.police;
+    if (!this.useReal) return;
+    this.agents.forEach((a, i) => { a.real = true; a.stand = i % 2 === 0 ? 'police' : 'father'; a.pace = i % 5 === 1; });
   }
   updateReal(dt) {
-    const ph = (this.st && this.st.ph) || 1, B = this.base; this.rt = (this.rt || 0) + dt;
-    for (const r of this.real) {
-      const a = r.a, u = r.fig.userData; let z = a.z, yaw;
-      if (r.walk) { const s = Math.sin(this.rt * 0.18 + r.ph); z = a.z + s * 7; yaw = this.yawOf(0, Math.cos(this.rt * 0.18 + r.ph) >= 0 ? 1 : -1); u.set(Math.floor(this.rt * u.K / u.dur)); }
-      else yaw = this.yawOf(1, 0);
-      r.fig.position.set(B.x + this.right.x * a.x + this.fwd.x * z, ph, B.z + this.right.z * a.x + this.fwd.z * z); r.fig.rotation.y = yaw; r.fig.visible = true;
+    if (!this.useReal) return;
+    const ph = (this.st && this.st.ph) || 1, B = this.base; this.rt = (this.rt || 0) + dt; let shown = 0; const cap = this.cap();
+    for (const a of this.agents) {
+      if (a.vis && shown < cap) {
+        const moving = a.moving && a.speed > 0, pace = !moving && a.pace && a.role === 'stay', walk = moving || pace, name = walk ? 'father' : a.stand;
+        if (a.fig && a.fig.name !== name) { this.scene.remove(a.fig); const o = this.real.findIndex((r) => r.fig === a.fig); if (o >= 0) this.real.splice(o, 1); a.fig = null; }
+        if (!a.fig) { const f = People.make(name); if (!f) continue; f.name = name; f.userData.fixed = f.userData.K; a.fig = f; this.scene.add(f); this.real.push({ fig: f, a }); }
+        const f = a.fig, u = f.userData; shown++;
+        let z = a.z, yaw = a.yaw;
+        if (pace) { const sn = Math.sin(this.rt * 0.18 + a.phase); z = a.z + sn * 7; yaw = this.yawOf(0, Math.cos(this.rt * 0.18 + a.phase) >= 0 ? 1 : -1); }
+        if (walk) u.set(Math.floor((this.rt + a.phase) * u.K / u.dur)); else if (name === 'father') u.set(3);
+        f.scale.setScalar(a.child ? 0.68 : a.h / 1.0);
+        f.position.set(B.x + this.right.x * a.x + this.fwd.x * z, ph, B.z + this.right.z * a.x + this.fwd.z * z); f.rotation.y = yaw; f.visible = true;
+      } else if (a.fig) a.fig.visible = false;
     }
   }
 
@@ -144,7 +152,7 @@ class Crowd {
       a.way = [[side * 1.95, best.z + (R() - 0.5) * 0.5], [side * 1.3, best.z]]; a.door = best;
     }
     // alighters appear at random doors, a few seconds apart
-    const free = this.agents.filter((a) => !a.vis && !a.real); let k = 0; const dl = doors.filter((q) => q.side < 0);   // double track: only the platform on the player's side is used
+    const free = this.agents.filter((a) => !a.vis); let k = 0; const dl = doors.filter((q) => q.side < 0);   // double track: only the platform on the player's side is used
     for (let j = 0; dl.length && j < nAl && j < free.length; j++) {
       const a = free[j], d = dl[Math.floor(R() * dl.length)], kind = R(), child = kind > 0.94, woman = kind > 0.6 && !child, robe = !woman && !child && kind < 0.2, cols = this.cols, pick = (arr) => arr[Math.floor(R() * arr.length)];
       const toBuilding = d.side < 0, way = toBuilding ? [[d.side * 2.6, d.z], [d.side * 4.5, d.z * 0.5 + 4], [-9.4, 10]] : [[d.side * 2.6, d.z], [4.5, d.z + (R() < 0.5 ? 1 : -1) * 6], [4.5, (R() < 0.5 ? 1 : -1) * (st.pl / 2 - 4)]];
@@ -168,7 +176,7 @@ class Crowd {
 
   update(dt, game, train) {
     if (!this.st) return;
-    if (this.real.length) this.updateReal(dt);
+    this.updateReal(dt);
     const dwell = game.phase === 'dwell' && game.nextIdx === this.cur;
     if (dwell && !this.started && game.dwellT >= 2.2) this.startDwell(train);
     if (!dwell && this.started) this.endDwell();
@@ -201,7 +209,7 @@ class Crowd {
     for (let i = 0; i < this.N; i++) {
       const a = this.agents[i];
       if (!this.dirtyAll && !a.dirty) continue; a.dirty = false;
-      if (!a.vis) { for (const k in M) M[k].setMatrixAt(i, this.hide); continue; }
+      if (!a.vis || this.useReal) { for (const k in M) M[k].setMatrixAt(i, this.hide); continue; }
       const wx = B.x + bx * a.x + fx * a.z, wz = B.z + bz * a.x + fz * a.z, h = a.h, yaw = a.yaw, cs = Math.cos(yaw), sn = Math.sin(yaw);
       const sw = Math.sin(a.phase) * 0.55 * (a.speed ? 1 : 0), bob = Math.abs(Math.cos(a.phase)) * 0.025 * (a.speed ? 1 : 0), y0 = ph + bob * h;
       const put = (mesh, ox, oy, oz, pitch, sx, sy, sz) => {

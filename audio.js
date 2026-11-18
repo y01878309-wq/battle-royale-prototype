@@ -161,7 +161,7 @@ const Sound = {
   speak(text) {
     if (this.muted || this.vol('vVoice') <= 0) return;
     this.paChime();
-    if (!('speechSynthesis' in window)) return;
+    if (!('speechSynthesis' in window) || !this.voice()) { this.speakOnline(text); return; }   // APK/WebView without an Arabic voice: stream the speech instead
     const ss = window.speechSynthesis;
     const go = () => {
       try {
@@ -174,8 +174,21 @@ const Sound = {
     };
     setTimeout(go, 900);
   },
+  /* Online fallback voice (needs internet): the text is cut into short sentences, each played in turn through an audio element. */
+  speakOnline(text) {
+    if (!navigator.onLine) return;
+    const parts = []; String(text).split(/(?<=[.؟!،])\s+/).forEach((p) => { while (p.length > 170) { let i = p.lastIndexOf(' ', 170); if (i < 40) i = 170; parts.push(p.slice(0, i)); p = p.slice(i).trim(); } if (p) parts.push(p); });
+    const id = this._sid = (this._sid || 0) + 1; if (this._au) { try { this._au.pause(); } catch (e) { /* */ } }
+    const vol = Math.min(1, this.vol('vVoice')), next = (k) => {
+      if (id !== this._sid || k >= parts.length || this.muted) return;
+      const au = this._au = new Audio('https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=ar&q=' + encodeURIComponent(parts[k]));
+      au.volume = vol; au.onended = () => next(k + 1); au.onerror = () => { /* no connection or blocked: captions still show */ };
+      const p = au.play(); if (p && p.catch) p.catch(() => {});
+    };
+    setTimeout(() => next(0), 900);
+  },
   /* Settings: lets the player hear whether the device can speak Arabic. */
-  testVoice() { this.init(); this.speak('السادة الركاب، قطر قطارات مصر يصل بعد قليل. برجاء الابتعاد عن حافة الرصيف.'); return !!this.voice(); },
+  testVoice() { this.init(); this.speak('السادة الركاب، قطر قطارات مصر يصل بعد قليل. برجاء الابتعاد عن حافة الرصيف.'); return !!this.voice() || navigator.onLine; },
 
-  setMuted(m) { this.muted = m; if (this.master) this.master.gain.value = m ? 0 : 0.8 * this.vol('vMaster'); if (m && 'speechSynthesis' in window) window.speechSynthesis.cancel(); }
+  setMuted(m) { this.muted = m; if (this.master) this.master.gain.value = m ? 0 : 0.8 * this.vol('vMaster'); if (m) { this._sid = (this._sid || 0) + 1; if (this._au) { try { this._au.pause(); } catch (e) { /* */ } } if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } }
 };
