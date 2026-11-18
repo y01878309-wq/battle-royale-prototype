@@ -46,6 +46,8 @@ const Models = {
     wh: { len: 20.4, credit: 'Sydney Trains Waratah (head car) by PolyDucky (CC BY 4.0, Sketchfab)' },
     wm: { len: 19.0, credit: 'Sydney Trains Waratah (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
     wn: { len: 19.0, credit: 'Sydney Trains Waratah (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
+    tgh: { len: 20, fy: 0.74, credit: 'Tangara Sydney Trains T set (head car) by PolyDucky (CC BY 4.0, Sketchfab)' },
+    tgm: { len: 20, fy: 0.74, credit: 'Tangara Sydney Trains T set (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
     waratah: { len: 150, credit: 'Sydney Trains Waratah by PolyDucky (CC BY 4.0, Sketchfab)' }
   },
   CREDITS() { return Object.keys(this.DEFS).map((k) => this.DEFS[k].credit).filter((c, i, a) => c.indexOf('(head car)') < 0 && c.indexOf('(car)') < 0 && a.indexOf(c) === i); },
@@ -56,7 +58,7 @@ const Models = {
       const hl = new DataView(buf).getUint32(0, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
       let off = 4 + hl; const root = new THREE.Group(), loader = new THREE.TextureLoader(), mats = [], waits = [];
       const bb = head.bbox, len = bb[1][2] - bb[0][2], s = def.h ? def.h / (bb[1][1] - bb[0][1]) : def.len / len, cx = (bb[0][0] + bb[1][0]) / 2, cz = (bb[0][2] + bb[1][2]) / 2, y0 = bb[0][1];
-      const inner = new THREE.Group(); root.add(inner); inner.scale.setScalar(s); inner.position.set(-cx * s, -y0 * s, -cz * s);
+      const inner = new THREE.Group(); root.add(inner); const fy = def.fy || 1; inner.scale.set(s, s * fy, s); inner.position.set(-cx * s, -y0 * s * fy, -cz * s);
       for (const m of head.mats) {
         const P = new Float32Array(buf, off, m.n * 3); off += m.n * 12; const N = new Float32Array(buf, off, m.n * 3); off += m.n * 12; const U = new Float32Array(buf, off, m.n * 2); off += m.n * 8; const I = new Uint32Array(buf, off, m.ni); off += m.ni * 4;
         const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); g.setAttribute('uv', new THREE.BufferAttribute(U, 2)); g.setIndex(new THREE.BufferAttribute(I, 1));

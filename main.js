@@ -47,7 +47,7 @@
     },
     check() { return navigator.onLine !== false && FB.ok; }
   };
-  window.addEventListener('offline', () => Gate.show('النت اتقطع. اللعبة بتقف لحد ما يرجع.'));
+  window.addEventListener('offline', () => { if (started && online) Gate.show('النت اتقطع. سباق الأونلاين بيقف لحد ما يرجع.'); });
   window.addEventListener('online', () => { if (Gate.el && !Gate.el.hidden) Gate.retry(); });
 
   /* ---- junctions: the siding branches off before a station gap's crossing; the driver decides with the «تحويلة» button ---- */
@@ -124,6 +124,7 @@
     Hub.init({
       trainId: () => e.optTrain.value,
       setTrain: (id) => { e.optTrain.value = id; refreshMenu(); try { const s = JSON.parse(localStorage.getItem('qs-opts') || '{}'); s.train = id; localStorage.setItem('qs-opts', JSON.stringify(s)); } catch (err) { /* */ } },
+      toast: (msg) => ui.toast(msg, 'bad', 3500),
       setup: (online, pre) => { e.optOnline.value = online ? '1' : '0'; netToggle(); if (pre && pre.line && LINES.some((l) => l.id === pre.line)) e.optLine.value = pre.line; if (pre && pre.train && [...e.optTrain.options].some((o) => o.value === pre.train)) e.optTrain.value = pre.train; if (Settings.d.autoDN) e.optTime.value = 'auto'; refreshMenu(); e.menu.hidden = false; }
     });
     t('setupBack').onclick = () => { e.menu.hidden = true; };
@@ -134,7 +135,6 @@
     t('pAtc').onclick = () => { Settings.set('atc', !Settings.d.atc); pauseLabels(); };
     t('homeBtn').onclick = () => location.reload();
     const hasAcct = await Account.init();
-    if (!Gate.check()) { Gate.show(); return; }   // no internet: nobody gets in
     await Account.applyCatalog();
     refreshMenu(); Hub.show('home');
     splash(() => { if (!hasAcct) Menu.askName(); });
@@ -150,10 +150,11 @@
 
   async function startGame() {
     Sound.unlock(); goLandscape();
-    if (!Gate.check()) { Gate.show(); return; }
     const e = ui.el, S = Settings.d, quality = Settings.quality(), time = e.optTime.value === 'auto' ? Settings.autoTime() : e.optTime.value;
     line = LINES.find((l) => l.id === e.optLine.value); const baseType = TRAIN_TYPES.find((x) => x.id === e.optTrain.value); type = Settings.paintType(baseType);
-    const wantOnline = e.optOnline.value === '1', pname = (Account.d && Account.d.name) || (e.optName.value || '').trim() || 'سواق';
+    const wantOnline = e.optOnline.value === '1';
+    if (wantOnline && !Gate.check()) { ui.toast('سباق الأونلاين محتاج إنترنت. وصّل النت وجرّب تاني', 'bad', 3500); return; }   // only the online race needs a connection
+    const pname = (Account.d && Account.d.name) || (e.optName.value || '').trim() || 'سواق';
     online = wantOnline && FB.ok;
     try { localStorage.setItem('qs-opts', JSON.stringify({ time: e.optTime.value, q: quality, line: line.id, train: type.id, online: e.optOnline.value, name: pname })); } catch (err) { /* no storage */ }
     if (!wallet.owns(baseType)) { ui.toast('القطر ده مقفول. اشتريه من المتجر الأول', 'bad', 3000); Menu.shop(); return; }   // trains are bought in the store only

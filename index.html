@@ -9,16 +9,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="style.css?v=20261117m">
-<link rel="stylesheet" href="hub.css?v=20261117m">
+<link rel="stylesheet" href="style.css?v=20261118d">
+<link rel="stylesheet" href="hub.css?v=20261118d">
 <script>
 /* Self-update: if the server has a newer build than this page, clear every cache and reload once. */
 (function () { try {
-  var V = '20261117m';
+  var V = '20261118d';
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
     if (j && j.v && j.v !== V && !/[?&]r=/.test(location.search)) {
       var go = function () { location.replace(location.pathname + '?r=' + j.v); };
-      if (window.caches) caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }).then(go, go); else go();
+      if (window.caches) caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return !/^qs-assets/.test(k); }).map(function (k) { return caches.delete(k); })); }).then(go, go); else go();
     }
   }).catch(function () {});
 } catch (e) { /* ignore */ } })();
@@ -202,38 +202,35 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="config.js?v=20261117m"></script>
-<script src="fb.js?v=20261117m"></script>
-<script src="util.js?v=20261117m"></script>
-<script src="settings.js?v=20261117m"></script>
-<script src="textures.js?v=20261117m"></script>
-<script src="data.js?v=20261117m"></script>
-<script src="route.js?v=20261117m"></script>
-<script src="track.js?v=20261117m"></script>
-<script src="sky.js?v=20261117m"></script>
-<script src="world.js?v=20261117m"></script>
-<script src="scenery.js?v=20261117m"></script>
-<script src="train.js?v=20261117m"></script>
-<script src="models.js?v=20261117m"></script>
-<script src="stations.js?v=20261117m"></script>
-<script src="net.js?v=20261117m"></script>
-<script src="traffic.js?v=20261117m"></script>
-<script src="crowd.js?v=20261117m"></script>
-<script src="game.js?v=20261117m"></script>
-<script src="commentary.js?v=20261117m"></script>
-<script src="account.js?v=20261117m"></script>
-<script src="menu.js?v=20261117m"></script>
-<script src="weather.js?v=20261117m"></script>
-<script src="hub.js?v=20261117m"></script>
-<script src="audio.js?v=20261117m"></script>
-<script src="ui.js?v=20261117m"></script>
-<script src="main.js?v=20261117m"></script>
+<script src="config.js?v=20261118d"></script>
+<script src="fb.js?v=20261118d"></script>
+<script src="util.js?v=20261118d"></script>
+<script src="settings.js?v=20261118d"></script>
+<script src="textures.js?v=20261118d"></script>
+<script src="data.js?v=20261118d"></script>
+<script src="route.js?v=20261118d"></script>
+<script src="track.js?v=20261118d"></script>
+<script src="sky.js?v=20261118d"></script>
+<script src="world.js?v=20261118d"></script>
+<script src="scenery.js?v=20261118d"></script>
+<script src="train.js?v=20261118d"></script>
+<script src="models.js?v=20261118d"></script>
+<script src="stations.js?v=20261118d"></script>
+<script src="net.js?v=20261118d"></script>
+<script src="traffic.js?v=20261118d"></script>
+<script src="crowd.js?v=20261118d"></script>
+<script src="game.js?v=20261118d"></script>
+<script src="commentary.js?v=20261118d"></script>
+<script src="account.js?v=20261118d"></script>
+<script src="menu.js?v=20261118d"></script>
+<script src="weather.js?v=20261118d"></script>
+<script src="hub.js?v=20261118d"></script>
+<script src="audio.js?v=20261118d"></script>
+<script src="ui.js?v=20261118d"></script>
+<script src="main.js?v=20261118d"></script>
 <script>
-/* The game needs the internet: old offline caches and the old service worker are removed. */
-try {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});
-  if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
-} catch (e) { /* ignore */ }
+/* Offline play: the service worker keeps the game on the device. */
+try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) { /* ignore */ }
 </script>
 </body>
 </html>

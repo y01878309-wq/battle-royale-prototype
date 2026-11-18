@@ -10,7 +10,7 @@ const Account = {
   get server() { return !!FB.ok && !!this.d && !this.d.local; },
 
   load() { try { const v = JSON.parse(localStorage.getItem('qs-acct') || 'null'); if (v && v.name) this.d = v; } catch (e) { /* no storage */ } return this.d; },
-  save() { try { localStorage.setItem('qs-acct', JSON.stringify(this.d)); } catch (e) { /* no storage */ } },
+  save() { if (this.d && this.d.guest) return; try { localStorage.setItem('qs-acct', JSON.stringify(this.d)); } catch (e) { /* no storage */ } },
 
   col(n) { return FB.db.collection(n); },
 
@@ -53,8 +53,12 @@ const Account = {
   async init() {
     this.load(); this.error = '';
     await FB.init();
-    if (this.d && this.d.local) { this.d = null; try { localStorage.removeItem('qs-acct'); } catch (e) { /* */ } }   // old offline-only accounts are gone
-    if (!FB.ok) { this.error = 'offline'; return false; }
+    if (this.d && this.d.local && !this.d.guest) { this.d = null; try { localStorage.removeItem('qs-acct'); } catch (e) { /* */ } }   // old offline-only accounts are gone
+    if (!FB.ok) {   // no connection: play offline with the last saved profile (or as a guest); buying, top-ups and the online race wait for the internet
+      this.error = 'offline';
+      if (!this.d || !this.d.name) this.d = { id: '', name: 'ضيف', coins: 0, gems: 0, xp: 0, owned: [], claimed: [], local: true, guest: true, rec: '' };
+      return true;
+    }
     try {
       let snap = null;
       if (this.d && !this.d.local && this.d.id) { try { const s = await this.pref(this.d.id).get(); if (s.exists) snap = s; } catch (e) { /* not ours any more: look it up below */ } }

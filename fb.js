@@ -18,6 +18,7 @@ const FB = {
   },
   async _init() {
     const f = window.firebase;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) { this.error = 'offline'; return false; }
     if (!f || !f.initializeApp || !f.auth || !f.firestore) { this.error = 'nosdk'; return false; }
     const wait = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
     try {

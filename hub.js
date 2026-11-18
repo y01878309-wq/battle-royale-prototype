@@ -85,7 +85,7 @@ const Hub = {
     const A = this.api;
     if (a === 'home') this.show('home');
     else if (a === 'play') A.setup(false);
-    else if (a === 'online') A.setup(true);
+    else if (a === 'online') { if (navigator.onLine === false) { A.toast('سباق الأونلاين محتاج إنترنت'); return; } FB._p = FB.ok ? FB._p : null; if (!window.firebase) { A.toast('سباق الأونلاين محتاج إنترنت. افتح اللعبة وإنت متصل بالنت'); return; } FB.init().then((ok) => { if (ok && FB.ok) A.setup(true); else A.toast('سباق الأونلاين محتاج إنترنت. مفيش اتصال بالسيرفر'); }).catch(() => A.toast('سباق الأونلاين محتاج إنترنت')); }
     else if (a === 'continue') { const l = this.last(); if (l) A.setup(false, l); }
     else if (a === 'hideLast') { try { localStorage.removeItem('qs-last'); } catch (e) { /* */ } this.show('home'); }
     else if (a === 'trains') Menu.shop('trains');

@@ -247,12 +247,12 @@ class Train {
       this.eye = eye; this.nose = nose;
     }
     this.finish(hull, spec.len, W, 1.0, 3.9);
-    const rn = this.type.real ? (kind === 'velaro' ? this.type.real.head : null) : (typeof Models !== 'undefined' ? Models.pickFor(this.type) : null), real = rn && typeof Models !== 'undefined' ? Models.get(rn, spec.len, { top: spec.top, low: spec.low, trim: spec.trim }) : null;   // a real 3D model replaces the procedural shell once it is loaded
+    const rn = this.type.real ? (kind === 'velaro' || kind === 'dmu' ? this.type.real.head : null) : (typeof Models !== 'undefined' ? Models.pickFor(this.type) : null), real = rn && typeof Models !== 'undefined' ? Models.get(rn, spec.len, { top: spec.top, low: spec.low, trim: spec.trim }) : null;   // a real 3D model replaces the procedural shell once it is loaded
     if (real) { hull.children.forEach((c) => { c.visible = false; }); hull.add(real); }
     this.scene.add(body);
     const ax = dmu || vel ? 2 : 3, sp = dmu || vel ? 2.5 : 1.9, bg = [this.makeBogie(ax, sp), this.makeBogie(ax, sp)];
     if (real) bg.forEach((b) => { b.g.visible = false; });
-    return { body, len: spec.len, bs: real ? spec.len * (kind === 'velaro' ? 0.68 : 0.55) : vel ? 17.4 : dmu ? 15.6 : 11.4, bogies: bg, loco: driver };
+    return { body, len: spec.len, bs: real ? spec.len * (kind === 'velaro' || kind === 'dmu' ? 0.68 : 0.55) : vel ? 17.4 : dmu ? 15.6 : 11.4, bogies: bg, loco: driver };
   }
 
   /* Finishing pass for every loco and coach: weathering overlay on both sides, underframe tanks and boxes, roof walkway strip. */
@@ -326,8 +326,8 @@ class Train {
       const len = 25, cs = this.type.coach || {}, mdl = Models.get('coach1', len, { trim: cs.band != null ? cs.band : cs.trim }); body.add(mdl); this.scene.add(body);
       return { body, len, bs: len * 0.68, bogies: [this.makeBogie(2, 2.5), this.makeBogie(2, 2.5)].map((b) => { b.g.visible = false; return b; }), loco: false };
     }
-    if (style === 'velaro' && this.type.real && typeof Models !== 'undefined') {
-      const nm = this.type.real.mid[ci % this.type.real.mid.length], len = Models.DEFS[nm].len, mdl = Models.get(nm, len);
+    if ((style === 'velaro' || style === 'std') && this.type.real && typeof Models !== 'undefined') {
+      const nm = this.type.real.mid[ci % this.type.real.mid.length], len = Models.DEFS[nm].len, lc = this.type.loco, mdl = Models.get(nm, len, { top: lc.top, low: lc.low, trim: lc.trim });
       if (mdl) { body.add(mdl); this.scene.add(body); return { body, len, bs: len * 0.68, bogies: [this.makeBogie(2, 2.5), this.makeBogie(2, 2.5)].map((b) => { b.g.visible = false; return b; }), loco: false }; }
     }
     if (style === 'velaro') {
