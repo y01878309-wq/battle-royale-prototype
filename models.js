@@ -48,6 +48,8 @@ const Models = {
     wn: { len: 19.0, credit: 'Sydney Trains Waratah (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
     tgh: { len: 26, fy: 0.74, credit: 'Tangara Sydney Trains T set (head car) by PolyDucky (CC BY 4.0, Sketchfab)' },
     tgm: { len: 26, fy: 0.74, credit: 'Tangara Sydney Trains T set (car) by PolyDucky (CC BY 4.0, Sketchfab)' },
+    wbox: { len: 13.6, credit: 'Railway Boxcar Freight Wagon by saadthedesigner314 (CC BY 4.0, Sketchfab)' },
+    whop: { len: 13.6, credit: 'Coal Hopper Railway Wagon by saadthedesigner314 (CC BY 4.0, Sketchfab)' },
     waratah: { len: 150, credit: 'Sydney Trains Waratah by PolyDucky (CC BY 4.0, Sketchfab)' }
   },
   CREDITS() { return Object.keys(this.DEFS).map((k) => this.DEFS[k].credit).filter((c, i, a) => c.indexOf('(head car)') < 0 && c.indexOf('(car)') < 0 && a.indexOf(c) === i); },

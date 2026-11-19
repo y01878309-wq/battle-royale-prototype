@@ -132,11 +132,16 @@ const Sound = {
     g.gain.setTargetAtTime(0, t + 1.9, 0.15); s.stop(t + 2.6); this.hornFar = true; setTimeout(() => { this.hornFar = false; }, 2600);
   },
 
-  /* Adhan while passing a mosque: needs audio/adhan.mp3 listed as "adhan" in manifest.json; plays at most once every 4 minutes. */
-  adhan() {
-    const c = this.ctx; if (!c || !this.buf.adhan || this.adhanOn) return;
-    const s = c.createBufferSource(), g = c.createGain(); s.buffer = this.buf.adhan; g.gain.value = 0.5; s.connect(g); g.connect(this.master); s.start(); this.adhanOn = true;
-    setTimeout(() => { this.adhanOn = false; }, 240000);
+  /* Adhan from a station mosque (audio/adhan.mp3 listed as "adhan" in manifest.json): starts when the train comes within 450 m, gets quieter the further away it is. d = metres to the mosque. */
+  adhan(d) {
+    const c = this.ctx; if (!c || !this.buf.adhan) return;
+    const k = d < 450 ? Math.pow(1 - d / 450, 1.6) : 0, vol = 0.9 * k * (this.vol ? Math.min(1.5, this.vol('vEngine') + 0.3) : 1);
+    if (!this.adhanSrc) {
+      if (d > 420 || performance.now() - (this.adhanEnd || -1e9) < 240000) return;
+      const s = c.createBufferSource(), g = c.createGain(); s.buffer = this.buf.adhan; g.gain.value = 0; s.connect(g); g.connect(this.master); s.start();
+      s.onended = () => { this.adhanSrc = null; this.adhanEnd = performance.now(); }; this.adhanSrc = { s, g };
+    }
+    this.adhanSrc.g.gain.setTargetAtTime(vol, c.currentTime, 0.4);
   },
 
   /* Settings buttons: hear the horn and the rolling sound without starting a trip. Returns false if the recordings aren't loaded. */

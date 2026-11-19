@@ -397,6 +397,8 @@ class Train {
   /* Freight wagons: tank, covered box, hopper, open gondola, flat car with containers. */
   buildWagon(kind, i) {
     const M = this.cm, body = new THREE.Group(), len = 13.6;
+    { const nm = (kind === 'hopper' || kind === 'gond') ? 'whop' : 'wbox', mdl = typeof Models !== 'undefined' && Models.get(nm, len);   // real freight wagon
+      if (mdl) { body.add(mdl); this.scene.add(body); return { body, len, bs: 9.4, bogies: [this.makeBogie(2, 1.8), this.makeBogie(2, 1.8)].map((b) => { b.g.visible = false; return b; }), loco: false }; } }
     const mat = (c, r, m) => new THREE.MeshStandardMaterial({ color: c, roughness: r === undefined ? 0.65 : r, metalness: m === undefined ? 0.15 : m });
     this.box(3.0, 0.4, len, M.dark, 0, 1.1, 0, body);
     for (const e of [-1, 1]) for (const sx of [-1, 1]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.45, 10), M.steel); b.rotation.x = Math.PI / 2; b.position.set(sx * 1.0, 1.15, e * (len / 2 + 0.3)); body.add(b); }

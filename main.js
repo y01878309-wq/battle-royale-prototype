@@ -5,6 +5,7 @@
   let renderer, scene, camera, track, route, sky, world, stations, train, game, type, line, crowd, traffic, weather, net = null, online = false, tiltBound = false, tiltN = 0, cineT = 0, atcAct = false, tilt0 = null;
   let started = false, paused = false, camIdx = 0, last = 0, sideS = -1e9, lastBoard = -1, baseFov = 62;
   const cam = { yaw: 0, pitch: 0, zoom: 1 };
+  let mosqueSts = [];
   const occRay = new THREE.Raycaster(), occDir = new THREE.Vector3(), v3 = new THREE.Vector3(), v4 = new THREE.Vector3(), tgt = new THREE.Vector3(), want = new THREE.Vector3(), eq = new THREE.Quaternion(), oq = new THREE.Quaternion(), eu = new THREE.Euler(0, 0, 0, 'YXZ');
 
   /* Wallet view over the player's account (js/account.js) */
@@ -186,13 +187,15 @@
     U.setProgress(0.9, 'المحطات والقطر…'); await U.tick();
     stations = new Stations(scene, track, quality, route, type.vmax, type.brake); stations.build();
     planJunctions();
-    if (typeof Models !== 'undefined') { const names = type.real ? [type.real.head].concat(type.real.mid) : [Models.pickFor(type)].filter(Boolean).concat((type.consist.indexOf('coach') >= 0 || type.consist.indexOf('old') >= 0 || type.consist.indexOf('talgo') >= 0) ? ['coach1'] : []); if (names.length) await Models.preload(names); }
+    if (typeof Models !== 'undefined') { const names = type.real ? [type.real.head].concat(type.real.mid) : [Models.pickFor(type)].filter(Boolean).concat((type.consist.indexOf('coach') >= 0 || type.consist.indexOf('old') >= 0 || type.consist.indexOf('talgo') >= 0) ? ['coach1'] : []).concat(type.consist.some((k) => ['tank','box','flat','cont'].includes(k)) ? ['wbox'] : []).concat(type.consist.some((k) => ['hopper','gond','tank'].includes(k)) ? ['whop'] : []); if (names.length) await Models.preload(names); }
     if (typeof People !== 'undefined') await Promise.all([People.load('father'), People.load('police')]).catch(() => null);
     train = new Train(scene, track, quality, type);
     crowd = new Crowd(scene, track, quality, stations, train.length); crowd.prepare(0);
     traffic = new Traffic(scene, track, quality);
     lightsOn = time === 'sunset' || time === 'night' || time === 'overcast'; train.setHeadlights(lightsOn); train.setNight(time === 'night'); stations.setNight(time === 'night');
     const phys = { mass: (type.locoMass + type.vehMass * type.consist.length) * 1000, fmax: type.fmax * 1350, power: type.power * 1.7e6, brake: type.brake * 1.1, vmax: Math.round(type.vmax * 1.15), tolerance: type.id.startsWith('cargo') || type.id === 'freight' ? 18 : 25 };
+    mosqueSts = stations.list.filter((st) => { let h = 7; for (const ch of st.name) h = (h * 31 + ch.charCodeAt(0)) >>> 0; st.mosque = h % 3 === 0; return st.mosque; });
+    mosqueSts.forEach((st) => world.scenery.addMosque(st.s + 35, 62, 0));
     game = new Game(track.L, stations.list, (s) => junctionLimit(s, stations.limitAt(s)), phys);
     stations.list.forEach((_, i) => stations.setSignal(i, i === 0));
     try { Commentary.warm(stations.list.map((s) => s.name), [Commentary.trainNo(type, line)]); } catch (err) { /* voice pieces are optional */ }
@@ -409,7 +412,7 @@
     { const nx = stations.list[game.nextIdx]; if (nx && game.phase === 'running') { const dd = game.distToStop(); if (dd < 900 && dd > 500) Commentary.arriving(nx, line, type, dd / Math.max(8, game.v), stations.list[stations.list.length - 1].name); else if (dd < 350 && dd > 60 && game.kmh > 70) Commentary.tip('قرّب من المحطة. فرمل دلوقتي.', 'brk' + game.nextIdx); }
       if (game.phase === 'dwell' && game.dwellT > 9 && game.doors > 0.5 && stations.list[game.nextIdx + 1]) Commentary.depart(stations.list[game.nextIdx + 1].name, type, line, 10, stations.list[stations.list.length - 1].name); }
     const L = track.L, near = world.scenery.crossings.some((c) => { const a = ((c.s - game.s) % L + L) % L; return a < 320 || a > L - train.length - 20; });
-    { const ms = world.scenery.mosques; if (ms && ms.some((q) => Math.abs(q - game.s) < 140)) Sound.adhan(); }
+    if (mosqueSts.length) { let dm = 1e9; for (const q of mosqueSts) dm = Math.min(dm, Math.hypot(((q.s - game.s) % track.L + track.L * 1.5) % track.L - track.L / 2, 60)); Sound.adhan(dm); }
     Sound.update({ v: game.v, throttle: game.power, brake: game.brake, d: game.d || 0, bell: near, over: game.over });
     updateCamera(dt);
     const idx = Math.min(game.nextIdx, stations.list.length - 1), st = stations.list[idx], dwell = game.phase === 'dwell';

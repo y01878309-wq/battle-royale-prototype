@@ -137,7 +137,7 @@ const Menu = {
       };
       const hex = (n) => '#' + (n | 0).toString(16).padStart(6, '0');
       if (tab === 'trains' || tab === 'metro') {
-        for (const t of TRAIN_TYPES.filter((x) => (x.cat || 'train') === (tab === 'metro' ? 'metro' : 'train'))) {
+        for (const t of TRAIN_TYPES.filter((x) => (x.cat || 'train') === (tab === 'metro' ? 'metro' : 'train') && (x.real || ['ge', 'box', 'hood'].includes(x.loco.kind)))) {   // only trains that have a real 3D model
           const own = Account.owns(t), c = this.el('div', 'item' + (own ? ' own' : ''));
           const sw = this.trainSVG(t);
           c.innerHTML = `<img class="tsvg" alt="" src="thumbs/${t.id}.jpg?v=${window.QS_BUILD || 1}"><b>${this.esc(t.name)}</b><small>${this.esc(t.desc || '')}</small><span>${own ? '✔ معاك' : '🔒 ' + priceTag(t) + (t.gems ? ' (شحن فقط)' : '')} · ${t.vmax} كم/س</span>`;
