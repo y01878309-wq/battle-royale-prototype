@@ -71,7 +71,7 @@ const Hub = {
         <button class="hb-btn" data-a="online"><i>🏁</i><b>${L('سباق أونلاين', 'Play online')}</b></button>
         <button class="hb-btn" data-a="garage"><i>🎨</i><b>${L('الجراج', 'Garage')}</b></button>
         <button class="hb-btn" data-a="map"><i>📍</i><b>${L('الخريطة', 'Map')}</b></button>
-        <button class="hb-btn" data-a="topup"><i>🛒</i><b>${L('المتجر', 'Shop')}</b></button>
+        <button class="hb-btn" data-a="shop"><i>🛒</i><b>${L('المتجر', 'Shop')}</b></button>
         <button class="hb-btn" data-a="ach"><i>🏆</i><b>${L('الإنجازات والمهام', 'Achievements')}</b></button>
         <button class="hb-btn" data-a="settings"><i>⚙</i><b>${L('الإعدادات', 'Settings')}</b></button>
       </div></div>`;
@@ -88,7 +88,7 @@ const Hub = {
     else if (a === 'online') { if (Settings.remote.race === false) { A.toast('سباق الأونلاين مقفول دلوقتي للصيانة'); return; } if (navigator.onLine === false) { A.toast('سباق الأونلاين محتاج إنترنت'); return; } FB._p = FB.ok ? FB._p : null; if (!window.firebase) { A.toast('سباق الأونلاين محتاج إنترنت. افتح اللعبة وإنت متصل بالنت'); return; } FB.init().then((ok) => { if (ok && FB.ok) A.setup(true); else A.toast('سباق الأونلاين محتاج إنترنت. مفيش اتصال بالسيرفر'); }).catch(() => A.toast('سباق الأونلاين محتاج إنترنت')); }
     else if (a === 'continue') { const l = this.last(); if (l) A.setup(false, l); }
     else if (a === 'hideLast') { try { localStorage.removeItem('qs-last'); } catch (e) { /* */ } this.show('home'); }
-    else if (a === 'trains') Menu.shop('trains');
+    else if (a === 'trains' || a === 'shop') Menu.shop('trains');
     else if (a === 'topup') Menu.topup();
     else if (a === 'ach') Menu.missions('m');
     else if (a === 'garage') this.show('garage');

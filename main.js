@@ -302,7 +302,8 @@
       if (hit.length) { const k = Math.max(3, hit[0].distance - 0.7); want.copy(tgt).addScaledVector(occDir, k); }
       break;
     }
-    camera.position.lerp(want, 1 - Math.exp(-9 * dt)); if (camera.position.distanceTo(want) > 40) camera.position.copy(want);
+    // smooth the offset from the train (not the world position), so the camera can never lag behind or drift away from a fast train
+    { const o = orbit.off || (orbit.off = new THREE.Vector3()); want.sub(tgt); if (orbit.fresh || o.distanceTo(want) > 40) o.copy(want); else o.lerp(want, 1 - Math.exp(-9 * dt)); camera.position.copy(tgt).add(o); }
     { const q0 = camera.quaternion.clone(); camera.lookAt(tgt); if (!orbit.fresh) camera.quaternion.copy(q0).slerp(camera.quaternion, 1 - Math.exp(-8 * dt)); orbit.fresh = false; }   // smooth turning of the view
   }
 

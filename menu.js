@@ -121,7 +121,7 @@ const Menu = {
       const a = Account.d, pay = window.QS_PAY || {};
       b.appendChild(this.el('div', 'wallet', `رصيدك: <b>🪙 ${a.coins}</b> جنيه لعبة · <b>💎 ${a.gems || 0}</b> ماسة`));
       const tabs = this.el('div', 'tabs');
-      for (const [k, t] of [['trains', '🚆 القطارات'], ['metro', '🚇 المترو والمونوريل'], ['cabs', '🪑 الكبائن'], ['stickers', '⭐ الملصقات'], ['packs', '💎 الباكدجات والشحن']]) {
+      for (const [k, t] of [['trains', '🚆 القطارات'], ['metro', '🚇 المترو والمونوريل'], ['stickers', '⭐ الملصقات'], ['packs', '💎 الباكدجات والشحن']]) {
         const x = this.el('button', 'mbtn' + (k === tab ? ' primary' : ''), t); x.type = 'button'; x.onclick = () => this.shop(k); tabs.appendChild(x);
       }
       b.appendChild(tabs);
