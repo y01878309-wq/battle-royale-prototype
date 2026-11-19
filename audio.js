@@ -91,7 +91,7 @@ const Sound = {
     // rail joints: one clack every 18 m for each bogie, two bogies close together
     this.joint += st.d;
     while (this.joint >= 15) { this.joint -= 15; const vol = 0.08 + 0.3 * sp; if (quiet) continue; this.clack(vol); setTimeout(() => this.clack(vol * 0.8), Math.max(30, 2500 / Math.max(v, 1))); }
-    sm(this.bellG.gain, st.bell ? (Math.floor(t * 5) % 2 ? 0.05 : 0.0) : 0, 0.005);
+    sm(this.bellG.gain, st.bell ? (Math.floor(t * 4) % 2 ? 0.17 : 0.0) : 0, 0.005);
     if (st.over && Math.floor(t * 3) % 2) this.beep(1100, 0.1);
   },
 
@@ -124,6 +124,21 @@ const Sound = {
     this.hornBreath.gain.cancelScheduledValues(t); this.hornBreath.gain.setTargetAtTime(on ? 0.05 : 0, t, on ? 0.04 : 0.12);
   },
 
+  /* A far-away horn (oncoming train, quieter with distance): plays the player's horn recording once, for about 2.2 s. */
+  passHorn(vol) {
+    const c = this.ctx; if (!c || !this.buf.horn || this.hornFar) return;
+    const s = c.createBufferSource(), g = c.createGain(), t = c.currentTime;
+    s.buffer = this.buf.horn; s.playbackRate.value = 0.96; g.gain.value = Math.max(0.05, Math.min(0.8, vol)); s.connect(g); g.connect(this.master); s.start();
+    g.gain.setTargetAtTime(0, t + 1.9, 0.15); s.stop(t + 2.6); this.hornFar = true; setTimeout(() => { this.hornFar = false; }, 2600);
+  },
+
+  /* Adhan while passing a mosque: needs audio/adhan.mp3 listed as "adhan" in manifest.json; plays at most once every 4 minutes. */
+  adhan() {
+    const c = this.ctx; if (!c || !this.buf.adhan || this.adhanOn) return;
+    const s = c.createBufferSource(), g = c.createGain(); s.buffer = this.buf.adhan; g.gain.value = 0.5; s.connect(g); g.connect(this.master); s.start(); this.adhanOn = true;
+    setTimeout(() => { this.adhanOn = false; }, 240000);
+  },
+
   /* Settings buttons: hear the horn and the rolling sound without starting a trip. Returns false if the recordings aren't loaded. */
   testHorn() { this.unlock(); if (!this.buf.horn) return false; this.horn(true); setTimeout(() => this.horn(false), 2500); return true; },
   testRoll() { this.unlock(); const c = this.ctx; if (!c || !this.buf.roll) return false; const s = c.createBufferSource(), g = c.createGain(); s.buffer = this.buf.roll; g.gain.value = Math.min(1, this.vol('vEngine')); s.connect(g); g.connect(this.master); s.start(0, 0, 5); return true; },
@@ -135,7 +150,7 @@ const Sound = {
     try {
       const r = await fetch('audio/manifest.json'); if (!r.ok) return;
       const m = await r.json();
-      for (const k of ['engine', 'horn', 'clack', 'chime', 'roll']) {
+      for (const k of ['engine', 'horn', 'clack', 'chime', 'roll', 'adhan']) {
         if (!m[k]) continue;
         try { const rr = await fetch('audio/' + m[k]); this.buf[k] = await c.decodeAudioData(await rr.arrayBuffer()); } catch (e) { /* skip this file */ }
       }

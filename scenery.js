@@ -197,6 +197,7 @@ class Scenery {
   }
 
   addMosque(s, lat, yaw) {
+    (this.mosques = this.mosques || []).push(s);
     const w = this.track.at(s, lat, 0), g = new THREE.Group();
     const stone = new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.9 });
     const dome = new THREE.MeshStandardMaterial({ color: 0x4f7f6c, roughness: 0.45, metalness: 0.2 });

@@ -482,15 +482,15 @@ class Train {
       const fa = tr.frame(center + v.bs / 2, this.fa), fb = tr.frame(center - v.bs / 2, this.fb);
       { const dj = this.divJ, la = lat + (dj ? tr.divLatJ(dj, center + v.bs / 2) : 0), lb = lat + (dj ? tr.divLatJ(dj, center - v.bs / 2) : 0); if (la) fa.pos.addScaledVector(fa.right, la); if (lb) fb.pos.addScaledVector(fb.right, lb); }
       this.tmp.copy(fa.pos).sub(fb.pos); const dir = this.tmp.clone().normalize(); if (rev) dir.negate();
-      v.body.position.copy(fa.pos).add(fb.pos).multiplyScalar(0.5); v.body.position.y = RAIL_TOP;
-      v.body.lookAt(v.body.position.x + dir.x, RAIL_TOP, v.body.position.z + dir.z);
+      v.body.position.copy(fa.pos).add(fb.pos).multiplyScalar(0.5); v.body.position.y = RAIL_TOP + 0.12;
+      v.body.lookAt(v.body.position.x + dir.x, RAIL_TOP + 0.12, v.body.position.z + dir.z);
       if (v.flip) v.body.rotateY(Math.PI);
       const sway = Math.sin(time * 1.3 + idx * 1.7) * 0.003 * Math.min(1, speed / 20) + Math.sin(time * 9 + idx) * 0.0012 * Math.min(1, speed / 25);
       v.body.rotateZ(sway); v.body.position.y += Math.sin(time * 11 + idx * 2) * 0.004 * Math.min(1, speed / 25);
       // derailment: each vehicle tips over in turn, starting with the locomotive, and slides off to one side
       let k = 0; if (derailT > 0) { k = U.clamp((derailT - idx * 0.22) / 1.4, 0, 1); k = k * k * (3 - 2 * k); if (k > 0) { v.body.rotateZ(k * 1.4); v.body.translateX(-k * 1.3); v.body.position.y -= k * 0.15; } }
       [fa, fb].forEach((f, bi) => {
-        const b = v.bogies[bi].g; b.position.set(f.pos.x, RAIL_TOP, f.pos.z); b.lookAt(f.pos.x + sg * f.fwd.x, RAIL_TOP, f.pos.z + sg * f.fwd.z);
+        const b = v.bogies[bi].g; b.position.set(f.pos.x, RAIL_TOP + 0.12, f.pos.z); b.lookAt(f.pos.x + sg * f.fwd.x, RAIL_TOP + 0.12, f.pos.z + sg * f.fwd.z);
         if (k > 0) { b.rotateZ(k * 1.25); b.translateX(-k * 1.0); }
       });
       v.center = center;

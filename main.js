@@ -137,7 +137,11 @@
     const hasAcct = await Account.init();
     await Account.applyCatalog();
     refreshMenu(); Hub.show('home');
-    splash(() => { if (!hasAcct) Menu.askName(); });
+    splash(() => {
+      let pn = ''; try { pn = localStorage.getItem('qs-pname') || ''; } catch (e) { /* */ }
+      if (!pn && !(Account.d && !Account.d.guest && Account.d.name)) Menu.firstName(!hasAcct);
+      else if (!hasAcct) Menu.askName();
+    });
     e.optTrain.addEventListener('change', () => { try { const s = JSON.parse(localStorage.getItem('qs-opts') || '{}'); s.train = e.optTrain.value; localStorage.setItem('qs-opts', JSON.stringify(s)); } catch (err) { /* */ } });
     ui.on({
       start: startGame, restart: restart, camera: (i) => cycleCamera(i), resetCam: () => resetCam(), pause: togglePause, autoPause: () => { if (started && !paused) togglePause(); },
@@ -268,7 +272,7 @@
         if (pinch) cam.zoom = U.clamp(cam.zoom * (pinch / d), 0.4, 3); pinch = d; return;
       }
       const k = CAMERAS[camIdx][0];
-      if (k === 'cab' || k === 'side') { cam.yaw = U.clamp(cam.yaw + dx * 0.005, -2.4, 2.4); cam.pitch = U.clamp(cam.pitch + dy * 0.004, -0.9, 0.9); }
+      if (k === 'cab' || k === 'side') { cam.yaw = U.clamp(cam.yaw - dx * 0.005, -2.4, 2.4); cam.pitch = U.clamp(cam.pitch - dy * 0.004, -0.9, 0.9); }
       else { cam.yaw -= dx * 0.005; cam.pitch = U.clamp(cam.pitch + dy * 0.004, -0.1, 1.45); }
     });
     for (const t of ['pointerup', 'pointercancel']) el.addEventListener(t, (ev) => { ptr.delete(ev.pointerId); pinch = 0; cabPress(ev, false); });
@@ -400,10 +404,11 @@
     world.update(dt, game.t); world.scenery.trainS = game.s; world.scenery.trainLen = train.length; if (world.scenery.ridge) world.scenery.ridge.position.set(camera.position.x, 0, camera.position.z);
     if (net) { net.setState(game, train.length); const hit = net.update(dt, game.t, train.length); if (hit && !game.derailed) handle(game.derail([], 'collision')); updateNetBox(); }
     { const idn = game.nextIdx, dd = game.distToStop(); if (idn < stations.list.length && dd < 1200 && dd > -150) crowd.prepare(idn); crowd.update(dt, game, train); }
-    if (traffic) traffic.update(dt, game.s, game.t);
+    if (traffic) { traffic.update(dt, game.s, game.t); if (traffic.horn) Sound.passHorn(traffic.horn); }
     { const nx = stations.list[game.nextIdx]; if (nx && game.phase === 'running') { const dd = game.distToStop(); if (dd < 900 && dd > 500) Commentary.arriving(nx, line, type, dd / Math.max(8, game.v), stations.list[stations.list.length - 1].name); else if (dd < 350 && dd > 60 && game.kmh > 70) Commentary.tip('قرّب من المحطة. فرمل دلوقتي.', 'brk' + game.nextIdx); }
       if (game.phase === 'dwell' && game.dwellT > 9 && game.doors > 0.5 && stations.list[game.nextIdx + 1]) Commentary.depart(stations.list[game.nextIdx + 1].name, type, line, 10, stations.list[stations.list.length - 1].name); }
     const L = track.L, near = world.scenery.crossings.some((c) => { const a = ((c.s - game.s) % L + L) % L; return a < 320 || a > L - train.length - 20; });
+    { const ms = world.scenery.mosques; if (ms && ms.some((q) => Math.abs(q - game.s) < 140)) Sound.adhan(); }
     Sound.update({ v: game.v, throttle: game.power, brake: game.brake, d: game.d || 0, bell: near, over: game.over });
     updateCamera(dt);
     const idx = Math.min(game.nextIdx, stations.list.length - 1), st = stations.list[idx], dwell = game.phase === 'dwell';

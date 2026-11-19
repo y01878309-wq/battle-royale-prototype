@@ -58,6 +58,7 @@ const Account = {
     if (!FB.ok) {   // no connection: play offline with the last saved profile (or as a guest); buying, top-ups and the online race wait for the internet
       this.error = 'offline';
       if (!this.d || !this.d.name) this.d = { id: '', name: 'ضيف', coins: 0, gems: 0, xp: 0, owned: [], claimed: [], local: true, guest: true, rec: '' };
+      try { const pn = localStorage.getItem('qs-pname'); if (pn && this.d.guest) this.d.name = pn; } catch (e) { /* */ }
       return true;
     }
     try {

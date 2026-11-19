@@ -13,11 +13,13 @@ class Traffic {
 
   /* sPlayer: the player's position on the line. Trains far away are only moved, not drawn. */
   update(dt, sPlayer, time) {
-    const L = this.track.L;
+    const L = this.track.L; this.horn = 0;
     for (const o of this.list) {
       o.s = ((o.s - o.v * dt) % L + L) % L;
       const d = Math.abs(((o.s - sPlayer + L / 2) % L + L) % L - L / 2), near = d < 900;
       if (near !== o.shown) { o.shown = near; for (const v of o.train.vehicles) { v.body.visible = near; for (const b of v.bogies) b.g.visible = near; } }
+      if (d < 520 && d > 60 && !o.honked) { o.honked = true; this.horn = 1 - d / 600; }
+      if (d > 800) o.honked = false;
       if (near) { o.train.place(o.s, time, o.v, 0); o.train.spin(o.v * dt); }
     }
   }

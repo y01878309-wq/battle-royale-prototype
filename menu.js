@@ -54,6 +54,27 @@ const Menu = {
   },
   close() { if (this.ov) { this.ov.remove(); this.ov = null; } },
 
+  /* First launch: the name is compulsory (no close button, no empty answer); afterwards the player is greeted by voice. */
+  firstName(acctMissing) {
+    const ov = this.modal('اهلاً بيك! اكتب اسمك عشان تبدأ', (b, o) => {
+      const x = o.querySelector('.modal-h .mbtn'); if (x) x.remove();
+      const inp = this.el('input'); inp.maxLength = 16; inp.placeholder = 'اسمك'; b.appendChild(inp);
+      const msg = this.el('div', 'sub', ''); b.appendChild(msg);
+      const ok = this.el('button', 'mbtn primary', 'تمام'); ok.type = 'button';
+      ok.onclick = async () => {
+        const n = inp.value.trim(); if (n.length < 2) { msg.textContent = 'لازم تكتب اسمك (حرفين على الأقل)'; return; }
+        ok.disabled = true;
+        try { localStorage.setItem('qs-pname', n); } catch (e) { /* */ }
+        if (acctMissing) { try { await Account.register(n); } catch (e) { /* offline */ } }
+        else if (Account.d) { Account.d.name = n; try { Account.save(); } catch (e) { /* */ } }
+        this.close(); this.refresh(); this.onChange();
+        try { Sound.speak('مرحبا بك في لعبة قطارات مصر يا ' + n); } catch (e) { /* */ }
+      };
+      b.appendChild(ok); setTimeout(() => inp.focus(), 50);
+    });
+    return ov;
+  },
+
   askName(rename) {
     this.modal(rename ? 'غيّر اسمك' : 'اهلاً بيك! اكتب اسمك', (b) => {
       const inp = this.el('input'); inp.maxLength = 16; inp.placeholder = 'اسمك'; inp.value = rename && Account.d ? Account.d.name : ''; b.appendChild(inp);
