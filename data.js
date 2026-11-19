@@ -81,7 +81,7 @@ const priceTag = (t) => (t.gems ? '💎 ' + t.gems : '🪙 ' + t.price);
 const TRAIN_TYPES = [
   { id: 'vip', price: 0, name: 'الجنرال GE (ركاب مكيّف)', desc: 'جرار GE أحمر وفضي مع سبع عربيات مكيّفة. سريع ومريح.',
     loco: { kind: 'ge', len: 19.9, top: 0xc4161c, low: 0xbfc4c8, trim: 0xe9e9e4, num: '٢٦١٢' },
-    coach: { style: 'std', body: 0xdfe2e4, band: 0xc4161c, trim: 0x2a4f86 }, consist: Array(7).fill('coach'),
+    coach: { style: 'std', body: 0xc6cacd, band: 0xc4161c, trim: 0x23262a }, consist: Array(7).fill('coach'),
     locoMass: 95, vehMass: 48, fmax: 300, power: 2.9, vmax: 120, brake: 1.15,
     snd: { base: 28, span: 17, horn: GE_HORN, turbo: 0.06 } },
   { id: 'orange', price: 40, name: 'الجنرال GE البرتقالي (ركاب)', desc: 'جرار برتقالي بخط رمادي وعربيات بيضا. اللي بتشوفه في رمسيس.',
