@@ -166,14 +166,16 @@ const Sound = {
   speak(text) {
     if (this.muted || this.vol('vVoice') <= 0) return;
     this.paChime();
-    if (!('speechSynthesis' in window) || !this.voice()) { this.speakOnline(text); return; }   // APK/WebView without an Arabic voice: stream the speech instead
+    if (!('speechSynthesis' in window) || !this.voice() || this.ttsBad) { this.speakOnline(text); return; }   // APK/WebView without an Arabic voice: stream the speech instead
     const ss = window.speechSynthesis;
     const go = () => {
       try {
         const v = this.voice(), u = new SpeechSynthesisUtterance(text);
         if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'ar-EG';   // no Arabic voice listed: still ask for Arabic and let the browser choose
         u.rate = 0.88; u.pitch = 0.95; u.volume = Math.min(1, this.vol('vVoice'));
-        const talk = () => { try { ss.resume(); ss.speak(u); } catch (e) { /* no voice available */ } };
+        let started = false; u.onstart = () => { started = true; }; u.onerror = () => { if (!started) { this.ttsBad = true; this.speakOnline(text); } };
+        setTimeout(() => { if (!started && !ss.speaking) { this.ttsBad = true; try { ss.cancel(); } catch (e) { /* */ } this.speakOnline(text); } }, 3000);   // the phone's own voice never started (common in the APK): stream the speech instead
+        const talk = () => { try { ss.resume(); ss.speak(u); } catch (e) { this.ttsBad = true; this.speakOnline(text); } };
         if (ss.speaking || ss.pending) { ss.cancel(); setTimeout(talk, 150); } else talk();
       } catch (e) { /* no voice available */ }
     };

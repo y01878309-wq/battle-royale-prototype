@@ -1,5 +1,5 @@
 /* Offline play: the game files are kept on the device. Only the online race needs the internet. */
-const BUILD = '20261119c', CORE = 'qs-core-' + BUILD, ASSETS = 'qs-assets';
+const BUILD = '20261119d', CORE = 'qs-core-' + BUILD, ASSETS = 'qs-assets';
 const fresh = (url) => /(^|\/)(index\.html|version\.json)?$/.test(new URL(url).pathname) || /version\.json$/.test(url);
 self.addEventListener('install', (e) => e.waitUntil((async () => {
   self.skipWaiting();
@@ -27,8 +27,9 @@ self.addEventListener('fetch', (e) => {
     })()); return;
   }
   e.respondWith((async () => {
-    const hit = await caches.match(r) || (u.origin === location.origin && await caches.match(r, { ignoreSearch: true })); if (hit) return hit;
-    try { const n = await fetch(r); if (n.ok || n.type === 'opaque') (await caches.open(/^\/(models|thumbs)\//.test(u.pathname) ? ASSETS : CORE)).put(r, n.clone()); return n; }
+    const hit = await caches.match(r) || (u.origin === location.origin && await caches.match(r, { ignoreSearch: true }));
+    if (hit) { if (/^\/(models|thumbs|audio)\//.test(u.pathname)) fetch(r).then(async (n) => { if (n.ok) (await caches.open(ASSETS)).put(r, n); }).catch(() => {}); return hit; }   // pictures, models and sounds: show the saved copy, refresh it quietly for next time
+    try { const n = await fetch(r); if (n.ok || n.type === 'opaque') (await caches.open(/^\/(models|thumbs|audio)\//.test(u.pathname) ? ASSETS : CORE)).put(r, n.clone()); return n; }
     catch (err) { return Response.error(); }
   })());
 });
