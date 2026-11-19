@@ -190,10 +190,11 @@
     if (typeof Models !== 'undefined') { const names = type.real ? [type.real.head].concat(type.real.mid) : [Models.pickFor(type)].filter(Boolean).concat((type.consist.indexOf('coach') >= 0 || type.consist.indexOf('old') >= 0 || type.consist.indexOf('talgo') >= 0) ? ['coach1'] : []).concat(type.consist.some((k) => ['tank','box','flat','cont'].includes(k)) ? ['wbox'] : []).concat(type.consist.some((k) => ['hopper','gond','tank'].includes(k)) ? ['whop'] : []); if (names.length) await Models.preload(names); }
     if (typeof People !== 'undefined') await Promise.all([People.load('father'), People.load('police')]).catch(() => null);
     train = new Train(scene, track, quality, type);
+    try { const sid = localStorage.getItem('qs-cabsticker'), sk = sid && STICKERS.find((x) => x.id === sid); if (sk && Account.d && Account.owns(sk)) train.setCabSticker(sk.emoji); } catch (e) { /* */ }
     crowd = new Crowd(scene, track, quality, stations, train.length); crowd.prepare(0);
     traffic = new Traffic(scene, track, quality);
     lightsOn = time === 'sunset' || time === 'night' || time === 'overcast'; train.setHeadlights(lightsOn); train.setNight(time === 'night'); stations.setNight(time === 'night');
-    const phys = { mass: (type.locoMass + type.vehMass * type.consist.length) * 1000, fmax: type.fmax * 1350, power: type.power * 1.7e6, brake: type.brake * 1.1, vmax: Math.round(type.vmax * 1.15), tolerance: type.id.startsWith('cargo') || type.id === 'freight' ? 18 : 25 };
+    const up = Account.upgradeFx(type.id), phys = { mass: (type.locoMass + type.vehMass * type.consist.length) * 1000, fmax: type.fmax * 1350 * up.power, power: type.power * 1.7e6 * up.power, brake: type.brake * 1.1 * up.brake, vmax: Math.round(type.vmax * 1.15 * up.vmax), tolerance: type.id.startsWith('cargo') || type.id === 'freight' ? 18 : 25 };
     mosqueSts = stations.list.filter((st) => { let h = 7; for (const ch of st.name) h = (h * 31 + ch.charCodeAt(0)) >>> 0; st.mosque = h % 3 === 0; return st.mosque; });
     mosqueSts.forEach((st) => world.scenery.addMosque(st.s + 35, 62, 0));
     game = new Game(track.L, stations.list, (s) => junctionLimit(s, stations.limitAt(s)), phys);
@@ -272,14 +273,14 @@
       const dx = ev.clientX - p.x, dy = ev.clientY - p.y; p.x = ev.clientX; p.y = ev.clientY;
       if (ptr.size === 2) {
         const [a, b] = [...ptr.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
-        if (pinch) cam.zoom = U.clamp(cam.zoom * (pinch / d), 0.4, 3); pinch = d; return;
+        if (pinch) cam.zoom = 1; pinch = d; return;
       }
       const k = CAMERAS[camIdx][0];
       if (k === 'cab' || k === 'side') { cam.yaw = U.clamp(cam.yaw - dx * 0.005, -2.4, 2.4); cam.pitch = U.clamp(cam.pitch - dy * 0.004, -0.9, 0.9); }
-      else { cam.yaw -= dx * 0.005; cam.pitch = U.clamp(cam.pitch + dy * 0.004, -0.1, 1.45); }
+      else { cam.yaw -= dx * 0.005; cam.pitch = U.clamp(cam.pitch + dy * 0.004, 0.08, 1.3); }
     });
     for (const t of ['pointerup', 'pointercancel']) el.addEventListener(t, (ev) => { ptr.delete(ev.pointerId); pinch = 0; cabPress(ev, false); });
-    el.addEventListener('wheel', (ev) => { ev.preventDefault(); cam.zoom = U.clamp(cam.zoom * Math.exp(ev.deltaY * 0.0012), 0.4, 3); }, { passive: false });
+    el.addEventListener('wheel', (ev) => { ev.preventDefault(); cam.zoom = 1; }, { passive: false });
     el.addEventListener('dblclick', resetCam);
   }
 
@@ -295,7 +296,8 @@
     const body = train.loco.body; body.getWorldPosition(tgt); tgt.y += height;
     body.getWorldDirection(v3); const psi = Math.atan2(v3.x, v3.z), a = psi + headingOffset + cam.yaw, p = cam.pitch, d = dist * cam.zoom;
     want.set(tgt.x + Math.sin(a) * Math.cos(p) * d, tgt.y + Math.sin(p) * d + 1.2, tgt.z + Math.cos(a) * Math.cos(p) * d);
-    if (want.y < 1.0) want.y = 1.0;
+    if (want.y < tgt.y - height + 1.8) want.y = tgt.y - height + 1.8;   // never below the roof line of the rails
+    { const dd = want.distanceTo(tgt), lo = dist * 0.9, hi = dist * 1.1; if (dd > hi) want.sub(tgt).multiplyScalar(hi / dd).add(tgt); else if (dd < lo) want.sub(tgt).multiplyScalar(lo / Math.max(dd, 0.01)).add(tgt); }   // fixed distance: no one can get closer or further
     // keep the camera in front of roofs, canopies and the footbridge when the train is in a station
     for (const st of stations.list) {
       const f = st.fr; if (!f || !st.occ.length) continue; const dx = tgt.x - f.pos.x, dz = tgt.z - f.pos.z;

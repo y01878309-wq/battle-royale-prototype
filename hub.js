@@ -167,6 +167,7 @@ const Hub = {
   /* ---------- garage ---------- */
   TOP: [['أحمر', 0xc4161c], ['برتقالي', 0xe8761c], ['أصفر', 0xe4a321], ['أخضر', 0x2f6a3e], ['أخضر فاتح', 0x3fa55a], ['سماوي', 0x59b3e6], ['أزرق', 0x2455b5], ['كحلي', 0x1d3f73], ['بنفسجي', 0x6a3d9a], ['وردي', 0xd95a8c], ['أسود', 0x222222], ['أبيض', 0xf1f1ee]],
   BODY: [['أبيض', 0xe6e4dc], ['كريمي', 0xd8d0b5], ['رمادي فاتح', 0xb9bdc1], ['رمادي', 0x7d8186], ['سماوي فاتح', 0x8fc8ee], ['أصفر فاتح', 0xf0d98a], ['أخضر فاتح', 0xa9d6b0], ['فضي', 0xc9ccd0]],
+  cabSticker() { try { return localStorage.getItem('qs-cabsticker') || ''; } catch (e) { return ''; } },
   garage() {
     const L = (x, y) => this.L(x, y), hex = (n) => '#' + n.toString(16).padStart(6, '0');
     const sel = this.gsel || this.api.trainId(); this.gsel = sel; const t = TRAIN_TYPES.find((x) => x.id === sel) || TRAIN_TYPES[0], own = Account.d ? Account.owns(t) : isFree(t), pt = Settings.d.paint[t.id] || {};
@@ -175,6 +176,8 @@ const Hub = {
       <div class="gr"><div class="gr-list">${TRAIN_TYPES.map((x) => `<button data-a="t:${x.id}" class="${x.id === sel ? 'on' : ''}"><b>${this.esc(x.name)}</b><small>${(Account.d ? Account.owns(x) : isFree(x)) ? L('معاك', 'Owned') : '🔒 ' + priceTag(x)}</small></button>`).join('')}</div>
       <div class="gr-side"><h4>${L('لون القطر', 'Main colour')}</h4><div class="sw">${this.TOP.map(([n, c]) => `<button data-a="top:${c}" class="${c === curTop ? 'on' : ''}" style="background:${hex(c)}" aria-label="${n}"></button>`).join('')}</div>
         <h4>${L('لون الجسم', 'Body colour')}</h4><div class="sw">${this.BODY.map(([n, c]) => `<button data-a="body:${c}" class="${c === curBody ? 'on' : ''}" style="background:${hex(c)}" aria-label="${n}"></button>`).join('')}</div>
+        <h4>${L('الورشة: تطوير القطر', 'Workshop')}</h4><div class="ws">${UPGRADES.map((u) => { const has = Account.d && Account.hasUp(t.id, u); return `<button data-a="up:${u.id}" class="${has ? 'on' : ''}"${own ? '' : ' disabled'}><b>${u.name}</b><small>${u.desc}</small><i>${has ? '✓ مركّب' : '🪙 ' + u.price}</i></button>`; }).join('')}</div>
+        <h4>${L('ملصق الكابينة', 'Cab sticker')}</h4><div class="ws cs"><button data-a="cs:" class="${this.cabSticker() ? '' : 'on'}">بدون</button>${STICKERS.filter((s) => Account.d && Account.owns(s)).map((s) => `<button data-a="cs:${s.id}" class="${this.cabSticker() === s.id ? 'on' : ''}">${s.emoji}</button>`).join('') || '<small>اشتري ملصقات من المتجر</small>'}</div>
         <div class="gr-btns"><button class="mbtn" data-a="reset">${L('الألوان الأصلية', 'Original colours')}</button>
         <button class="mbtn primary" data-a="pick">${own ? L('اختار القطر ده', 'Use this train') : L('اشتريه 🔒 ' + priceTag(t), 'Buy 🔒 ' + priceTag(t))}</button></div></div></div></div>`;
     this.wire(this.ui, (a) => {
@@ -182,6 +185,12 @@ const Hub = {
       if (a.startsWith('t:')) { this.gsel = a.slice(2); return this.garage(); }
       if (a.startsWith('top:') || a.startsWith('body:')) { const [k, v] = a.split(':'); Settings.d.paint[t.id] = Object.assign({}, Settings.d.paint[t.id], { [k]: +v }); Settings.save(); return this.garage(); }
       if (a === 'reset') { delete Settings.d.paint[t.id]; Settings.save(); return this.garage(); }
+      if (a.startsWith('cs:')) { try { localStorage.setItem('qs-cabsticker', a.slice(3)); } catch (e) { /* */ } return this.garage(); }
+      if (a.startsWith('up:')) {
+        const u = UPGRADES.find((x) => x.id === a.slice(3)); if (!u || !own || Account.hasUp(t.id, u)) return;
+        Account.buy({ item: 'up', id: t.id + '.' + u.id, price: u.price }).then((r) => { this.api.toast && this.api.toast(r === 'ok' ? 'اتركّب: ' + u.name : r === 'coins' ? 'رصيدك مش كفاية' : 'محتاج إنترنت للشراء', r === 'ok' ? 'good' : 'bad'); this.garage(); });
+        return;
+      }
       if (a === 'pick') { if (own) { this.api.setTrain(t.id); this.show('home'); } else Menu.shop(); }
     });
     const lst = this.ui.querySelector('.gr-list .on'); if (lst && lst.scrollIntoView) lst.scrollIntoView({ block: 'nearest' });

@@ -152,6 +152,10 @@ const Account = {
     } catch (e) { return { online: false, list: null }; }
   },
 
+  upId(trainId, u) { return 'up:' + trainId + '.' + u.id; },
+  hasUp(trainId, u) { return !!(this.d && this.d.owned && this.d.owned.includes(this.upId(trainId, u))); },
+  /* Combined effect of the workshop upgrades bought for a train. */
+  upgradeFx(trainId) { const r = { power: 1, vmax: 1, brake: 1 }; if (typeof UPGRADES === 'undefined') return r; for (const u of UPGRADES) if (this.hasUp(trainId, u)) { r.power *= u.power || 1; r.vmax *= u.vmax || 1; r.brake *= u.brake || 1; } return r; },
   owns(t) { return isFree(t) || this.d.owned.includes((t.item || 'train') + ':' + t.id); },
 
   /* Buys a train (game coins, or gems for the gem-only trains). Returns 'ok' | 'coins' | 'gems' | 'offline'. */

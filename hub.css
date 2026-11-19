@@ -166,3 +166,9 @@ body[data-ctl=tilt] .rh-track{opacity:.45;pointer-events:none}
 .hb-menu .hb-btn:nth-of-type(6){border-color:#2ed1e6;background:linear-gradient(90deg,rgba(46,209,230,.26),rgba(15,20,29,.92))}
 .hb-menu .hb-btn:nth-of-type(n+7){border-color:#9aa6b8}
 .hb-btn>i{background:rgba(255,255,255,.12);border-radius:50%;width:6.2vh;height:6.2vh;line-height:6.2vh}
+
+.ws{display:grid;grid-template-columns:1fr 1fr;gap:.8vw;margin:.6vh 0}
+.ws button{background:#1c2430;border:1px solid #3a4658;border-radius:10px;color:#fff;padding:.8vh .8vw;text-align:right;font-family:inherit;display:flex;flex-direction:column;gap:2px}
+.ws button small{opacity:.7;font-size:.78em}.ws button i{font-style:normal;color:#f6c343}
+.ws button.on{border-color:#f6c343;background:#2b2a1c}.ws button:disabled{opacity:.4}
+.ws.cs{grid-template-columns:repeat(5,1fr)}.ws.cs button{align-items:center;font-size:1.4em;padding:.5vh}

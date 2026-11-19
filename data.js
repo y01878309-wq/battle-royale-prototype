@@ -333,3 +333,12 @@ function regionOf(name) {
   if (/القاهرة|الجيزة|شبرا|بشتيل|عين شمس|المرج/.test(n)) return 'cairo';
   return 'delta';
 }
+
+/* WORKSHOP UPGRADES: bought per train with game coins (stored in the account like any other item as 'up:<trainId>.<id>'). Levels are bought in order. */
+const UPGRADES = [
+  { id: 'e1', item: 'up', price: 400, name: 'محرك مطوّر ١', desc: 'قوة أكبر وتسارع أسرع', power: 1.08, vmax: 1.02 },
+  { id: 'e2', item: 'up', price: 900, name: 'محرك مطوّر ٢', desc: 'قوة وسرعة قصوى أعلى', power: 1.16, vmax: 1.04 },
+  { id: 'e3', item: 'up', price: 1800, name: 'محرك رياضي', desc: 'أقوى محرك للقطر', power: 1.26, vmax: 1.06 },
+  { id: 'b1', item: 'up', price: 350, name: 'فرامل أقوى ١', desc: 'مسافة وقوف أقصر', brake: 1.08 },
+  { id: 'b2', item: 'up', price: 800, name: 'فرامل أقوى ٢', desc: 'فرملة أحسن وأمان أكتر', brake: 1.18 }
+];

@@ -470,6 +470,14 @@ class Train {
     const f = People.makeSeated('police'); if (!f) return; f.scale.setScalar(1.15); f.position.set(-0.75, 1.08, 3.95 + ofs); parent.add(f); this.driverFig = f;
   }
 
+  /* Emoji sticker on the cab dashboard, chosen in the workshop. */
+  setCabSticker(emoji) {
+    if (this.stk && this.stk.parent) this.stk.parent.remove(this.stk); this.stk = null; if (!emoji || !this.eye) return;
+    const cv = document.createElement('canvas'); cv.width = cv.height = 128; const g = cv.getContext('2d'); g.font = '96px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(emoji, 64, 70);
+    const tex = new THREE.CanvasTexture(cv), m = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.16), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
+    m.renderOrder = 50; m.position.set(0.5, 0.2, -1.0); this.eye.add(m); this.stk = m;
+  }
+
   setCabView(on) {
     this.cabMode = on; this.cab.visible = on;
     if (this.metroRoot) { const keep = new Set([this.cab, this.eye, this.nose, this.spot, this.spot && this.spot.target]); this.metroRoot.children.forEach((c) => { if (!keep.has(c) && !c.userData.skip) c.visible = !on; }); }   // the metro car is a group of parts, so hide every part except the cab
