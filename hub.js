@@ -337,6 +337,8 @@ const SetUI = {
     this.slider(c, 'vMaster', L('الصوت العام', 'Master volume'), 0, 1, 0.05, pc);
     this.slider(c, 'vEngine', L('صوت المحرك', 'Engine'), 0, 1, 0.05, pc);
     this.slider(c, 'vVoice', L('التعليق وإعلانات المحطات', 'Commentary & announcements'), 0, 1, 0.05, pc);
+    this.btn(c, L('جرّب الكلاكس', 'Test horn'), () => { if (!Sound.testHorn()) this.note(c, L('الصوت لسه بيتحمّل. استنى ثواني وجرّب تاني.', 'Still loading, try again.')); });
+    this.btn(c, L('جرّب صوت حركة القطر', 'Test rolling sound'), () => { if (!Sound.testRoll()) this.note(c, L('الصوت لسه بيتحمّل. استنى ثواني وجرّب تاني.', 'Still loading, try again.')); });
     this.btn(c, L('جرّب صوت الإعلان', 'Test voice'), (b) => { const ok = Sound.testVoice(); this.note(c, ok ? L('لو سمعت صوت، الكلام شغال.', 'If you hear a voice it works.') : L('جهازك مفيهوش صوت عربي: هتسمع جرس المحطة والكلام هيظهر مكتوب. نزّل «Speech Services by Google» واللغة العربية من إعدادات الجهاز. تطبيقات الـAPK ساعات بتمنع الصوت.', 'No Arabic voice on this device: only the chime and captions.')); });
   },
   t_gfx(m) {

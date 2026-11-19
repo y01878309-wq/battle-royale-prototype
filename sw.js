@@ -1,5 +1,5 @@
 /* Offline play: the game files are kept on the device. Only the online race needs the internet. */
-const BUILD = '20261119a', CORE = 'qs-core-' + BUILD, ASSETS = 'qs-assets';
+const BUILD = '20261119b', CORE = 'qs-core-' + BUILD, ASSETS = 'qs-assets';
 const fresh = (url) => /(^|\/)(index\.html|version\.json)?$/.test(new URL(url).pathname) || /version\.json$/.test(url);
 self.addEventListener('install', (e) => e.waitUntil((async () => {
   self.skipWaiting();

@@ -124,6 +124,9 @@ const Sound = {
     this.hornBreath.gain.cancelScheduledValues(t); this.hornBreath.gain.setTargetAtTime(on ? 0.05 : 0, t, on ? 0.04 : 0.12);
   },
 
+  /* Settings buttons: hear the horn and the rolling sound without starting a trip. Returns false if the recordings aren't loaded. */
+  testHorn() { this.unlock(); if (!this.buf.horn) return false; this.horn(true); setTimeout(() => this.horn(false), 2500); return true; },
+  testRoll() { this.unlock(); const c = this.ctx; if (!c || !this.buf.roll) return false; const s = c.createBufferSource(), g = c.createGain(); s.buffer = this.buf.roll; g.gain.value = Math.min(1, this.vol('vEngine')); s.connect(g); g.connect(this.master); s.start(0, 0, 5); return true; },
   /* Optional recordings: put audio/manifest.json next to index.html, e.g.
      { "engine": "engine.mp3", "horn": "horn.mp3", "clack": "clack.mp3", "chime": "chime.mp3" }
      engine is looped and pitched by throttle; horn plays while the key is held. Missing files fall back to the synthesised sound. */
