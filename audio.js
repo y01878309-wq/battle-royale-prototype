@@ -73,7 +73,7 @@ const Sound = {
     const c = this.ctx; if (!c || !this.eng || c.state !== 'running') { if (c && c.state === 'suspended' && !this.paused) c.resume().catch(() => {}); return; }
     const t = c.currentTime, v = st.v, kmh = v * 3.6, sm = (p, val, tc) => p.setTargetAtTime(val, t, tc || 0.08);
     const rpm = 0.25 + 0.75 * Math.max(st.throttle, Math.min(1, kmh / 140) * 0.35);
-    const P = this.prof, synth = this.engSrc ? 0 : 1, base = P.base + rpm * P.span;   // fundamental in Hz, about 42 at a working notch
+    const P = this.prof, quiet = !!this.rollSrc, synth = this.engSrc || quiet ? 0 : 1, base = P.base + rpm * P.span;   // fundamental in Hz, about 42 at a working notch
     for (const o of this.eng.o) sm(o.o.frequency, base * o.mul, 0.15);
     sm(this.eng.lfo.frequency, 4 + rpm * 8, 0.3);
     sm(this.eng.f.frequency, 170 + rpm * 160 + st.throttle * 140, 0.3);
@@ -81,16 +81,16 @@ const Sound = {
     if (this.engSrc) { sm(this.engSrc.src.playbackRate, 0.55 + 0.9 * rpm, 0.15); sm(this.engSrc.g.gain, ev * (0.35 + 0.55 * st.throttle), 0.2); }
     sm(this.turbo.g.gain, ev * synth * (0.004 + 0.3 * P.turbo * st.throttle * st.throttle), 0.3); sm(this.turbo.f.frequency, 900 + 900 * st.throttle, 0.3);
     const sp = Math.min(1, v / 38);
-    if (this.rollSrc) { sm(this.rollSrc.g.gain, this.vol('vEngine') * Math.min(1.1, 0.04 + 1.0 * sp), 0.25); sm(this.rollSrc.src.playbackRate, 0.6 + 0.7 * sp, 0.25); }
-    sm(this.wheel.g.gain, (this.rollSrc ? 0.35 : 1) * (0.004 + 0.22 * sp * (0.4 + 0.6 * sp)), 0.2); sm(this.wheel.f.frequency, 400 + 1100 * sp, 0.2);
-    sm(this.rumble.g.gain, ev * synth * (0.22 + 0.25 * st.throttle) + 0.25 * sp, 0.3);
-    sm(this.wind.g.gain, 0.05 * sp + 0.16 * sp * sp * sp, 0.3); sm(this.wind.f.frequency, 900 + 1800 * sp, 0.3);
-    sm(this.squeal.g.gain, st.brake > 0.15 && v > 0.8 && v < 9 ? 0.03 * st.brake * (1 - v / 9) : 0, 0.1); sm(this.squeal.f.frequency, 2200 + v * 120, 0.1);
-    const rel = this.lastBrake - st.brake; if (rel > 0.02 && st.brake < this.lastBrake) { this.hiss.g.gain.setTargetAtTime(Math.min(0.12, rel * 3), t, 0.01); this.hiss.g.gain.setTargetAtTime(0, t + 0.05, 0.25); }
+    if (this.rollSrc) { sm(this.rollSrc.g.gain, this.vol('vEngine') * (v > 0.3 ? Math.min(1.1, 0.05 + 1.0 * sp) : 0), 0.25); sm(this.rollSrc.src.playbackRate, 0.6 + 0.7 * sp, 0.25); }
+    sm(this.wheel.g.gain, quiet ? 0 : 0.004 + 0.22 * sp * (0.4 + 0.6 * sp), 0.2); sm(this.wheel.f.frequency, 400 + 1100 * sp, 0.2);
+    sm(this.rumble.g.gain, quiet ? 0 : ev * synth * (0.22 + 0.25 * st.throttle) + 0.25 * sp, 0.3);
+    sm(this.wind.g.gain, quiet ? 0 : 0.05 * sp + 0.16 * sp * sp * sp, 0.3); sm(this.wind.f.frequency, 900 + 1800 * sp, 0.3);
+    sm(this.squeal.g.gain, !quiet && st.brake > 0.15 && v > 0.8 && v < 9 ? 0.03 * st.brake * (1 - v / 9) : 0, 0.1); sm(this.squeal.f.frequency, 2200 + v * 120, 0.1);
+    const rel = this.lastBrake - st.brake; if (!quiet && rel > 0.02 && st.brake < this.lastBrake) { this.hiss.g.gain.setTargetAtTime(Math.min(0.12, rel * 3), t, 0.01); this.hiss.g.gain.setTargetAtTime(0, t + 0.05, 0.25); }
     this.lastBrake = st.brake;
     // rail joints: one clack every 18 m for each bogie, two bogies close together
     this.joint += st.d;
-    while (this.joint >= 15) { this.joint -= 15; const vol = 0.08 + 0.3 * sp; this.clack(vol); setTimeout(() => this.clack(vol * 0.8), Math.max(30, 2500 / Math.max(v, 1))); }
+    while (this.joint >= 15) { this.joint -= 15; const vol = 0.08 + 0.3 * sp; if (quiet) continue; this.clack(vol); setTimeout(() => this.clack(vol * 0.8), Math.max(30, 2500 / Math.max(v, 1))); }
     sm(this.bellG.gain, st.bell ? (Math.floor(t * 5) % 2 ? 0.05 : 0.0) : 0, 0.005);
     if (st.over && Math.floor(t * 3) % 2) this.beep(1100, 0.1);
   },
