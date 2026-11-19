@@ -85,7 +85,7 @@ const TRAIN_TYPES = [
     locoMass: 95, vehMass: 48, fmax: 300, power: 2.9, vmax: 120, brake: 1.15,
     snd: { base: 28, span: 17, horn: GE_HORN, turbo: 0.06 } },
   { id: 'orange', price: 40, name: 'الجنرال GE البرتقالي (ركاب)', desc: 'جرار برتقالي بخط رمادي وعربيات بيضا. اللي بتشوفه في رمسيس.',
-    loco: { kind: 'ge', len: 19.9, top: 0xe8761c, low: 0xb9bdc1, trim: 0xe6e4dc, num: '١٠١٢' },
+    loco: { kind: 'ge', len: 19.9, top: 0xe8561c, low: 0x1e1e21, trim: 0xf2f0ea, num: '١٠١٢' },
     coach: { style: 'std', body: 0xe6e4dc, band: 0xe8761c, trim: 0x8a8d90 }, consist: Array(8).fill('coach'),
     locoMass: 95, vehMass: 46, fmax: 300, power: 2.9, vmax: 110, brake: 1.1,
     snd: { base: 28, span: 17, horn: GE_HORN, turbo: 0.06 } },
