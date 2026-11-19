@@ -114,7 +114,7 @@ const Sound = {
     const c = this.ctx; if (!c) return;
     if (this.buf.horn) {
       const t = c.currentTime;
-      if (on) { if (this.hornSrc) return; const s = c.createBufferSource(), g = c.createGain(); s.buffer = this.buf.horn; g.gain.value = 1; s.connect(g); g.connect(this.master); s.start(); this.hornSrc = { s, g }; s.onended = () => { this.hornSrc = null; }; }
+      if (on) { if (this.hornSrc) return; const s = c.createBufferSource(), g = c.createGain(); s.buffer = this.buf.horn; g.gain.value = 1; s.connect(g); g.connect(this.master); s.loop = true; s.loopStart = 4.3; s.loopEnd = 5.7; s.start(0, 3.4); this.hornSrc = { s, g }; s.onended = () => { this.hornSrc = null; }; }
       else if (this.hornSrc) { const h = this.hornSrc; h.g.gain.setTargetAtTime(0, t, 0.1); h.s.stop(t + 0.5); this.hornSrc = null; }
       return;
     }
@@ -128,7 +128,7 @@ const Sound = {
   passHorn(vol) {
     const c = this.ctx; if (!c || !this.buf.horn || this.hornFar) return;
     const s = c.createBufferSource(), g = c.createGain(), t = c.currentTime;
-    s.buffer = this.buf.horn; s.playbackRate.value = 0.96; g.gain.value = Math.max(0.05, Math.min(0.8, vol)); s.connect(g); g.connect(this.master); s.start();
+    s.buffer = this.buf.horn; s.playbackRate.value = 0.96; g.gain.value = Math.max(0.05, Math.min(0.8, vol)); s.connect(g); g.connect(this.master); s.start(0, 3.4);
     g.gain.setTargetAtTime(0, t + 1.9, 0.15); s.stop(t + 2.6); this.hornFar = true; setTimeout(() => { this.hornFar = false; }, 2600);
   },
 

@@ -325,7 +325,7 @@
     else if (k === 'top') { orbit(60, Math.PI, dt, 1.0); }
     else {
       const d = ((sideS - game.s) % track.L + track.L) % track.L;
-      if (sideS < -1e8 || d > track.L / 2) sideS = game.s + 70 + game.v * 4;
+      if (sideS < -1e8 || d > track.L / 2 || d < track.L - 110 && d > track.L / 2 - 1 || ((game.s - sideS + track.L * 1.5) % track.L) - track.L / 2 > 110) sideS = game.s + 70 + game.v * 4;   // re-place once the train has passed
       track.at(sideS, -8, 1.9, camera.position); body.getWorldPosition(tgt); tgt.y += 2.2;
       camera.lookAt(tgt); camera.fov = U.clamp(baseFov / cam.zoom, 20, 90);
       camera.rotateY(cam.yaw * 0.3); camera.rotateX(-cam.pitch * 0.3);
@@ -394,7 +394,7 @@
     if (paused) return;
     /* adaptive resolution: if the phone can't keep up, draw fewer pixels (and give them back when it can) */
     afr.t += dt; afr.n++; if (afr.t > 2.5) { const fps = afr.n / afr.t, pr = renderer.getPixelRatio(), top = Settings.pixelRatio(); afr.t = 0; afr.n = 0;
-      if (fps < 38 && pr > 0.7) { renderer.setPixelRatio(Math.max(0.7, pr - 0.2)); onResize(); } else if (fps > 56 && pr < top) { renderer.setPixelRatio(Math.min(top, pr + 0.1)); onResize(); } }
+      if (fps < 30 && pr > Math.min(top, 1.0)) { renderer.setPixelRatio(Math.max(Math.min(top, 1.0), pr - 0.1)); onResize(); } else if (fps > 56 && pr < top) { renderer.setPixelRatio(Math.min(top, pr + 0.1)); onResize(); } }
     const inp = Object.assign({}, ui.input);
     if (Settings.d.atc && !game.derailed && game.phase === 'running') {   // ATC: brake alone when over the limit, or when the train could not stop before the starter signal
       const dd = game.distToStop(), need = dd > -26 && dd < 1600 && game.v * game.v > 2 * 0.75 * type.brake * Math.max(0, dd + 24);
@@ -411,6 +411,7 @@
     if (net) { net.setState(game, train.length); const hit = net.update(dt, game.t, train.length); if (hit && !game.derailed) handle(game.derail([], 'collision')); updateNetBox(); }
     { const idn = game.nextIdx, dd = game.distToStop(); if (idn < stations.list.length && dd < 1200 && dd > -150) crowd.prepare(idn); crowd.update(dt, game, train); }
     if (traffic) { traffic.update(dt, game.s, game.t); if (traffic.horn) Sound.passHorn(traffic.horn); }
+    if (game.phase === 'running' && !game.derailed) Commentary.chatter({ kmh: game.kmh, next: (stations.list[game.nextIdx] || {}).name });
     { const nx = stations.list[game.nextIdx]; if (nx && game.phase === 'running') { const dd = game.distToStop(); if (dd < 900 && dd > 500) Commentary.arriving(nx, line, type, dd / Math.max(8, game.v), stations.list[stations.list.length - 1].name); else if (dd < 350 && dd > 60 && game.kmh > 70) Commentary.tip('قرّب من المحطة. فرمل دلوقتي.', 'brk' + game.nextIdx); }
       if (game.phase === 'dwell' && game.dwellT > 9 && game.doors > 0.5 && stations.list[game.nextIdx + 1]) Commentary.depart(stations.list[game.nextIdx + 1].name, type, line, 10, stations.list[stations.list.length - 1].name); }
     const L = track.L, near = world.scenery.crossings.some((c) => { const a = ((c.s - game.s) % L + L) % L; return a < 320 || a > L - train.length - 20; });
