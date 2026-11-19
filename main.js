@@ -191,6 +191,7 @@
     const phys = { mass: (type.locoMass + type.vehMass * type.consist.length) * 1000, fmax: type.fmax * 1350, power: type.power * 1.7e6, brake: type.brake * 1.1, vmax: Math.round(type.vmax * 1.15), tolerance: type.id.startsWith('cargo') || type.id === 'freight' ? 18 : 25 };
     game = new Game(track.L, stations.list, (s) => junctionLimit(s, stations.limitAt(s)), phys);
     stations.list.forEach((_, i) => stations.setSignal(i, i === 0));
+    try { Commentary.warm(stations.list.map((s) => s.name), [Commentary.trainNo(type, line)]); } catch (err) { /* voice pieces are optional */ }
     let netNote = wantOnline && !FB.ok ? 'اللعب أونلاين محتاج إنترنت. هلعب لوحدي دلوقتي' : '';
     if (online) {
       U.setProgress(0.95, 'بتتصل بالسيرفر…'); net = new Online(scene, track, game); net.onEvent = onNet;
@@ -297,8 +298,8 @@
       if (hit.length) { const k = Math.max(3, hit[0].distance - 0.7); want.copy(tgt).addScaledVector(occDir, k); }
       break;
     }
-    camera.position.lerp(want, 1 - Math.exp(-12 * dt)); if (camera.position.distanceTo(want) > 40) camera.position.copy(want);
-    camera.lookAt(tgt);
+    camera.position.lerp(want, 1 - Math.exp(-9 * dt)); if (camera.position.distanceTo(want) > 40) camera.position.copy(want);
+    { const q0 = camera.quaternion.clone(); camera.lookAt(tgt); if (!orbit.fresh) camera.quaternion.copy(q0).slerp(camera.quaternion, 1 - Math.exp(-8 * dt)); orbit.fresh = false; }   // smooth turning of the view
   }
 
   function updateCamera(dt) {
@@ -306,7 +307,7 @@
     baseFov = (k === 'cab' ? 70 : 48) * Settings.d.fov; camera.fov = baseFov; camera.near = k === 'cab' ? 0.12 : 0.8; const f = Math.min(1, game.v / 25) * (Settings.d.shake ? 1 : 0);
     if (k === 'cab') {
       train.eye.getWorldPosition(camera.position); train.eye.getWorldQuaternion(camera.quaternion);
-      camera.position.y += Math.sin(game.t * 17) * 0.004 * f + Math.sin(game.t * 5.3) * 0.006 * f; camera.position.x += Math.sin(game.t * 3.1) * 0.004 * f;
+      camera.position.y += Math.sin(game.t * 17) * 0.0012 * f + Math.sin(game.t * 5.3) * 0.0025 * f; camera.position.x += Math.sin(game.t * 3.1) * 0.0015 * f;
       if (game.derailed) { const q = Math.min(1, game.derailT) * 0.12 * Math.max(0, 1 - game.derailT / 4); camera.position.x += (Math.random() - 0.5) * q; camera.position.y += (Math.random() - 0.5) * q; camera.rotateZ(Math.min(1, game.derailT / 1.5) * 0.5); }
       eq.setFromEuler(eu.set(cam.pitch, cam.yaw + Math.PI * 0, 0, 'YXZ')); camera.quaternion.multiply(eq); camera.fov = U.clamp(baseFov / cam.zoom, 28, 100);
     } else if (k === 'front') { orbit(10.5, 0, dt, 2.2); }
@@ -345,7 +346,7 @@
       if (e.type === 'arrive') {
         const ae = Math.abs(e.err), word = ae <= 1.5 ? 'وقفة مظبوطة!' : ae <= 4 ? 'وقفة ممتازة' : ae <= 8 ? 'وقفة كويسة' : e.err > 0 ? 'وقفت قبل العلامة' : 'عديت العلامة';
         ui.toast(`${st.name}: ${word} (${ae.toFixed(1)} م) +${e.pts + e.bonus} نقطة`, 'good', 4500);
-        Sound.chime(true); Commentary.say('وصلنا محطة ' + st.name + '. ' + word, 'pa', 'at' + e.idx);
+        Sound.chime(true); Commentary.say('وصلنا محطة ' + st.name + '.|' + word, 'pa', 'at' + e.idx);
       } else if (e.type === 'depart') { stations.setSignal(e.idx, true); stations.setBoarding(e.idx, 1); Sound.chime(true); if (!game.finished) ui.toast('الإشارة خضرا. تقدر تتحرك', 'good'); }
       else if (e.type === 'missed') { ui.toast('فوّتّ محطة ' + st.name + '. خصم 50 نقطة', 'bad', 4500); Sound.chime(false); }
       else if (e.type === 'moved') { Commentary.tip('الأبواب مفتوحة، متتحركش.', 'moved'); ui.toast('اتحركت والأبواب مفتوحة! خصم 30 نقطة', 'bad'); Sound.chime(false); }

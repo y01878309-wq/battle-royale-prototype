@@ -170,7 +170,7 @@ const Sound = {
     const ss = window.speechSynthesis;
     const go = () => {
       try {
-        const v = this.voice(), u = new SpeechSynthesisUtterance(text);
+        const v = this.voice(), u = new SpeechSynthesisUtterance(plain);
         if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'ar-EG';   // no Arabic voice listed: still ask for Arabic and let the browser choose
         u.rate = 0.88; u.pitch = 0.95; u.volume = Math.min(1, this.vol('vVoice'));
         let started = false; u.onstart = () => { started = true; }; u.onerror = () => { if (!started) { this.ttsBad = true; this.speakOnline(text); } };
@@ -181,19 +181,28 @@ const Sound = {
     };
     setTimeout(go, 900);
   },
-  /* Online fallback voice (needs internet): the text is cut into short sentences, each played in turn through an audio element. */
+  /* Streamed Arabic voice. The text is split at '|' marks (and at full stops) into short pieces; each piece comes from /api/tts, is kept by the service worker, and so plays again with no internet. */
+  voiceBlob(piece) {
+    this._vc = this._vc || new Map(); if (this._vc.has(piece)) return this._vc.get(piece);
+    const p = fetch('/api/tts?q=' + encodeURIComponent(piece)).then((r) => { if (!r.ok) throw new Error('tts'); return r.blob(); }).then((b) => URL.createObjectURL(b));
+    this._vc.set(piece, p); p.catch(() => this._vc.delete(piece)); return p;
+  },
   speakOnline(text) {
-    if (!navigator.onLine) return;
-    const parts = []; String(text).split(/(?<=[.؟!،])\s+/).forEach((p) => { while (p.length > 170) { let i = p.lastIndexOf(' ', 170); if (i < 40) i = 170; parts.push(p.slice(0, i)); p = p.slice(i).trim(); } if (p) parts.push(p); });
+    const parts = []; String(text).split('|').forEach((seg) => seg.split(/(?<=[.؟!،])\s+/).forEach((p) => { p = p.trim(); while (p.length > 170) { let i = p.lastIndexOf(' ', 170); if (i < 40) i = 170; parts.push(p.slice(0, i)); p = p.slice(i).trim(); } if (p) parts.push(p); }));
     const id = this._sid = (this._sid || 0) + 1; if (this._au) { try { this._au.pause(); } catch (e) { /* */ } }
-    const vol = Math.min(1, this.vol('vVoice')), next = (k) => {
+    const vol = Math.min(1, this.vol('vVoice')), next = async (k) => {
       if (id !== this._sid || k >= parts.length || this.muted) return;
-      const au = this._au = new Audio('https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=ar&q=' + encodeURIComponent(parts[k]));
-      au.volume = vol; au.onended = () => next(k + 1); au.onerror = () => { /* no connection or blocked: captions still show */ };
+      let url = null; try { url = await this.voiceBlob(parts[k]); } catch (e) { /* not saved and no connection */ }
+      if (!url && navigator.onLine) url = 'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=ar&q=' + encodeURIComponent(parts[k]);
+      if (id !== this._sid) return; if (!url) { next(k + 1); return; }
+      if (parts[k + 1]) this.voiceBlob(parts[k + 1]).catch(() => {});   // get the next piece ready while this one plays
+      const au = this._au = new Audio(url); au.volume = vol; au.onended = () => next(k + 1); au.onerror = () => next(k + 1);
       const p = au.play(); if (p && p.catch) p.catch(() => {});
     };
-    setTimeout(() => next(0), 900);
+    setTimeout(() => next(0), 700);
   },
+  /* Keeps pieces for offline use: called while online with the pieces the game is likely to say. */
+  async warmVoice(pieces) { if (!navigator.onLine || this._warm) return; this._warm = true; try { for (const p of pieces) { if (!navigator.onLine) break; try { await this.voiceBlob(p); } catch (e) { /* skip */ } await new Promise((r) => setTimeout(r, 250)); } } finally { this._warm = false; } },
   /* Settings: lets the player hear whether the device can speak Arabic. */
   testVoice() { this.init(); this.speak('السادة الركاب، قطر قطارات مصر يصل بعد قليل. برجاء الابتعاد عن حافة الرصيف.'); return !!this.voice() || navigator.onLine; },
 
