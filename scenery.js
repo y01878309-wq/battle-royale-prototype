@@ -72,7 +72,7 @@ class Scenery {
     U.setProgress(0.52, 'الرمال…'); this.buildSand(); U.setProgress(0.55, 'النخيل والشجر…'); this.buildPalms(); await U.tick();
     U.setProgress(0.68, 'القرى والمآذن…'); this.buildVillages(); await U.tick();
     U.setProgress(0.82, 'أعمدة التلغراف والمزلقانات…'); this.buildPoles(); this.buildCrossings(); this.buildValley(); await U.tick();
-    U.setProgress(0.9, 'العمارات والطريق السريع…'); this.buildBlocks(); this.buildTraffic(); await U.tick();
+    U.setProgress(0.9, 'العمارات والطريق السريع…'); this.buildBlocks(); this.buildTraffic(); this.buildOverpasses(); await U.tick();
   }
 
   buildPalms() {
@@ -220,6 +220,30 @@ class Scenery {
   }
 
   /* Rows of tall apartment blocks along both sides, with shops on the ground floor, and a highway beside them. */
+  /* Concrete road overpasses across the tracks in built-up areas: deck, railings, piers and two sloped approaches. */
+  buildOverpasses() {
+    const tr = this.track, L = tr.L, R = U.rng(515), H = 6.4, W = 60;
+    const conc = new THREE.MeshStandardMaterial({ color: 0x9a968c, roughness: 0.95 }), road = new THREE.MeshStandardMaterial({ color: 0x3a3b3d, roughness: 0.95 }), rail = new THREE.MeshStandardMaterial({ color: 0xb4b0a6, roughness: 0.9 });
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), grp = new THREE.Group(), add = (g, m, x, y, z, ry, rx) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.rotation.set(rx || 0, ry, 0, 'YXZ'); grp.add(o); return o; };
+    for (let s = 600; s < L - 600; s += 650 + R() * 500) {
+      if (this.inStation(s) || this.urban(s) < 0.4 || this.crossings.some((c) => Math.abs(c.s - s) < 120)) continue;
+      tr.at(s - 2, 0, 0, a); tr.at(s + 2, 0, 0, b); const ry = Math.atan2(b.x - a.x, b.z - a.z), c = tr.at(s, 0, 0, new THREE.Vector3()), cs = Math.cos(ry), sn = Math.sin(ry);
+      const place = (lat, y, g, m, rz) => add(g, m, c.x + cs * lat, y, c.z - sn * lat, ry, rz);
+      place(0, H, new THREE.BoxGeometry(W, 0.9, 10), conc); place(0, H + 0.47, new THREE.BoxGeometry(W, 0.06, 7.6), road);
+      for (const sd of [-1, 1]) {
+        const o1 = (z) => { const o = add(new THREE.BoxGeometry(W, 0.9, 0.35), rail, c.x + sn * z, H + 0.9, c.z + cs * z, ry); return o; }; o1(sd * 4.6);
+        for (const px of [-1, 1]) {   // piers at both ends and a ramp down to the ground
+          const lat = px * (W / 2 - 4); add(new THREE.BoxGeometry(2.2, H, 8), conc, c.x + cs * lat + sn * sd * 0, H / 2, c.z - sn * lat, ry);
+        }
+      }
+      for (const px of [-1, 1]) {
+        const len = 38, ang = Math.atan(H / len), lat = px * (W / 2 + len / 2 * Math.cos(ang) - 0.5), o = add(new THREE.BoxGeometry(len, 0.9, 10), conc, c.x + cs * lat, H / 2 - 0.2, c.z - sn * lat, ry);
+        o.rotation.set(0, ry, 0, 'YXZ'); o.rotateZ(-px * ang);
+      }
+    }
+    this.scene.add(grp);
+  }
+
   buildBlocks() {
     const tr = this.track, L = tr.L, R = U.rng(909), fr = Track.makeFrame(), o = new THREE.Object3D();
     const aptM = new THREE.MeshStandardMaterial({ map: Tex.apt(), roughness: 0.95 }), shopM = new THREE.MeshStandardMaterial({ map: Tex.shops(), roughness: 0.9 });
