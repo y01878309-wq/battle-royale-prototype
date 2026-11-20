@@ -265,7 +265,7 @@
     const ptr = new Map(); let pinch = 0;
     el.addEventListener('pointerdown', (ev) => {
       if (cabPress(ev, true)) { ev.preventDefault(); el.setPointerCapture(ev.pointerId); return; }
-      ptr.set(ev.pointerId, { x: ev.clientX, y: ev.clientY }); el.setPointerCapture(ev.pointerId); pinch = 0;
+      ptr.set(ev.pointerId, { x: ev.clientX, y: ev.clientY }); el.setPointerCapture(ev.pointerId); pinch = 0; cam.held = true;
     });
     el.addEventListener('pointermove', (ev) => { if (cabDrag && cabDrag.id === ev.pointerId) { const n = U.clamp(cabDrag.n0 + Math.round((cabDrag.y0 - ev.clientY) / (16 / Settings.d.sens)), 0, 8); if (cabDrag.act === 'throttle') ui.setNotch(n); } });
     el.addEventListener('pointermove', (ev) => {
@@ -275,11 +275,10 @@
         const [a, b] = [...ptr.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
         if (pinch) cam.zoom = 1; pinch = d; return;
       }
-      const k = CAMERAS[camIdx][0];
-      if (k === 'cab' || k === 'side') { cam.yaw = U.clamp(cam.yaw - dx * 0.005, -2.4, 2.4); cam.pitch = U.clamp(cam.pitch - dy * 0.004, -0.9, 0.9); }
-      else { cam.yaw -= dx * 0.005; cam.pitch = U.clamp(cam.pitch + dy * 0.004, 0.08, 1.3); }
+      // locked cameras: only the cab view can be glanced around (a little, and it springs back when the finger lifts); every other view stays put
+      if (CAMERAS[camIdx][0] === 'cab') { cam.yaw = U.clamp(cam.yaw - dx * 0.004, -0.9, 0.9); cam.pitch = U.clamp(cam.pitch - dy * 0.003, -0.4, 0.4); }
     });
-    for (const t of ['pointerup', 'pointercancel']) el.addEventListener(t, (ev) => { ptr.delete(ev.pointerId); pinch = 0; cabPress(ev, false); });
+    for (const t of ['pointerup', 'pointercancel']) el.addEventListener(t, (ev) => { ptr.delete(ev.pointerId); pinch = 0; if (!ptr.size) cam.held = false; cabPress(ev, false); });
     el.addEventListener('wheel', (ev) => { ev.preventDefault(); cam.zoom = 1; }, { passive: false });
     el.addEventListener('dblclick', resetCam);
   }
@@ -314,6 +313,7 @@
 
   function updateCamera(dt) {
     const k = CAMERAS[camIdx][0], body = train.loco.body; body.updateMatrixWorld(true);
+    { const d = DEFAULT[k], q = 1 - Math.exp(-7 * dt); if (!cam.held) { cam.yaw += (d[0] - cam.yaw) * q; cam.pitch += (d[1] - cam.pitch) * q; } }   // the view always eases back to its fixed angle
     baseFov = (k === 'cab' ? 70 : 48) * Settings.d.fov; camera.fov = baseFov; camera.near = k === 'cab' ? 0.12 : 0.8; const f = Math.min(1, game.v / 25) * (Settings.d.shake ? 1 : 0);
     if (k === 'cab') {
       train.eye.getWorldPosition(camera.position); train.eye.getWorldQuaternion(camera.quaternion);

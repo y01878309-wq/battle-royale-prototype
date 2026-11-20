@@ -42,6 +42,13 @@ section[hidden]{display:none}textarea{width:100%;padding:11px 12px;border-radius
   <nav id="tabs"><button data-t="players" class="on">👤 اللاعبين</button><button data-t="contests">🏆 المسابقات</button><button data-t="prices">🏷️ الأسعار</button><button data-t="game">⚙️ إعدادات اللعبة</button></nav>
   <section data-sec="players">
   <div class="card">
+    <h2>كل اللاعبين</h2>
+    <div class="row"><button class="alt" id="btnList">حمّل اللاعبين</button></div>
+    <input id="plSearch" placeholder="دور بالاسم أو الـ ID أو الرقم" style="margin-top:8px">
+    <div id="plCount" style="margin:6px 0;opacity:.8"></div>
+    <div style="overflow-x:auto"><table id="plTable" style="width:100%;border-collapse:collapse;font-size:13px"></table></div>
+  </div>
+  <div class="card">
     <h2>شحن لاعب بالـ ID</h2>
     <label>الـ ID بتاع اللاعب (6 أرقام)</label>
     <input id="pid" inputmode="numeric" maxlength="6" dir="ltr" placeholder="123456">
@@ -139,6 +146,24 @@ if (auth) {
 }
 
 const player = (id) => db.collection('players').doc(String(id).trim());
+let allPl = [];
+const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function drawPlayers() {
+  const q = ($('plSearch').value || '').trim().toLowerCase(), rows = allPl.filter((p) => !q || (p.id + ' ' + p.name + ' ' + p.contact).toLowerCase().includes(q));
+  $('plCount').textContent = 'العدد: ' + rows.length + ' من ' + allPl.length + ' لاعب';
+  $('plTable').innerHTML = '<tr style="text-align:right;opacity:.7"><th>ID</th><th>الاسم</th><th>الرقم / الإيميل</th><th>🪙</th><th>💎</th><th>XP</th><th>🚆</th></tr>' + rows.map((p) =>
+    '<tr data-id="' + esc(p.id) + '" style="border-top:1px solid rgba(255,255,255,.12);cursor:pointer"><td dir="ltr"><b>' + esc(p.id) + '</b></td><td>' + esc(p.name) + '</td><td dir="ltr">' + (p.contact ? esc(p.contact) : '—') + '</td><td>' + p.coins + '</td><td>' + p.gems + '</td><td>' + p.xp + '</td><td>' + p.owned + '</td></tr>').join('');
+  $('plTable').querySelectorAll('tr[data-id]').forEach((r) => { r.onclick = () => { $('pid').value = r.dataset.id; window.scrollTo({ top: 0, behavior: 'smooth' }); log('اخترت اللاعب ' + r.children[1].textContent + ' (' + r.dataset.id + '). اكتب المبلغ واشحن.', 'ok'); }; });
+}
+$('btnList').onclick = async () => {
+  log('بحمّل اللاعبين…');
+  try {
+    const sn = await db.collection('players').limit(2000).get();
+    allPl = sn.docs.map((d) => { const x = d.data(); return { id: d.id, name: x.name || '', contact: x.contact || '', coins: x.coins || 0, gems: x.gems || 0, xp: x.xp || 0, owned: (x.owned || []).length }; }).sort((a, b) => b.xp - a.xp);
+    drawPlayers(); log('اتحمل ' + allPl.length + ' لاعب ✔', 'ok');
+  } catch (e) { log(why(e), 'bad'); }
+};
+$('plSearch').oninput = drawPlayers;
 $('btnFind').onclick = async () => {
   try {
     const s = await player($('pid').value).get(); if (!s.exists) return log('مفيش لاعب بالـ ID ده', 'bad');

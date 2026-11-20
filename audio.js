@@ -114,8 +114,13 @@ const Sound = {
     const c = this.ctx; if (!c) return;
     if (this.buf.horn) {
       const t = c.currentTime;
-      if (on) { if (this.hornSrc) return; const s = c.createBufferSource(), g = c.createGain(); s.buffer = this.buf.horn; g.gain.value = 1; s.connect(g); g.connect(this.master); s.loop = true; s.loopStart = 4.3; s.loopEnd = 5.7; s.start(0, 3.4); this.hornSrc = { s, g }; s.onended = () => { this.hornSrc = null; }; }
-      else if (this.hornSrc) { const h = this.hornSrc; h.g.gain.setTargetAtTime(0, t, 0.1); h.s.stop(t + 0.5); this.hornSrc = null; }
+      if (on) {
+        if (this.hornSrc) return;
+        for (const d of this.hornDying || []) { try { d.g.gain.cancelScheduledValues(t); d.g.gain.setValueAtTime(0, t); d.s.stop(); } catch (e) { /* already stopped */ } }   // a fading horn from a quick earlier press is cut so presses never stack
+        this.hornDying = [];
+        const s = c.createBufferSource(), g = c.createGain(), h = { s, g }; s.buffer = this.buf.horn; g.gain.value = 1; s.connect(g); g.connect(this.master); s.loop = true; s.loopStart = 4.3; s.loopEnd = 5.7; s.start(0, 3.4); this.hornSrc = h;
+        s.onended = () => { if (this.hornSrc === h) this.hornSrc = null; };   // an old source ending must never clear a newer one (that left the horn stuck on)
+      } else if (this.hornSrc) { const h = this.hornSrc; this.hornSrc = null; h.g.gain.cancelScheduledValues(t); h.g.gain.setTargetAtTime(0, t, 0.05); h.s.stop(t + 0.25); (this.hornDying = this.hornDying || []).push(h); }
       return;
     }
     const t = c.currentTime, n = this.horns.length, lvl = 0.5 / Math.sqrt(n);

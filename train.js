@@ -474,7 +474,17 @@ class Train {
   /* the driver sits on his seat (behind the player's eye, so he shows from the outside cameras) */
   addDriver(parent, ofs) {
     if (typeof People === 'undefined' || !People.ready.police) return;
-    const f = People.makeSeated('police'); if (!f) return; f.scale.setScalar(1.15); if (this.cabStyle === 'lux') f.position.set(-0.49, 1.24, 5.08 + ofs); else f.position.set(-0.75, 1.08, 3.95 + ofs);   // the lux cab has its own seat, further forward and higher parent.add(f); this.driverFig = f;
+    const f = People.makeSeated('police'); if (!f) return; f.scale.setScalar(1.15); if (this.cabStyle === 'lux') f.position.set(-0.49, 1.24, 5.08 + ofs); else f.position.set(-0.75, 1.08, 3.95 + ofs); this.addDriverFace(f); parent.add(f); this.driverFig = f;   // the lux cab has its own seat, further forward and higher
+  }
+
+  /* The driver wears the owner's own face: his photo (models/driver_face.png) on a soft-edged plane over the head of the seated figure. */
+  addDriverFace(f) {
+    try {
+      f.updateMatrixWorld(true); const bb = new THREE.Box3().setFromObject(f).applyMatrix4(new THREE.Matrix4().copy(f.matrixWorld).invert()), cy = bb.max.y - 0.125, H = 0.26;
+      if (!Train._faceTex) { const t = new THREE.TextureLoader().load('models/driver_face.png?v=' + (window.QS_BUILD || 1)); t.encoding = THREE.sRGBEncoding; Train._faceTex = t; }
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(H * 192 / 264, H), new THREE.MeshStandardMaterial({ map: Train._faceTex, transparent: true, alphaTest: 0.08, roughness: 1, metalness: 0, emissive: 0x555555, emissiveMap: Train._faceTex }));
+      m.position.set(0, cy, 0.17); m.castShadow = false; f.add(m);
+    } catch (e) { console.error('FACE ' + e.message); }
   }
 
   /* Emoji sticker on the cab dashboard, chosen in the workshop. */
