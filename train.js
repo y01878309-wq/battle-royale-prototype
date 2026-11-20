@@ -258,10 +258,12 @@ class Train {
     this.finish(hull, spec.len, W, 1.0, 3.9);
     const rn = this.type.real ? (kind === 'velaro' || kind === 'dmu' ? this.type.real.head : null) : (typeof Models !== 'undefined' ? Models.pickFor(this.type) : null), real = rn && typeof Models !== 'undefined' ? Models.get(rn, spec.len, { top: spec.top, low: spec.low, trim: spec.trim }) : null;   // a real 3D model replaces the procedural shell once it is loaded
     if (real) { hull.children.forEach((c) => { c.visible = false; }); hull.add(real); }
+    const ge = !real && diesel && !boxy && !dmu && !vel && typeof Ge2595 !== 'undefined' ? Ge2595.build(spec.len) : null;   // the author's own Egyptian GE model
+    if (ge) { hull.children.forEach((c) => { c.visible = false; }); hull.add(ge); }
     this.scene.add(body);
     const ax = dmu || vel ? 2 : 3, sp = dmu || vel ? 2.5 : 1.9, bg = [this.makeBogie(ax, sp), this.makeBogie(ax, sp)];
-    if (real) bg.forEach((b) => { b.g.visible = false; });
-    return { body, len: spec.len, bs: real ? spec.len * (kind === 'velaro' || kind === 'dmu' ? 0.68 : 0.55) : vel ? 17.4 : dmu ? 15.6 : 11.4, bogies: bg, loco: driver };
+    if (real || ge) bg.forEach((b) => { b.g.visible = false; });
+    return { body, len: spec.len, bs: ge ? 11.6 * spec.len / 20.9 : real ? spec.len * (kind === 'velaro' || kind === 'dmu' ? 0.68 : 0.55) : vel ? 17.4 : dmu ? 15.6 : 11.4, bogies: bg, loco: driver };
   }
 
   /* Finishing pass for every loco and coach: weathering overlay on both sides, underframe tanks and boxes, roof walkway strip. */
