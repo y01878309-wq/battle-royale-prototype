@@ -321,6 +321,35 @@ const Ge2595 = (() => {
 
           add(locoRoot, new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.34, 2.66), chevronMat), dir*10.16, 0.28, 0, 0, 0, dir*0.22);
         });
+
+    /* ---- additions: details of the real General that were missing from the base model ---- */
+    const baseM = new THREE.MeshStandardMaterial({ color: 0xf2f4f7, metalness: 0.2, roughness: 0.4 });
+    // continuous grab-rails on both sides along the walkway, with their posts
+    [-1.5, 1.5].forEach((z) => {
+      add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 14.6, 8), M.steel), 0, 1.22, z, 0, 0, Math.PI / 2);
+      for (let x = -7.2; x <= 7.2; x += 1.8) add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.34, 6), M.steel), x, 1.1, z);
+    });
+    // fuel tank and under-frame pipes with brake cylinders
+    add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 5.6, 20), M.black), 0, 0.62, 0, 0, 0, Math.PI / 2);
+    add(locoRoot, new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.1, 1.3), M.iron), 0, 0.3, 0);
+    [-1, 1].forEach((sz) => { add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 12.5, 8), M.steel), 0, 0.82, sz * 0.72, 0, 0, Math.PI / 2); add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.6, 12), M.iron), sz * 3.2, 0.66, sz * 1.05, Math.PI / 2, 0, 0); });
+    // roof: radio antennas, strobe, bell and the cooling-fan cage rails
+    [[-6.0, 0.55], [2.6, -0.55]].forEach(([x, z]) => { add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.1, 6), M.black), x, 4.88, z); add(locoRoot, new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), M.red), x, 5.44, z); });
+    add(locoRoot, new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.24), M.black), 8.7, 4.34, 0.6);
+    add(locoRoot, new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.24), M.black), -8.7, 4.34, -0.6);
+    [-1.2, 1.2].forEach((z) => add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 4.2, 6), M.steel), -3.8, 4.46, z, 0, 0, Math.PI / 2));
+    [1, -1].forEach((dir) => {
+      // sun visor and cab-door grab handles
+      const vis = add(locoRoot, new THREE.Mesh(new THREE.BoxGeometry(2.46, 0.05, 0.42), baseM), dir * 9.62, 4.06, 0); vis.rotation.y = dir === 1 ? Math.PI / 2 : -Math.PI / 2; vis.rotation.x = 0.28 * dir;
+      [-1.52, 1.52].forEach((z) => { add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 1.05, 8), baseM), dir * 8.6, 2.2, z); add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 1.05, 8), baseM), dir * 8.18, 2.2, z); });
+      // number board and flag on the nose
+      const nb = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.26), new THREE.MeshStandardMaterial({ map: (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 108; const g = c.getContext('2d'); g.fillStyle = '#111'; g.fillRect(0, 0, 256, 108); g.fillStyle = '#fff'; g.font = 'bold 74px Tahoma'; g.textAlign = 'center'; g.fillText('٢٥٩٥', 128, 84); return new THREE.CanvasTexture(c); })(), roughness: 0.5 }));
+      add(locoRoot, nb, dir * 10.3, 2.62, 0.0, 0, dir === 1 ? Math.PI / 2 : -Math.PI / 2, 0); nb.rotation.x = -0.055;
+      // front step plates with edge grips either side of the coupler
+      [-1.2, 1.2].forEach((z) => add(locoRoot, new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.4), diamondMat), dir * 10.2, 1.28, z));
+      // grey louvre band under the windscreen (as on the real nose)
+      for (let r = 0; r < 5; r++) add(locoRoot, new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.028, 1.1), M.iron), dir * 10.31, 1.96 + r * 0.055, 0);
+    });
     return { root: locoRoot, wheels: wheelsList, fans: fansList };
   }
   return {
