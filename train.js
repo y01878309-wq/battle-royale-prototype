@@ -167,9 +167,13 @@ class Train {
     gl.position.set(0, win.y + win.n[0] * 0.12 * 0, win.z); if (!boxy) { gl.position.y = win.y + win.n[0] * 0.12; gl.position.z = win.z + win.n[1] * 0.12; } gl.rotation.x = win.th; hull.add(gl);
     if (boxy) { this.box(2.9, 0.1, 0.45, M.blue, 0, hood ? 4.2 : 3.92, h + 0.2, hull); }
     if (driver) this.glass = gl;
+    if (!boxy && !vel && !dmu) {   // two-pane windscreen with dark frame, centre pillar and smaller lamps like the real GE
+      const fr = (w, h, x, y) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), M.dark); m.position.set(x, y, 0.012); gl.add(m); };
+      fr(0.07, win.h, 0, 0); fr(win.w, 0.07, 0, win.h / 2 - 0.035); fr(win.w, 0.07, 0, -win.h / 2 + 0.035); fr(0.07, win.h, -win.w / 2 + 0.035, 0); fr(0.07, win.h, win.w / 2 - 0.035, 0);
+    }
     // front lamps, tail lamps, buffer beam, buffers
     const lampY = vel ? 1.35 : 1.7, lampX = vel ? 0.95 : ((loftOn || loftD) && !boxy ? 0.68 : 1.0), lampZ = vel ? h + 0.02 : ((loftOn || loftD) && !boxy ? h + 0.02 : h + 0.1);
-    for (const sx of [-lampX, lampX]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16), M.lamp); l.rotation.x = Math.PI / 2; l.position.set(sx, lampY, lampZ); hull.add(l); }
+    for (const sx of [-lampX, lampX]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(vel ? 0.2 : 0.14, vel ? 0.2 : 0.14, 0.1, 16), M.lamp); l.rotation.x = Math.PI / 2; l.position.set(sx, lampY, lampZ); hull.add(l); }
     if (!vel) { const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.1, 16), M.lamp); hl.rotation.x = Math.PI / 2; hl.position.set(0, boxy ? 2.2 : 2.45, h + 0.1); hl.visible = !boxy; hull.add(hl); }
     for (const sx of [-1.25, 1.25]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 12), M.redlamp); r.rotation.x = Math.PI / 2; r.position.set(sx, 1.7, -h - 0.1); hull.add(r); }
     if (!vel) {
@@ -213,6 +217,7 @@ class Train {
       if (dmu) { const hn = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 0.55, 10), M.steel); hn.rotation.x = Math.PI / 2; hn.position.set(sx * 0.35, 4.42, h - 4); hull.add(hn); }
     }
     if (diesel) this.box(2.3, 0.7, 6.4, M.dark, 0, 0.78, 0, hull);
+    if (!vel && !boxy && !dmu && !hood) this.box(2.72, 0.42, spec.len - 3.2, M.dark, 0, 1.0, -0.2, hull);   // black underframe skirt
     if (!vel && !boxy) for (const wx of [-0.65, 0.65]) { const w = this.box(0.03, 0.9, 0.04, M.dark, wx, 3.4, h - 1.3, hull); w.rotation.x = 0.97; w.rotation.z = 0.5 * Math.sign(wx); }   // wipers
     body.add(hull);
     if (!vel) {   // mirrors, coupler, air hoses, stanchions

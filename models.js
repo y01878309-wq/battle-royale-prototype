@@ -2,13 +2,14 @@
 const Models = {
   cache: {}, ready: {},
   /* which real model stands in for each procedural loco kind (the procedural one stays as a fallback while the file loads or if it is missing) */
-  REAL: { ge: 'gegyp', box: 'f59', hood: 'sd40' },
+  REAL: { ge: 'es4e', box: 'f59', hood: 'sd40' },
   /* which real loco model a train type uses: a stable variety so the different types in the shop do not all look the same */
   pickFor(type) {
     if (type.real) return type.real.head;
     const k = type.loco.kind; if (k !== 'ge' && k !== 'box' && k !== 'hood') return null;
     let h = 0; for (const c of type.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-    return k === 'box' ? 'f59' : k === 'hood' ? 'sd40' : 'gegyp';
+    if (k === 'ge') return null;   // the GE kind uses the procedural Egyptian-style loco (sloped nose, arched roof, livery colours)
+    return k === 'box' ? 'f59' : 'sd40';
   },
   preload(names) { return Promise.all(names.map((n) => this.load(n).catch(() => null))); },
   /* synchronous copy, only if already loaded; scaled to len metres */
@@ -37,6 +38,7 @@ const Models = {
   /* length: the model is scaled so its long axis (z) is this many metres */
   DEFS: {
     gegyp: { len: 21.6, credit: 'GE AC4400CW "Awvr 777" by zairiq-zairiq-123-pixar-cars-bfdi (CC BY 4.0, Sketchfab), repainted in an Egyptian livery' },
+    es4e: { len: 21.6, credit: 'GE ES44DC BNSF by zairiq zairiq 8 (CC BY 4.0, Sketchfab), repainted in an Egyptian livery' },
     ge767: { len: 21.6, credit: 'GE AC4400CW "Awvr 767" by zairiq-zairiq-123-pixar-cars-bfdi (CC BY 4.0, Sketchfab)' },
     ge777: { len: 21.6, credit: 'GE AC4400CW "Awvr 777" by zairiq-zairiq-123-pixar-cars-bfdi (CC BY 4.0, Sketchfab)' },
     f59: { len: 17.5, credit: 'Metrolink EMD F59PH by Trashbulldogproductions (CC BY 4.0, Sketchfab)' },
