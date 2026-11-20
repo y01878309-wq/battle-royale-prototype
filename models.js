@@ -2,13 +2,13 @@
 const Models = {
   cache: {}, ready: {},
   /* which real model stands in for each procedural loco kind (the procedural one stays as a fallback while the file loads or if it is missing) */
-  REAL: { ge: 'ge777', box: 'f59', hood: 'sd40' },
+  REAL: { ge: 'gegyp', box: 'f59', hood: 'sd40' },
   /* which real loco model a train type uses: a stable variety so the different types in the shop do not all look the same */
   pickFor(type) {
     if (type.real) return type.real.head;
     const k = type.loco.kind; if (k !== 'ge' && k !== 'box' && k !== 'hood') return null;
     let h = 0; for (const c of type.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-    return k === 'box' ? 'f59' : k === 'hood' ? 'sd40' : ['ge777', 'ge767', 'sd40', 'f59'][h % 4];
+    return k === 'box' ? 'f59' : k === 'hood' ? 'sd40' : 'gegyp';
   },
   preload(names) { return Promise.all(names.map((n) => this.load(n).catch(() => null))); },
   /* synchronous copy, only if already loaded; scaled to len metres */
@@ -36,6 +36,7 @@ const Models = {
   },
   /* length: the model is scaled so its long axis (z) is this many metres */
   DEFS: {
+    gegyp: { len: 21.6, credit: 'GE AC4400CW "Awvr 777" by zairiq-zairiq-123-pixar-cars-bfdi (CC BY 4.0, Sketchfab), repainted in an Egyptian livery' },
     ge767: { len: 21.6, credit: 'GE AC4400CW "Awvr 767" by zairiq-zairiq-123-pixar-cars-bfdi (CC BY 4.0, Sketchfab)' },
     ge777: { len: 21.6, credit: 'GE AC4400CW "Awvr 777" by zairiq-zairiq-123-pixar-cars-bfdi (CC BY 4.0, Sketchfab)' },
     f59: { len: 17.5, credit: 'Metrolink EMD F59PH by Trashbulldogproductions (CC BY 4.0, Sketchfab)' },
