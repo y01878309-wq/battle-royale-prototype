@@ -26,7 +26,7 @@ class Train {
   /* Which interior this train shows: the metro always has its own; otherwise the one the player picked in the store (the terracotta one is gems-only). */
   static cabStyleFor(type) {
     if (type.loco.kind === 'metro') return 'metro';
-    try { const c = localStorage.getItem('qs-cab'); if (c === 'ge' || c === 'desiro') return c; } catch (e) { /* */ }
+    try { const c = localStorage.getItem('qs-cab'); if (c === 'ge' || c === 'desiro' || c === 'lux') return c; } catch (e) { /* */ }
     return 'terra';
   }
 
@@ -237,7 +237,7 @@ class Train {
       this.locoHull = hull;
       const cab = new THREE.Group(), ic = new THREE.MeshStandardMaterial({ color: 0xcdb089, roughness: 0.92 }), dk = new THREE.MeshStandardMaterial({ color: 0x1c1b1a, roughness: 0.7 }), wood = new THREE.MeshStandardMaterial({ color: 0x6d4a30, roughness: 0.75 }), trimM = new THREE.MeshStandardMaterial({ color: 0x8a5a2c, roughness: 0.8 });
       this.cabShell(cab, this.cabStyle); this.addDriver(body, h - 9.8);
-      const ey = new THREE.Vector3(-0.75, 3.05, 5.0);
+      const ey = this.cabStyle === 'lux' ? new THREE.Vector3(-0.42, 2.8, 5.0) : new THREE.Vector3(-0.75, 3.05, 5.0);
       this.dials = [];
       for (const [x, max, lab, big] of [[-0.75, this.dialMax, 'كم/س', 0.34], [-0.15, 10, 'بار', 0.26], [0.35, 10, 'قوة', 0.26]]) {
         const grp = new THREE.Group(); grp.position.set(x, 2.58, 6.2);
@@ -474,7 +474,7 @@ class Train {
   /* the driver sits on his seat (behind the player's eye, so he shows from the outside cameras) */
   addDriver(parent, ofs) {
     if (typeof People === 'undefined' || !People.ready.police) return;
-    const f = People.makeSeated('police'); if (!f) return; f.scale.setScalar(1.15); f.position.set(-0.75, 1.08, 3.95 + ofs); parent.add(f); this.driverFig = f;
+    const f = People.makeSeated('police'); if (!f) return; f.scale.setScalar(1.15); if (this.cabStyle === 'lux') f.position.set(-0.49, 1.24, 5.08 + ofs); else f.position.set(-0.75, 1.08, 3.95 + ofs);   // the lux cab has its own seat, further forward and higher parent.add(f); this.driverFig = f;
   }
 
   /* Emoji sticker on the cab dashboard, chosen in the workshop. */
@@ -487,6 +487,7 @@ class Train {
 
   setCabView(on) {
     this.cabMode = on; this.cab.visible = on;
+    if (this.driverFig && this.cabStyle === 'lux') this.driverFig.visible = !on || !!this.showDriver;   // first person: the camera sits in the driver's head
     if (this.metroRoot) { const keep = new Set([this.cab, this.eye, this.nose, this.spot, this.spot && this.spot.target]); this.metroRoot.children.forEach((c) => { if (!keep.has(c) && !c.userData.skip) c.visible = !on; }); }   // the metro car is a group of parts, so hide every part except the cab
     else this.locoHull.visible = !on;
   }
@@ -662,6 +663,7 @@ class Train {
     const glassM = new THREE.MeshStandardMaterial({ color: 0xa8d0e8, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.13, depthWrite: false });
     if (style === 'ge') return this.cabGE(cab, dk, glassM);
     if (style === 'desiro') return this.cabDesiro(cab, dk, glassM);
+    if (style === 'lux') return this.cabLux(cab);
     const metro = style === 'metro';   // the metro cab reuses the verified rounded-window shell in light grey and white with a teal stripe
     {
       // 'terra': cab shell modelled on the reference photo: terracotta walls and desk, beige perforated ceiling, rounded framed windows with glass, black screen with a row of yellow buttons
@@ -761,7 +763,11 @@ class Train {
     for (let i = n0; i < cab.children.length; i++) cab.children[i].position.x *= -1;
   }
 
+  /* 'lux': the owner's own luxury Egyptian cab (cablux.js), mounted as written; its levers, buttons and screens are driven by setCabState. */
+  cabLux(cab) { const L = this.lux = CabLux.build(); cab.add(L.mount); }
+
   buildCabControls(cab) {
+    if (this.cabStyle === 'lux') { this.cabHits = this.lux.hits; this.cabCtl = {}; return; }
     if (this.cabStyle === 'ge') return this.cabControlsGE(cab);
     this.cabHits = []; const C = this.cabCtl = {};
     const std = (col, r, m) => new THREE.MeshStandardMaterial({ color: col, roughness: r === undefined ? 0.6 : r, metalness: m || 0 });
@@ -796,6 +802,7 @@ class Train {
   /* info: { notch, brake, doors (0..1), emerg, lights, horn, kmh, limit, dist, name } */
   setCabState(i) {
     const C = this.cabCtl; if (!C || !this.cab || !this.cab.visible) return;
+    if (this.lux) return this.lux.update(i, this.dialMax);
     C.throttle.rotation.x = 0.55 - (i.notch / 8) * 1.1; C.brake.rotation.x = 0.55 - i.brake * 1.1;
     C.horn.position.y = i.horn ? 2.535 : 2.55; C.emerg.position.y = i.emerg ? 2.535 : 2.55; C.door.position.y = i.doors > 0.5 ? 2.535 : 2.55;
     C.light.material.emissiveIntensity = i.lights ? 1.2 : 0.1;

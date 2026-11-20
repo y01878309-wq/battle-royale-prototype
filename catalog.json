@@ -232,6 +232,7 @@
     "train:talgo-prl": 40,
     "train:monorail": 30,
     "cab:ge": 30,
-    "cab:desiro": 60
+    "cab:desiro": 60,
+    "cab:lux": 90
   }
 }
