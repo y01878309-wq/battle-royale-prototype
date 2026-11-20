@@ -339,8 +339,7 @@ const Ge2595 = (() => {
     add(locoRoot, new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.24), M.black), -8.7, 4.34, -0.6);
     [-1.2, 1.2].forEach((z) => add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 4.2, 6), M.steel), -3.8, 4.46, z, 0, 0, Math.PI / 2));
     [1, -1].forEach((dir) => {
-      // sun visor and cab-door grab handles
-      const vis = add(locoRoot, new THREE.Mesh(new THREE.BoxGeometry(2.46, 0.05, 0.42), baseM), dir * 9.62, 4.06, 0); vis.rotation.y = dir === 1 ? Math.PI / 2 : -Math.PI / 2; vis.rotation.x = 0.28 * dir;
+      // cab-door grab handles
       [-1.52, 1.52].forEach((z) => { add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 1.05, 8), baseM), dir * 8.6, 2.2, z); add(locoRoot, new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 1.05, 8), baseM), dir * 8.18, 2.2, z); });
       // number board and flag on the nose
       const nb = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.26), new THREE.MeshStandardMaterial({ map: (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 108; const g = c.getContext('2d'); g.fillStyle = '#111'; g.fillRect(0, 0, 256, 108); g.fillStyle = '#fff'; g.font = 'bold 74px Tahoma'; g.textAlign = 'center'; g.fillText('٢٥٩٥', 128, 84); return new THREE.CanvasTexture(c); })(), roughness: 0.5 }));
