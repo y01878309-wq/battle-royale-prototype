@@ -104,7 +104,11 @@ section[hidden]{display:none}textarea{width:100%;padding:11px 12px;border-radius
     <label>سطر الإعداد</label><input id="gx_made" placeholder="إعداد يوسف فرج، ومساعدة يوسف خربوش.">
     <label>عنوان الحقوق</label><input id="gx_rightsHead" placeholder="حقوق النشر والطباعة محفوظة">
     <label>نص الحقوق</label><textarea id="gx_rights" rows="3" placeholder="حقوق النشر والطباعة ملك ..."></textarea>
-    <label>إعلان يظهر للاعبين في الرئيسية (اختياري)</label><textarea id="gx_news" rows="2"></textarea>
+    <label>رسائل الشاشة الرئيسية (بتظهر للاعبين واحدة ورا التانية)</label>
+    <div id="newsBox" style="margin:6px 0"></div>
+    <div class="row"><input id="newsNew" placeholder="اكتب رسالة جديدة…" style="flex:1"><button class="alt" id="newsAdd" type="button">➕ أضف</button></div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="newsOnly" style="width:auto"> أخفي أخبار اللعبة الأساسية وأظهر رسايلي بس</label>
+    <small style="opacity:.7">بعد ما تضيف أو تمسح أو ترتّب، دوس «حفظ إعدادات اللعبة» تحت عشان تظهر للاعبين.</small>
     <h3>الأداء (عشان اللعبة متهنجش)</h3>
     <label>أعلى جودة رسوميات مسموحة</label><select id="gx_gfx"><option value="">بدون حد</option><option value="0">منخفضة</option><option value="1">متوسطة</option><option value="2">عالية</option></select>
     <label>أقصى عدد ناس حقيقيين في المحطة</label><input id="gx_crowd" inputmode="numeric" dir="ltr" placeholder="مثلاً 12">
@@ -147,7 +151,6 @@ if (auth) {
 
 const player = (id) => db.collection('players').doc(String(id).trim());
 let allPl = [];
-const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function drawPlayers() {
   const q = ($('plSearch').value || '').trim().toLowerCase(), rows = allPl.filter((p) => !q || (p.id + ' ' + p.name + ' ' + p.contact).toLowerCase().includes(q));
   $('plCount').textContent = 'العدد: ' + rows.length + ' من ' + allPl.length + ' لاعب';
@@ -241,16 +244,27 @@ $('btnSavePrices').onclick = async () => {
 
 /* ---- sections ---- */
 document.querySelectorAll('#tabs button').forEach((b) => { b.onclick = () => { document.querySelectorAll('#tabs button').forEach((x) => x.classList.toggle('on', x === b)); document.querySelectorAll('section[data-sec]').forEach((s) => { s.hidden = s.dataset.sec !== b.dataset.t; }); }; });
+/* ---- home-screen messages: add, delete and reorder ---- */
+let newsList = [];
+function drawNews() {
+  $('newsBox').innerHTML = newsList.length ? newsList.map((t, i) => '<div style="display:flex;gap:6px;align-items:center;margin:4px 0;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.06)"><span style="flex:1">' + esc(t) + '</span><button type="button" class="alt" data-n="up" data-i="' + i + '">⬆</button><button type="button" class="alt" data-n="dn" data-i="' + i + '">⬇</button><button type="button" class="alt" data-n="ed" data-i="' + i + '">✏️</button><button type="button" class="alt" data-n="del" data-i="' + i + '">🗑</button></div>').join('') : '<small style="opacity:.7">مفيش رسايل. الرسايل اللي تضيفها بتظهر هنا.</small>';
+  $('newsBox').querySelectorAll('button[data-n]').forEach((b) => { b.onclick = () => { const i = +b.dataset.i, k = b.dataset.n;
+    if (k === 'del') newsList.splice(i, 1); else if (k === 'up' && i > 0) [newsList[i - 1], newsList[i]] = [newsList[i], newsList[i - 1]]; else if (k === 'dn' && i < newsList.length - 1) [newsList[i + 1], newsList[i]] = [newsList[i], newsList[i + 1]];
+    else if (k === 'ed') { const t = prompt('عدّل الرسالة', newsList[i]); if (t !== null && t.trim()) newsList[i] = t.trim(); }
+    drawNews(); }; });
+}
+$('newsAdd').onclick = () => { const t = $('newsNew').value.trim(); if (!t) return; newsList.push(t); $('newsNew').value = ''; drawNews(); };
+drawNews();
 /* ---- game settings: config/game is read by every player when online and kept for offline play ---- */
 $('btnLoadGame').onclick = async () => {
   try { const s = await db.collection('config').doc('game').get(), g = s.exists ? s.data() : {}, t = g.texts || {};
     for (const k of ['name', 'made', 'rightsHead', 'rights']) $('gx_' + k).value = t[k] || '';
-    $('gx_news').value = g.news || ''; $('gx_gfx').value = g.maxDetail == null ? '' : String(g.maxDetail); $('gx_crowd').value = g.crowdMax == null ? '' : g.crowdMax; $('gx_comm').value = g.commentary === false ? '0' : '1'; $('gx_race').value = g.race === false ? '0' : '1'; log('اتحمّلت إعدادات اللعبة', 'ok'); }
+    newsList = Array.isArray(g.newsList) ? g.newsList.slice() : (g.news ? [g.news] : []); $('newsOnly').checked = !!g.newsOnly; drawNews(); $('gx_gfx').value = g.maxDetail == null ? '' : String(g.maxDetail); $('gx_crowd').value = g.crowdMax == null ? '' : g.crowdMax; $('gx_comm').value = g.commentary === false ? '0' : '1'; $('gx_race').value = g.race === false ? '0' : '1'; log('اتحمّلت إعدادات اللعبة', 'ok'); }
   catch (e) { log('مقدرتش أحمّل: ' + why(e), 'bad'); }
 };
 $('btnSaveGame').onclick = async () => {
   const t = {}; for (const k of ['name', 'made', 'rightsHead', 'rights']) { const v = $('gx_' + k).value.trim(); if (v) t[k] = v; }
-  const g = { texts: t, news: $('gx_news').value.trim(), commentary: $('gx_comm').value === '1', race: $('gx_race').value === '1' };
+  const g = { texts: t, news: newsList[0] || '', newsList: newsList.slice(), newsOnly: $('newsOnly').checked, commentary: $('gx_comm').value === '1', race: $('gx_race').value === '1' };
   if ($('gx_gfx').value !== '') g.maxDetail = parseInt($('gx_gfx').value, 10); const c = parseInt($('gx_crowd').value, 10); if (c >= 0) g.crowdMax = c;
   try { await db.collection('config').doc('game').set(g); log('اتحفظت إعدادات اللعبة ✔', 'ok'); } catch (e) { log('فشل الحفظ: ' + why(e), 'bad'); }
 };

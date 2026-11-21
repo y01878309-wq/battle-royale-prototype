@@ -375,8 +375,10 @@ const CabLux = (() => {
 
     // 7. التليفون بسلكه الحلزوني + الأجندة
     const phoneGrp = put(cabRoot, new THREE.Group(), 0.88, 0.86, 0.78, 0, 0, -0.22);
-    put(phoneGrp, new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.30), new THREE.MeshStandardMaterial({ map: makePhoneTex() })), 0, 0, 0);
-    put(phoneGrp, new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.04, 0.055), M.rubber), -0.02, 0.05, -0.14);
+    const phoneBody = put(phoneGrp, new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.30), new THREE.MeshStandardMaterial({ map: makePhoneTex() })), 0, 0, 0);
+    const handset = put(phoneGrp, new THREE.Group(), -0.02, 0.05, -0.14);
+    put(handset, new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.04, 0.055), M.rubber), 0, 0, 0);
+    [-0.085, 0.085].forEach(hx => put(handset, new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 14), M.rubber), hx, -0.012, 0));
     const cordPts = [];
     for (let i=0; i<=14; i++) cordPts.push(new THREE.Vector3(-0.08 - Math.sin(i*1.2)*0.02, 0.02 - i*0.004, -0.16 + i*0.008));
     put(phoneGrp, new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cordPts), 16, 0.006, 6, false), M.rubber), 0, 0, 0);
@@ -460,6 +462,8 @@ const CabLux = (() => {
     hit(door, 'door'); big(cabRoot, door.position.x, door.position.y, door.position.z, 0.07, 'door');
     hit(lite, 'light'); big(cabRoot, lite.position.x, lite.position.y, lite.position.z, 0.07, 'light');
     hit(emBtn, 'emerg'); big(cabRoot, emBtn.position.x, emBtn.position.y, emBtn.position.z, 0.09, 'emerg');
+    [horn, door, lite].forEach(b => { b.position.y -= 0.014; }); emBtn.position.y -= 0.014;   // the push buttons sit a little deeper in their bezels
+    hit(phoneBody, 'phone'); big(phoneGrp, 0, 0.04, 0, 0.16, 'phone'); handset.traverse(o => { if (o.isMesh) hit(o, 'handset'); }); big(handset, 0, 0, 0, 0.1, 'handset');
     const y0 = { horn: horn.position.y, door: door.position.y, lite: lite.position.y, em: emBtn.position.y };
     lite.material.emissive = new THREE.Color(0x2563eb); door.material.emissive = new THREE.Color(0x2563eb); horn.material.emissive = new THREE.Color(0xfacc15); emBtn.material.emissive = new THREE.Color(0xb91c1c);
 
@@ -523,6 +527,7 @@ const CabLux = (() => {
     function update(i, max) {
       const now = performance.now(), dt = Math.min(0.1, (now - t0) / 1000); t0 = now; max = max || 160;
       fanBlades.rotation.y += dt * 12;
+      ph.k += ((ph.lifted ? 1 : 0) - ph.k) * Math.min(1, dt * 8); handset.position.set(-0.02 - 0.5 * ph.k, 0.05 + 0.38 * ph.k, -0.14 + 0.15 * ph.k); handset.rotation.z = 1.0 * ph.k;
       throttlePivot.rotation.z = 0.38 - (i.notch / 8) * 0.78; brakePivot.rotation.z = 0.38 - i.brake * 0.78; revPivot.rotation.z = -0.32;
       horn.position.y = y0.horn - (i.horn ? 0.014 : 0); emBtn.position.y = y0.em - (i.emerg ? 0.016 : 0); door.position.y = y0.door - (i.doors > 0.5 ? 0.012 : 0);
       lite.material.emissiveIntensity = i.lights ? 1.0 : 0.15; door.material.emissiveIntensity = i.doors > 0.5 ? 1.0 : 0.15; horn.material.emissiveIntensity = i.horn ? 1.0 : 0.15;
@@ -531,7 +536,10 @@ const CabLux = (() => {
       if (k === key) return; key = k;
       drawEM2(i, max); drawSpeedo2(i.kmh, max); drawAtc2(i.limit, max); if (airTex) drawAir2(i.brake);
     }
-    return { mount, hits, update };
+    // the landline: tap the handset (or the phone) to pick up / hang up; while it is up, tapping the phone itself switches to the next person
+    const ph = { lifted: false, k: 0 };
+    function togglePhone(on) { ph.lifted = on === undefined ? !ph.lifted : !!on; return ph.lifted; }
+    return { mount, hits, update, togglePhone, phone: ph };
   }
   return { build };
 })();

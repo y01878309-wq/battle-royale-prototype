@@ -212,7 +212,7 @@
     applyCamera(S.cam || 0); ui.setMuteLabel(Sound.muted); bindTilt();
     if (netNote) setTimeout(() => ui.toast(netNote, net ? 'good' : 'bad', 4500), 6200);
     ui.toast('اضغط W علشان تزود القوة، وابدأ الفرملة قبل علامة «قف» بـ 300 م', '', 5600);
-    window.__game = { game, track, train, stations, world, sky, renderer, scene, camera, route }; Object.defineProperty(window.__game, 'crowd', { get: () => crowd });
+    window.__game = { game, track, train, stations, world, sky, renderer, scene, camera, route, cam, cams: () => camIdx }; Object.defineProperty(window.__game, 'crowd', { get: () => crowd });
     last = performance.now(); requestAnimationFrame(frame);
   }
 
@@ -245,6 +245,19 @@
 
   /* Controls inside the cab: click a button, drag the throttle lever, hold the brake lever. */
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); let cabDrag = null, lightsOn = false;
+  const PHONE = [
+    (n) => 'ألو، هنا ناظر المحطة. القطر ماشي كويس، والمحطة الجاية ' + n + '. الطريق مفتوح قدامك.',
+    () => 'غرفة التحكم معاك. الإشارات مفتوحة قدامك. كمّل بحذر وخلّي عينك على السرعة.',
+    () => 'مفتش الحركة بيسلّم عليك. الركاب مبسوطين بالرحلة، وربنا يسهّل عليك.',
+    () => 'هنا ورشة الصيانة. القطر شغال تمام، ولو حصل أي عطل بلّغنا فوراً.'
+  ]; let phoneN = 0;
+  function phoneTalk() {
+    const nx = (stations.list[Math.min(game.nextIdx, stations.list.length - 1)] || {}).name || '', text = PHONE[phoneN++ % PHONE.length](nx), box = document.getElementById('caption');
+    try { Sound.init && Sound.init(); Sound.ring(); } catch (e) { /* */ }
+    if (box) { box.textContent = '📞 ' + text; box.className = 'caption radio'; box.hidden = false; clearTimeout(phoneTalk.t); phoneTalk.t = setTimeout(() => { box.hidden = true; }, 9000); }
+    setTimeout(() => { if (train && train.lux && train.lux.phone.lifted) Sound.speak(text); }, 1300);
+  }
+  function phoneHang() { try { Sound.stopSpeak(); } catch (e) { /* */ } const box = document.getElementById('caption'); if (box) box.hidden = true; }
   function cabPress(ev, down) {
     if (!down) { if (cabDrag && cabDrag.id === ev.pointerId) { const a = cabDrag.act; cabDrag = null; if (a === 'brake') ui.input.brakeHeld = false; else if (a === 'horn') ui.api.horn(false); return true; } return false; }
     if (!train || !train.cabHits || CAMERAS[camIdx][0] !== 'cab' || paused) return false;
@@ -257,6 +270,10 @@
     else if (act === 'door') ui.handlers.doors && ui.handlers.doors();
     else if (act === 'emerg') ui.api.emerg(!ui.input.emergency);
     else if (act === 'light') { lightsOn = !lightsOn; train.setHeadlights(lightsOn); }
+    else if (act === 'phone' || act === 'handset') {   // the landline: pick up, talk to the next person, hang up
+      const L = train.lux, up = L && L.phone.lifted;
+      if (act === 'handset' && up) { L.togglePhone(false); phoneHang(); } else { L && L.togglePhone(true); phoneTalk(); }
+    }
     return true;
   }
 

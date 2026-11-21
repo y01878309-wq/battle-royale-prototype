@@ -77,7 +77,10 @@ const Hub = {
       </div></div>`;
     this.wire(this.ui, (act) => this.act(act));
     let k = 0; const tick = this.$('hbTick');
-    this.every(() => { if (Settings.remote.news && k % (nw.length + 1) === nw.length) { k++; tick.textContent = Settings.remote.news; return; } const n = nw[k++ % (nw.length + 1) % nw.length]; tick.textContent = n.tag + ': ' + n.title + ' — ' + n.text; }, 6000);
+    this.every(() => {   // the game's own news, then every message the admin wrote (or only those when he hid the built-in ones)
+      const R = Settings.remote || {}, mine = Array.isArray(R.newsList) ? R.newsList.filter(Boolean) : (R.news ? [R.news] : []), items = (R.newsOnly && mine.length ? [] : nw.map((n) => n.tag + ': ' + n.title + ' — ' + n.text)).concat(mine);
+      if (items.length) tick.textContent = items[k++ % items.length];
+    }, 6000);
     this.every(() => { const T = this.$('hbTimer'); if (!T) return; const left = Math.max(0, Math.floor((Date.now() + this.TZ) / 86400000 + 1) * 86400000 - this.TZ - Date.now()), p = (n) => String(n).padStart(2, '0'); T.textContent = p(Math.floor(left / 3600000)) + ':' + p(Math.floor(left % 3600000 / 60000)) + ':' + p(Math.floor(left % 60000 / 1000)); }, 1000);
   },
 
@@ -271,7 +274,7 @@ const Hub = {
 
 /* ---------- settings screen (also opened from the pause menu in the game) ---------- */
 const SetUI = {
-  TABS: [['general', 'عام', 'General', '⚙'], ['play', 'طريقة اللعب', 'Gameplay', '🎮'], ['ctl', 'طريقة التحكم', 'Controls', '🕹'], ['sound', 'الصوت', 'Sound', '🔊'], ['gfx', 'الرسوميات', 'Graphics', '🖥'], ['cam', 'الكاميرا', 'Camera', '📷'], ['ui', 'الواجهة', 'Interface', '▦'], ['credits', 'الحقوق والشروط', 'Rights', '©'], ['reset', 'إعادة تعيين', 'Reset', '↻'], ['acct', 'حسابي', 'My account', '👤']],
+  TABS: [['general', 'عام', 'General', '⚙'], ['play', 'طريقة اللعب', 'Gameplay', '🎮'], ['ctl', 'طريقة التحكم', 'Controls', '🕹'], ['sound', 'الصوت', 'Sound', '🔊'], ['gfx', 'الرسوميات', 'Graphics', '🖥'], ['cam', 'الكاميرا', 'Camera', '📷'], ['ui', 'الواجهة', 'Interface', '▦'], ['update', 'التحديث والتحميل', 'Update', '⬇'], ['credits', 'الحقوق والشروط', 'Rights', '©'], ['reset', 'إعادة تعيين', 'Reset', '↻'], ['acct', 'حسابي', 'My account', '👤']],
   tab: 'general',
   L: (a, e) => Settings.L(a, e),
   open(onClose) {
@@ -371,6 +374,42 @@ const SetUI = {
     this.slider(c, 'uiScale', L('حجم الأزرار', 'Button size'), 0.7, 1.4, 0.02, (v) => Math.round(v * 100) + '%');
     this.slider(c, 'uiAlpha', L('شفافية الواجهة', 'Interface opacity'), 0.3, 1, 0.05, (v) => Math.round(v * 100) + '%');
     this.note(c, L('جوه اللعبة: زرار «واجهة» بيخفي ويظهر لوحة القيادة.', 'In the game the "HUD" button hides the dashboard.'));
+  },
+  /* Download the whole game onto the phone (needs internet once) so it opens and plays with no connection; also checks for a newer version and installs it. */
+  t_update(m) {
+    const L = (a, e) => this.L(a, e), c = this.card(m, L('تحميل اللعبة على الجهاز', 'Download the game'), '⬇'), BUILD = window.QS_BUILD || '1';
+    const st = Menu.el('p', 'set-note', ''), bar = Menu.el('div', 'xpbar', '<i style="width:0"></i>'), fill = bar.firstChild; c.appendChild(st); c.appendChild(bar);
+    const key = (f) => (/\.(js|css)$/.test(f) && !/^vendor\//.test(f) ? f + '?v=' + BUILD : f), mb = (n) => (n / 1048576).toFixed(1);
+    const plan = async () => { const l = await (await fetch('precache.json', { cache: 'no-store' })).json(); return l.core.map((f) => ['qs-core-' + BUILD, key(f)]).concat(l.assets.map((f) => ['qs-assets', f])); };
+    const have = async (items) => { let n = 0; for (const [cn, u] of items) { try { if (await (await caches.open(cn)).match(u)) n++; } catch (e) { /* */ } } return n; };
+    const show = async () => {
+      try { const it = await plan(), n = await have(it); st.textContent = n >= it.length ? L('✔ كل ملفات اللعبة على جهازك (' + n + ' ملف). تلعب من غير نت.', '✔ All game files are on your device.') : L('على جهازك ' + n + ' من ' + it.length + ' ملف. دوس «حمّل» وانت على النت عشان تلعب من غير نت.', n + ' of ' + it.length + ' files are on the device.'); fill.style.width = Math.round(100 * n / it.length) + '%'; }
+      catch (e) { st.textContent = L('محتاج نت عشان نعرف حالة التحميل.', 'Internet needed to check the download state.'); }
+    }; show();
+    this.btn(c, L('حمّل اللعبة كلها (تلعب من غير نت)', 'Download everything'), async (b) => {
+      if (!window.caches) { st.textContent = L('الجهاز ده مبيدعمش التحميل.', 'This device does not support downloads.'); return; }
+      b.disabled = true; let done = 0, bytes = 0, fail = 0;
+      try {
+        const it = await plan();
+        for (const [cn, u] of it) {
+          try { const cache = await caches.open(cn); if (!(await cache.match(u))) { const r = await fetch(u, { cache: 'reload' }); if (!r.ok) throw new Error(r.status); bytes += +(r.headers.get('content-length') || 0) || (await r.clone().blob()).size; await cache.put(u, r); } } catch (e) { fail++; }
+          done++; fill.style.width = Math.round(100 * done / it.length) + '%'; st.textContent = L('بنحمّل… ' + done + ' / ' + it.length + ' · ' + mb(bytes) + ' ميجا', 'Downloading… ' + done + ' / ' + it.length);
+        }
+        st.textContent = fail ? L('خلص، بس ' + fail + ' ملف ماتحملش (النت ضعيف). دوس تاني.', fail + ' files failed, try again.') : L('✔ تم التحميل (' + mb(bytes) + ' ميجا). اللعبة دلوقتي تفتح وتلعب من غير نت.', '✔ Done.');
+      } catch (e) { st.textContent = L('النت مش شغال. اتصل وجرّب تاني.', 'No internet. Connect and try again.'); }
+      b.disabled = false;
+    });
+    const u = this.card(m, L('التحديث', 'Update'), '🔄'), us = Menu.el('p', 'set-note', L('النسخة اللي عندك: ' + BUILD, 'Your version: ' + BUILD)); u.appendChild(us);
+    this.btn(u, L('شوف فيه تحديث؟', 'Check for updates'), async (b) => {
+      b.disabled = true; us.textContent = L('بدوّر…', 'Checking…');
+      try {
+        const v = (await (await fetch('version.json', { cache: 'no-store' })).json()).v;
+        if (v === BUILD) us.textContent = L('✔ عندك آخر نسخة (' + BUILD + ').', '✔ You have the latest version.');
+        else { us.textContent = L('فيه نسخة أحدث (' + v + '). بنحمّلها…', 'A newer version (' + v + ') is available. Updating…'); try { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch (e) { /* */ } setTimeout(() => location.reload(), 1500); }
+      } catch (e) { us.textContent = L('محتاج نت عشان نشوف التحديث.', 'Internet needed to check.'); }
+      b.disabled = false;
+    });
+    this.note(u, L('اللعبة نفسها مبتحتاجش نت. النت بس للسباق الأونلاين والتحديث والتحميل.', 'The game itself needs no internet; only the online race, updates and downloads do.'));
   },
   t_credits(m) {
     const L = (a, e) => this.L(a, e), row = (c, a, b) => c.appendChild(Menu.el('div', 'set-row', `<span><b>${a}</b>${b ? `<small>${b}</small>` : ''}</span>`));

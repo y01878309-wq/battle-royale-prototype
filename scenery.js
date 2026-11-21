@@ -71,6 +71,7 @@ class Scenery {
   async build() {
     U.setProgress(0.52, 'الرمال…'); this.buildSand(); U.setProgress(0.55, 'النخيل والشجر…'); this.buildPalms(); await U.tick();
     U.setProgress(0.68, 'القرى والمآذن…'); this.buildVillages(); await U.tick();
+    this.buildShubra();
     U.setProgress(0.82, 'أعمدة التلغراف والمزلقانات…'); this.buildPoles(); this.buildCrossings(); this.buildValley(); await U.tick();
     U.setProgress(0.9, 'العمارات والطريق السريع…'); this.buildBlocks(); this.buildTraffic(); this.buildOverpasses(); await U.tick();
   }
@@ -165,7 +166,7 @@ class Scenery {
     const tints = [[1, .93, .8], [.95, .82, .7], [.82, .88, .9], [.96, .9, .62], [.85, .84, .82], [1, 1, .97], [.9, .72, .62]];
     // house colours by region: red brick in the Delta, mud and sand in Upper Egypt, bright Nubian colours near Aswan
     const RT = {
-      delta: [[1.0, .62, .5], [.95, .55, .42], [.88, .5, .4], [.85, .84, .82]],
+      delta: [[.95, .42, .3], [.88, .34, .24], [.8, .3, .21], [.92, .45, .33], [.75, .27, .19], [.85, .33, .25], [.9, .52, .4], [.85, .84, .82]],
       cairo: [[.85, .84, .82], [.95, .88, .75], [.9, .8, .7], [.8, .82, .85]],
       alex: [[1, 1, .97], [.95, .95, .9], [.85, .9, .95], [.92, .88, .8]],
       canal: [[1, .93, .6], [.95, .85, .55], [.9, .9, .85], [.9, .7, .55]],
@@ -196,6 +197,42 @@ class Scenery {
     }
   }
 
+  /* Shubra El-Namla (between Tanta and Kafr El-Zayat): a canal with palms along the line, red-brick houses with rebar and water tanks, a minaret, the level crossing just past the halt. */
+  buildShubra() {
+    const st = this.route.stations.find((x) => x.name === 'شبرا النملة'); if (!st) return;
+    const tr = this.track, R = U.rng(77), s0 = st.s + st.pl / 2 + 380, L = tr.L, yawAt = (s) => { const a = tr.at(s, 0, 0), b = tr.at(s + 6, 0, 0); return Math.atan2(b.x - a.x, b.z - a.z); };
+    // irrigation canal on the left, 430 m long, with grassy banks
+    { const pos = [], idx = [], N = 36, lats = [-17, -20.5, -26.5, -30];
+      for (let k = 0; k <= N; k++) { const sc = s0 - 215 + 430 * k / N; for (const lat of lats) { const w = tr.at(sc, lat, 0.07); pos.push(w.x, w.y, w.z); } }
+      for (let k = 0; k < N; k++) for (let q = 0; q < 3; q++) { const i = k * 4 + q, j = i + 4; idx.push(i, j, i + 1, i + 1, j, j + 1); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+      const mats = [new THREE.MeshStandardMaterial({ color: 0x5d8f3a, roughness: 1 }), new THREE.MeshStandardMaterial({ color: 0x3b7f93, roughness: 0.15, metalness: 0.4 }), new THREE.MeshStandardMaterial({ color: 0x5d8f3a, roughness: 1 })];
+      g.clearGroups(); for (let q = 0; q < 3; q++) g.addGroup(q * 6, 6, q);   // (per-quad groups are rebuilt below)
+      g.clearGroups(); const per = N * 6; for (let k = 0; k < N; k++) for (let q = 0; q < 3; q++) g.addGroup(k * 18 + q * 6, 6, q);
+      const m = new THREE.Mesh(g, mats); m.receiveShadow = true; this.scene.add(m); }
+    // a row of palms on the far bank (merged leaf crowns on thin trunks)
+    { const parts = []; for (let i = 0; i < 14; i++) { const g = new THREE.PlaneGeometry(1.9, 5, 2, 6), p = g.attributes.position;
+        for (let v = 0; v < p.count; v++) { const x = p.getX(v), y = p.getY(v), t = (y + 2.5) / 5; p.setXYZ(v, x * (0.55 + 0.6 * Math.sin(Math.PI * Math.min(1, t * 1.05))), 1.5 * t - 3.1 * t * t + (i % 3) * 0.25, t * 5); }
+        g.rotateY((i / 14) * Math.PI * 2 + (i % 2) * 0.2); g.computeVertexNormals(); parts.push(g); }
+      const crown = U.merge(parts), cm = new THREE.MeshStandardMaterial({ map: Tex.frond(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.8, color: 0xdfeacb }), tm = new THREE.MeshStandardMaterial({ color: 0x6d5a40, roughness: 1 });
+      for (let i = 0; i < 16; i++) { const sc = s0 - 200 + i * 26 + R() * 10, lat = -33 - R() * 5, h = 9 + R() * 5, w = tr.at(sc, lat, 0), grp = new THREE.Group();
+        const tk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.34, h, 7), tm); tk.position.y = h / 2; grp.add(tk); const cr = new THREE.Mesh(crown, cm); cr.position.y = h; cr.rotation.y = R() * 6; grp.add(cr);
+        grp.position.copy(w); this.scene.add(grp); } }
+    // red-brick houses behind the palms and on the other side, each with a flat roof, rebar stubs and a black water tank
+    const brick = [0xa3432c, 0x9b3d28, 0xb2502f, 0x8f3a26], roof = new THREE.MeshStandardMaterial({ color: 0x8a8378, roughness: 1 }), tank = new THREE.MeshStandardMaterial({ color: 0x1e2226, roughness: 0.5 }), bar = new THREE.MeshStandardMaterial({ color: 0x7a746a, roughness: 1 });
+    for (let i = 0; i < 22; i++) {
+      const left = i % 2 === 0, sc = s0 - 230 + (i >> 1) * 42 + R() * 14, lat = (left ? -1 : 1) * (left ? 46 + R() * 14 : 30 + R() * 22), fl = 1 + Math.floor(R() * 3), wd = 8 + R() * 5, dp = 8 + R() * 4, hh = 3.1 * fl;
+      const w = tr.at(sc, lat, 0), g = new THREE.Group();
+      const b = new THREE.Mesh(new THREE.BoxGeometry(wd, hh, dp), new THREE.MeshStandardMaterial({ color: brick[i % brick.length], roughness: 0.95 })); b.position.y = hh / 2; g.add(b);
+      const r = new THREE.Mesh(new THREE.BoxGeometry(wd + 0.4, 0.3, dp + 0.4), roof); r.position.y = hh + 0.15; g.add(r);
+      for (const [ox, oz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const rb = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.5, 0.25), bar); rb.position.set(ox * wd * 0.45, hh + 1.0, oz * dp * 0.45); g.add(rb); }
+      if (R() < 0.6) { const tk = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.2, 12), tank); tk.position.set(wd * 0.2, hh + 0.9, 0); g.add(tk); }
+      for (let k = 0; k < fl; k++) for (let q = -1; q <= 1; q += 2) { const wi = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.4), new THREE.MeshStandardMaterial({ color: 0x23323f, roughness: 0.2, metalness: 0.3 })); wi.position.set(q * wd * 0.22, 1.7 + k * 3.1, dp / 2 + 0.02); g.add(wi); }
+      g.position.copy(w); g.rotation.y = yawAt(sc) + (R() < 0.5 ? 0 : Math.PI); g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); this.scene.add(g);
+    }
+    this.addMosque(s0 - 120, 78, yawAt(s0));
+  }
+
   addMosque(s, lat, yaw) {
     (this.mosques = this.mosques || []).push(s);
     const w = this.track.at(s, lat, 0), g = new THREE.Group();
@@ -216,7 +253,10 @@ class Scenery {
   /* How built-up the ground beside the line is at s (0..1): rows of apartment blocks appear where it is high. */
   urban(s) {
     const rg = this.regionAt(s), base = { cairo: 0.75, delta: 0.55, alex: 0.7, canal: 0.5, middle: 0.38, matrouh: 0.3, upper: 0.2, luxor: 0.25, aswan: 0.15, redsea: 0.1, newvalley: 0.15 }[rg] || 0.4;
-    return base * (0.45 + 1.1 * U.fbm(s / 700, 0.5, 5, 3, 21));
+    let u = base * (0.45 + 1.1 * U.fbm(s / 700, 0.5, 5, 3, 21));
+    if (this._shub === undefined) { const st = this.route.stations.find((x) => x.name === 'شبرا النملة'); this._shub = st ? st.s + st.pl / 2 + 380 : null; }
+    if (this._shub !== null) { const L = this.track.L, d = Math.abs(((s - this._shub + L / 2) % L + L) % L - L / 2), k = U.clamp((d - 500) / 500, 0, 1); u *= 0.05 + 0.95 * k * k * (3 - 2 * k); }   // Shubra El-Namla is open farmland and brick houses, not tower blocks
+    return u;
   }
 
   /* Rows of tall apartment blocks along both sides, with shops on the ground floor, and a highway beside them. */

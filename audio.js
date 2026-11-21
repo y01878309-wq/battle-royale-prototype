@@ -228,6 +228,12 @@ const Sound = {
   },
   /* Keeps pieces for offline use: called while online with the pieces the game is likely to say. */
   async warmVoice(pieces) { if (!navigator.onLine || this._warm) return; this._warm = true; try { for (const p of pieces) { if (!navigator.onLine) break; try { await this.voiceBlob(p); } catch (e) { /* skip */ } await new Promise((r) => setTimeout(r, 250)); } } finally { this._warm = false; } },
+  /* Landline in the cab: stop whatever is being said, and a short ring-back tone while the line connects. */
+  stopSpeak() { this._sid = (this._sid || 0) + 1; try { if (this._au) this._au.pause(); } catch (e) { /* */ } try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) { /* */ } },
+  ring() {
+    const c = this.ctx; if (!c || this.muted) return; const t = c.currentTime, g = c.createGain(); g.gain.value = 0; g.connect(this.master);
+    for (let k = 0; k < 2; k++) { const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = 425; o.connect(g); o.start(t + k * 0.55); o.stop(t + k * 0.55 + 0.4); g.gain.setValueAtTime(0.16, t + k * 0.55); g.gain.setValueAtTime(0, t + k * 0.55 + 0.4); }
+  },
   /* Settings: lets the player hear whether the device can speak Arabic. */
   testVoice() { this.init(); this.speak('السادة الركاب، قطر قطارات مصر يصل بعد قليل. برجاء الابتعاد عن حافة الرصيف.'); return !!this.voice() || navigator.onLine; },
 

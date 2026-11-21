@@ -21,6 +21,7 @@ class Route {
       const g = this.stations[i + 1].s - this.stations[i].s;
       if (g >= 2400) this.crossings.push(this.stations[i].s + g * 0.5);
     }
+    this.stations.forEach((st, i) => { if (src[i][3] === 'x') this.crossings.push(st.s + st.pl / 2 + 380); });   // a level crossing just past stations marked 'x' (Shubra El-Namla)
     this.crossings.push(s + this.ret * 0.5);
     this.L = this.Ltarget;
   }
