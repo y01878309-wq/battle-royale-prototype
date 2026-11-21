@@ -368,6 +368,7 @@ const SetUI = {
     this.seg(c, CAMERAS.map((x, i) => [i, x[1], ['🚂', '🎥', '🛰', '👁', '🚉'][i]]), Settings.d.cam, (v) => { Settings.set('cam', v); this.render(); });
     this.slider(c, 'fov', L('زاوية الرؤية', 'Field of view'), 0.8, 1.25, 0.05, (v) => Math.round(v * 100) + '%');
     this.toggle(c, 'shake', L('اهتزاز الكابينة', 'Cab shake'), L('اهتزاز خفيف مع السرعة', ''));
+    this.toggle(c, 'lockres', L('ثبّت أعلى جودة للصورة', 'Lock sharp image'), L('الصورة تفضل حادة حتى لو الجهاز تقيل', ''));
   },
   t_ui(m) {
     const L = (a, e) => this.L(a, e), c = this.card(m, L('الواجهة', 'Interface'), '▦');

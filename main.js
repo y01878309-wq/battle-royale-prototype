@@ -300,7 +300,7 @@
     el.addEventListener('dblclick', resetCam);
   }
 
-  const DEFAULT = { cab: [0, 0], chase: [0, 0.3], top: [0, 1.15], front: [0.15, 0.12], side: [0, 0] };
+  const DEFAULT = { cab: [0, 0], chase: [0, 0.24], top: [0, 1.15], front: [0.15, 0.12], side: [0, 0] };
   function resetCam() { const d = DEFAULT[CAMERAS[camIdx][0]]; cam.yaw = d[0]; cam.pitch = d[1]; cam.zoom = 1; }
   function cycleCamera(i) { applyCamera(typeof i === 'number' ? i : (camIdx + 1) % CAMERAS.length); }
   function applyCamera(i) {
@@ -338,7 +338,7 @@
       if (game.derailed) { const q = Math.min(1, game.derailT) * 0.12 * Math.max(0, 1 - game.derailT / 4); camera.position.x += (Math.random() - 0.5) * q; camera.position.y += (Math.random() - 0.5) * q; camera.rotateZ(Math.min(1, game.derailT / 1.5) * 0.5); }
       eq.setFromEuler(eu.set(cam.pitch, cam.yaw + Math.PI * 0, 0, 'YXZ')); camera.quaternion.multiply(eq); camera.fov = U.clamp(baseFov / cam.zoom, 28, 100);
     } else if (k === 'front') { orbit(10.5, 0, dt, 2.2); }
-    else if (k === 'chase') { orbit(21, Math.PI, dt, 2.7); }
+    else if (k === 'chase') { orbit(23, Math.PI, dt, 3.0); }
     else if (k === 'top') { orbit(60, Math.PI, dt, 1.0); }
     else {
       const d = ((sideS - game.s) % track.L + track.L) % track.L;
@@ -411,7 +411,7 @@
     if (paused) return;
     /* adaptive resolution: if the phone can't keep up, draw fewer pixels (and give them back when it can) */
     afr.t += dt; afr.n++; if (afr.t > 2.5) { const fps = afr.n / afr.t, pr = renderer.getPixelRatio(), top = Settings.pixelRatio(); afr.t = 0; afr.n = 0;
-      if (fps < 30 && pr > Math.min(top, 1.0)) { renderer.setPixelRatio(Math.max(Math.min(top, 1.0), pr - 0.1)); onResize(); } else if (fps > 56 && pr < top) { renderer.setPixelRatio(Math.min(top, pr + 0.1)); onResize(); } }
+      if (fps < 30 && !Settings.d.lockres && pr > Math.min(top, 1.0)) { renderer.setPixelRatio(Math.max(Math.min(top, 1.0), pr - 0.1)); onResize(); } else if (fps > 56 && pr < top) { renderer.setPixelRatio(Math.min(top, pr + 0.1)); onResize(); } }
     const inp = Object.assign({}, ui.input);
     if (Settings.d.atc && !game.derailed && game.phase === 'running') {   // ATC: brake alone when over the limit, or when the train could not stop before the starter signal
       const dd = game.distToStop(), need = dd > -26 && dd < 1600 && game.v * game.v > 2 * 0.75 * type.brake * Math.max(0, dd + 24);

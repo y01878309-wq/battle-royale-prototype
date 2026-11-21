@@ -349,6 +349,8 @@ const Ge2595 = (() => {
       // grey louvre band under the windscreen (as on the real nose)
       for (let r = 0; r < 5; r++) add(locoRoot, new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.028, 1.1), M.iron), dir * 10.31, 1.96 + r * 0.055, 0);
     });
+    // the painted canvas textures are sRGB images: tell the game's sRGB pipeline, otherwise the orange washes out to pink
+    { const seen = new Set(); locoRoot.traverse((o) => { if (!o.isMesh) return; (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { if (m.map && !seen.has(m.map)) { seen.add(m.map); m.map.encoding = THREE.sRGBEncoding; m.map.needsUpdate = true; m.needsUpdate = true; } }); }); }
     return { root: locoRoot, wheels: wheelsList, fans: fansList };
   }
   return {

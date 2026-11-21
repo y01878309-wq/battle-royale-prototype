@@ -187,7 +187,7 @@ button.primary:hover{filter:brightness(1.08)}
 .rh-mid{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;direction:ltr}
 .rh-money{background:rgba(18,22,28,.82);border-radius:12px;padding:6px 12px;text-align:center;line-height:1.3;color:#fff;direction:rtl}
 .rh-money b{display:block;color:#ffd24a;font-size:17px}.rh-money span{color:#ff7a6a;font-size:13px}.rh-money small{display:block;opacity:.8}
-.rh-lamps{position:absolute;top:84px;right:10px;display:flex;gap:6px}
+.rh-lamps{position:absolute;top:128px;right:10px;display:flex;gap:6px}
 .rh-lamp{pointer-events:auto;border:0;border-radius:10px;background:rgba(18,22,28,.82);color:#fff;padding:6px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
 .rh-lamp i{width:34px;height:34px;border-radius:50%;background:#c9a82a;box-shadow:inset 0 0 0 4px #555}.rh-lamp.door i{background:#2e8a4a}.rh-lamp.on i{box-shadow:inset 0 0 0 4px #fff,0 0 12px #fff}.rh-lamp small{font-size:11px}
 .rh-speed{position:absolute;left:8px;bottom:8px;width:min(150px,22vw)}.rh-speed canvas{width:100%;display:block}
@@ -203,7 +203,7 @@ button.primary:hover{filter:brightness(1.08)}
 .rh-track:after{content:"";position:absolute;left:50%;top:6px;bottom:6px;width:6px;margin-left:-3px;background:#111;border-radius:3px}
 #rhKnob{position:absolute;left:4px;right:4px;height:30px;margin-bottom:-15px;border-radius:6px;background:#d32f2f;border:2px solid #eee;z-index:2}
 .rh-power small{background:rgba(18,22,28,.82);color:#fff;padding:2px 8px;border-radius:10px;font-size:12px}
-@media (max-width:760px),(max-height:480px){.rh-green{width:40vw;padding:5px 8px}.rh-blue{width:42vw;padding:5px 8px}.rh-row b{font-size:17px}.rh-lamps{top:76px}.rh-brake{right:84px}.rh-sm{font-size:10px}}
+@media (max-width:760px),(max-height:480px){.rh-green{width:40vw;padding:5px 8px}.rh-blue{width:42vw;padding:5px 8px}.rh-row b{font-size:17px}.rh-lamps{top:118px}.rh-brake{right:84px}.rh-sm{font-size:10px}}
 
 /* landscape only */
 #rotate{position:fixed;inset:0;z-index:200;background:#0b0f14;color:#fff;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-size:20px;text-align:center;padding:20px}
