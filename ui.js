@@ -1,6 +1,6 @@
 'use strict';
 /* Input (keyboard, mouse, touch) and the HUD. */
-const CAMERAS = [['cab', 'داخل الكابينة'], ['chase', 'من ورا'], ['top', 'من فوق'], ['front', 'من قدام'], ['side', 'من جنب السكة']];
+const CAMERAS = [['cab', 'داخل الكابينة'], ['chase', 'من ورا'], ['top', 'من فوق'], ['front', 'من قدام'], ['side', 'من جنب السكة'], ['inside', 'ركاب']];
 
 class UI {
   constructor() {

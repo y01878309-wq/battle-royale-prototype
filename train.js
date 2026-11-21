@@ -331,28 +331,41 @@ class Train {
   }
 
   /* Passenger coaches in three styles. */
-  /* People sitting inside the coaches, visible through the windows: one instanced torso + head per seat, shirt colours vary. */
-  addPassengers(r, style) {
-    if (!r || !r.body || r.loco) return r;
-    const model = Math.abs(r.len - 25) < 0.5 || (r.len > 24.5 && r.len < 27), len = r.len;
-    const step = style === 'old' ? 1.55 : style === 'talgo' ? 2.4 : 1.95;
-    const wy = model ? 2.36 : style === 'old' ? 2.7 : style === 'talgo' ? 2.2 : style === 'velaro' ? 3.1 : 2.8;
-    const X = model ? 1.71 : 1.66, spots = [];
-    const zs = model ? [-10.6, -9, -7.3, -3.2, -1.6, 0, 1.6, 3.2, 7.3, 8.9, 10.5] : (() => { const n0 = Math.max(3, Math.floor((len - 5) / step)), a = []; for (let k = 0; k < n0; k++) a.push(-((n0 - 1) * step) / 2 + k * step); return a; })();
-    for (const sx of [-1, 1]) for (const z of zs) if (Math.random() < 0.8) spots.push([sx * X, z + (Math.random() - 0.5) * 0.25, sx]);
-    if (!spots.length) return r;
-    if (!Train._pgeo) { Train._pgeo = { t: new THREE.BoxGeometry(0.14, 0.5, 0.5), h: new THREE.SphereGeometry(0.16, 8, 6).scale(0.55, 1, 1), m: new THREE.MeshLambertMaterial({ color: 0xffffff }), hm: new THREE.MeshLambertMaterial({ color: 0xffffff }) }; }
-    const G = Train._pgeo, T = new THREE.InstancedMesh(G.t, G.m, spots.length), H = new THREE.InstancedMesh(G.h, G.hm, spots.length);
-    const shirts = [0xe8e2d0, 0x2f5d8a, 0x8a2f2f, 0x3a7a4a, 0xd9a441, 0x555555, 0x7a4fa0, 0xc9c9c9, 0x1f1f1f], skins = [0xd9a47a, 0xc68a5c, 0xa66a40, 0xe0b48a], m = new THREE.Matrix4(), c = new THREE.Color(), pos = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(1, 1, 1);
-    spots.forEach((sp, i) => {
-      pos.set(sp[0], wy - 0.33, sp[1]); m.compose(pos, q, sc); T.setMatrixAt(i, m); T.setColorAt(i, c.setHex(shirts[(Math.random() * shirts.length) | 0]));
-      pos.set(sp[0], wy + 0.05, sp[1]); m.compose(pos, q, sc); H.setMatrixAt(i, m); H.setColorAt(i, c.setHex(skins[(Math.random() * skins.length) | 0]));
-    });
-    T.instanceMatrix.needsUpdate = H.instanceMatrix.needsUpdate = true; T.frustumCulled = H.frustumCulled = false;
-    r.body.add(T); r.body.add(H);
-    return r;
+  buildCoach(style, ci) { return this.buildCoach0(style, ci); }
+  /* The "passengers" view: the inside of the first coach (floor, walls, ceiling, wooden benches) with real seated people on the benches. Built on first use. */
+  setInside(on) {
+    if (on && !this.interior) this.ensureInterior();
+    if (this.interior) { this.interior.visible = !!on; const b = this.inside.body; b.children.forEach((c) => { if (c !== this.interior) c.visible = !on; }); }   // inside: the outer shell is hidden so the windows show the real scenery
   }
-  buildCoach(style, ci) { return this.addPassengers(this.buildCoach0(style, ci), style); }
+  ensureInterior() {
+    const v = this.vehicles.find((x, i) => i > 0 && !x.loco && x.body && x.len > 12); if (!v) return;
+    this.inside = v; v.body.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(v.body.matrixWorld).invert(), bb = new THREE.Box3(), tb = new THREE.Box3();
+    v.body.traverse((o) => { if (o.isMesh && o.geometry) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); tb.copy(o.geometry.boundingBox).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld)); bb.union(tb); } });
+    const len = Math.min(v.len, Math.max(10, bb.max.z - bb.min.z)), zc = (bb.max.z + bb.min.z) / 2, g = new THREE.Group(), L = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: e == null ? 0.32 : e });
+    const cream = L(0xe9e0c8), floorM = L(0x4a3a2c, 0.2), wood = L(0x9a6630, 0.2), dark = L(0x5a3c1c, 0.18);
+    const bx = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = false; o.receiveShadow = false; g.add(o); return o; };
+    const FL = 1.05, hw = 1.42, hl = len / 2 - 0.35;
+    bx(hw * 2, 0.06, hl * 2, floorM, 0, FL, 0);
+    bx(hw * 2, 0.06, hl * 2, cream, 0, 3.55, 0);
+    for (const sx of [-1, 1]) {
+      bx(0.06, 0.75, hl * 2, cream, sx * hw, FL + 0.4, 0);        // wall under the windows
+      bx(0.06, 0.85, hl * 2, cream, sx * hw, 3.12, 0);            // wall above the windows
+      for (let k = -Math.floor(hl / 1.95); k <= Math.floor(hl / 1.95); k++) bx(0.1, 1.0, 0.16, cream, sx * hw, 2.2, k * 1.95 + 0.95);   // pillars between the windows
+      bx(0.07, 0.04, hl * 2, dark, sx * (hw - 0.04), 1.86, 0);    // window sill
+    }
+    for (const sz of [-1, 1]) bx(hw * 2, 2.5, 0.06, cream, 0, 2.3, sz * hl);
+    const rows = Math.floor((hl * 2 - 1.2) / 1.05), z0 = -((rows - 1) * 1.05) / 2, ppl = [];
+    const names = ['father', 'police'].filter((n) => typeof People !== 'undefined' && People.ready[n]);
+    for (let r = 0; r < rows; r++) for (const sx of [-1, 1]) {
+      const z = z0 + r * 1.05, cx = sx * 0.9;
+      bx(1.0, 0.07, 0.46, wood, cx, FL + 0.46, z); bx(1.0, 0.62, 0.07, wood, cx, FL + 0.82, z - 0.26); bx(0.06, 0.45, 0.4, dark, sx * 0.4, FL + 0.23, z); bx(0.06, 0.45, 0.4, dark, sx * 1.4, FL + 0.23, z);
+      for (const o of [-0.25, 0.25]) if (names.length && Math.random() < 0.7) {
+        const nm = names.length > 1 && Math.random() < 0.8 ? names[0] : names[names.length - 1], f = People.makeSeated(nm); if (!f) continue;
+        f.position.set(cx + o + (Math.random() - 0.5) * 0.06, FL - 0.02, z + 0.02); f.rotation.y = (Math.random() - 0.5) * 0.35; f.scale.setScalar(0.92 + Math.random() * 0.14); g.add(f); ppl.push(f);
+      }
+    }
+    g.position.z = isFinite(zc) ? zc : 0; g.visible = false; v.body.add(g); this.interior = g; this.insideLen = len; this.insideZ = g.position.z;
+  }
   buildCoach0(style, ci) {
     const M = this.cm, body = new THREE.Group();
     if ((style === 'std' || style === 'old' || style === 'talgo') && !this.type.real && typeof Models !== 'undefined' && Models.ready.coach1) {   // real passenger carriage
