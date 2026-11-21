@@ -22,6 +22,7 @@ const PushN = {
   async on() { try { const r = await navigator.serviceWorker.ready; return Notification.permission === 'granted' && !!(await r.pushManager.getSubscription()); } catch (e) { return false; } },
   async enable() {
     if (!this.ok()) throw new Error('unsupported');
+    try { localStorage.removeItem('qs-pushoff'); } catch (e) { /* */ }
     if ((await Notification.requestPermission()) !== 'granted') throw new Error('denied');
     const r = await navigator.serviceWorker.ready, key = Uint8Array.from(atob(QS_VAPID.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
     const s = (await r.pushManager.getSubscription()) || await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }), j = s.toJSON();
@@ -29,7 +30,7 @@ const PushN = {
     await Account.col('pushSubs').doc(id).set({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, t: Date.now() });
     try { localStorage.setItem('qs-pushid', id); } catch (e) { /* */ }
   },
-  async disable() { try { const r = await navigator.serviceWorker.ready, s = await r.pushManager.getSubscription(); if (s) await s.unsubscribe(); const id = localStorage.getItem('qs-pushid'); if (id) await Account.col('pushSubs').doc(id).delete().catch(() => {}); } catch (e) { /* */ } }
+  async disable() { try { localStorage.setItem('qs-pushoff', '1'); } catch (e) { /* */ } try { const r = await navigator.serviceWorker.ready, s = await r.pushManager.getSubscription(); if (s) await s.unsubscribe(); const id = localStorage.getItem('qs-pushid'); if (id) await Account.col('pushSubs').doc(id).delete().catch(() => {}); } catch (e) { /* */ } }
 };
 
 const Hub = {
@@ -139,19 +140,11 @@ const Hub = {
     } catch (e) { this._dlRun = false; box.hidden = true; }
   },
 
-  /* One-time question when the player enters the game: allow phone notifications or not. Asked once; the answer is remembered. */
+  /* Notifications are on by default: the first time (and whenever the phone allows it) we subscribe automatically. The browser shows its own allow/deny box once.
+     A player who switched them off in Settings is never subscribed again. */
   pushAsk() {
-    try { if (localStorage.getItem('qs-pushask') || document.getElementById('pushAsk') || (window.Notification && Notification.permission !== 'default')) return; } catch (e) { return; }
-    setTimeout(() => {
-      if (document.getElementById('pushAsk')) return;
-      const el = document.createElement('div'); el.id = 'pushAsk';
-      el.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);display:grid;place-items:center;direction:rtl;font-family:inherit';
-      el.innerHTML = '<div style="background:#161b22;color:#fff;border:1px solid #e8b04a;border-radius:16px;padding:20px 22px;max-width:min(88vw,420px);text-align:center"><div style="font-size:40px">🔔</div><h3 style="margin:6px 0">تحب توصلك إشعارات؟</h3><p style="margin:0 0 14px;line-height:1.7;color:#ccd">هنبعتلك أخبار اللعبة والتحديثات والمسابقات على تليفونك حتى لو اللعبة مقفولة. وتقدر توقفها في أي وقت من الإعدادات.</p><div style="display:flex;gap:10px;justify-content:center"><button id="paYes" style="border:0;border-radius:20px;background:#e8b04a;color:#1b1406;font:700 16px inherit;padding:9px 26px">موافق</button><button id="paNo" style="border:0;border-radius:20px;background:#333b46;color:#fff;font:600 16px inherit;padding:9px 26px">لأ</button></div></div>';
-      document.body.appendChild(el);
-      const done = (v) => { try { localStorage.setItem('qs-pushask', v); } catch (e) { /* */ } el.remove(); };
-      el.querySelector('#paNo').onclick = () => done('no');
-      el.querySelector('#paYes').onclick = async () => { done('yes'); if (!PushN.ok()) { this.api.toast('التطبيق ده مش بيدعم الإشعارات الخارجية. افتح اللعبة من متصفح كروم عشان تشتغل'); return; } try { await PushN.enable(); this.api.toast('✔ الإشعارات اشتغلت'); } catch (e) { this.api.toast(e.message === 'denied' ? 'اتمنعت الإشعارات. تقدر تفعلها من إعدادات المتصفح' : 'الإشعارات مش متاحة دلوقتي'); } };
-    }, 1200);
+    try { if (localStorage.getItem('qs-pushoff') === '1' || !PushN.ok() || (window.Notification && Notification.permission === 'denied')) return; } catch (e) { return; }
+    setTimeout(async () => { try { if (await PushN.on()) return; await PushN.enable(); } catch (e) { /* the player said no, or this app can't do push: stay quiet */ } }, 1500);
   },
 
   act(a) {
