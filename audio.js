@@ -131,7 +131,10 @@ const Sound = {
 
   /* A far-away horn (oncoming train, quieter with distance): plays the player's horn recording once, for about 2.2 s. */
   passHorn(vol) {
-    const c = this.ctx; if (!c || !this.buf.horn || this.hornFar) return;
+    const c = this.ctx; if (!c || !(this.buf.flyby || this.buf.horn) || this.hornFar) return;
+    if (this.buf.flyby) {   // the recorded loud horn with a fly-by (audio/flyby.mp3), softer the further away the other train is
+      const s = c.createBufferSource(), g = c.createGain(); s.buffer = this.buf.flyby; g.gain.value = Math.max(0.05, Math.min(0.9, vol)); s.connect(g); g.connect(this.master); s.start(); this.hornFar = true; setTimeout(() => { this.hornFar = false; }, 9000); return;
+    }
     const s = c.createBufferSource(), g = c.createGain(), t = c.currentTime;
     s.buffer = this.buf.horn; s.playbackRate.value = 0.96; g.gain.value = Math.max(0.05, Math.min(0.8, vol)); s.connect(g); g.connect(this.master); s.start(0, 3.4);
     g.gain.setTargetAtTime(0, t + 1.9, 0.15); s.stop(t + 2.6); this.hornFar = true; setTimeout(() => { this.hornFar = false; }, 2600);
@@ -160,7 +163,7 @@ const Sound = {
     try {
       const r = await fetch('audio/manifest.json'); if (!r.ok) return;
       const m = await r.json();
-      for (const k of ['engine', 'horn', 'clack', 'chime', 'roll', 'adhan']) {
+      for (const k of ['engine', 'horn', 'clack', 'chime', 'roll', 'adhan', 'flyby']) {
         if (!m[k]) continue;
         try { const rr = await fetch('audio/' + m[k]); this.buf[k] = await c.decodeAudioData(await rr.arrayBuffer()); } catch (e) { /* skip this file */ }
       }

@@ -8,6 +8,20 @@ const Settings = {
     vMaster: 1, vEngine: 1, vVoice: 1, cam: 0, fov: 1, shake: true, uiScale: 1, uiAlpha: 1, atc: false, cine: false, tracks: 3, paint: {}, texts: {}
   },
   d: null, remote: {},
+  fresh: false,   // true once the live config was read this session (so an old saved "maintenance" flag can never lock someone out while offline)
+  /* Maintenance: when the admin closes the game, every player who is online sees this blocking screen with the message and the re-opening time; it checks again every minute and opens by itself. */
+  maint() {
+    const R = this.remote || {}, on = this.fresh && R.maintenance && !/nomaint/.test(location.search), esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    let el = document.getElementById('maintBox'); clearTimeout(this._mt);
+    if (!on) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('div'); el.id = 'maintBox'; el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:linear-gradient(180deg,#0b1220,#1b2a44);display:grid;place-items:center;text-align:center;color:#fff;padding:24px;direction:rtl;font-family:inherit'; document.body.appendChild(el); }
+    const fmt = (ms) => { try { return new Date(+ms).toLocaleString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
+    el.innerHTML = '<div style="max-width:540px"><div style="font-size:72px">🔧</div><h2 style="margin:8px 0">اللعبة تحت الصيانة</h2><p style="font-size:18px;line-height:1.8">' + esc(R.maintMsg || 'بنظبّط حاجات عشان تلعب أحسن. شكراً لصبرك.') + '</p>'
+      + (R.reopenAt ? '<p style="font-size:18px">هتفتح تاني: <b style="color:#ffd35c">' + fmt(R.reopenAt) + '</b></p>' : '') + (R.updateNote ? '<p style="font-size:16px;opacity:.9">التحديث الجاي: <b>' + esc(R.updateNote) + '</b></p>' : '')
+      + '<button id="maintRetry" style="margin-top:14px;padding:12px 26px;border:0;border-radius:12px;background:#ffd35c;color:#222;font:700 17px inherit">جرّب تاني</button></div>';
+    const again = async () => { try { const g = await Account.col('config').doc('game').get(); if (g.exists) { this.remote = g.data() || {}; try { localStorage.setItem('qs-remote', JSON.stringify(this.remote)); } catch (e) { /* */ } } this.maint(); } catch (e) { this._mt = setTimeout(again, 60000); } };
+    document.getElementById('maintRetry').onclick = again; this._mt = setTimeout(again, 60000);
+  },
   load() {
     try { this.remote = JSON.parse(localStorage.getItem('qs-remote') || '{}') || {}; } catch (e) { this.remote = {}; }
     let v = null; try { v = JSON.parse(localStorage.getItem('qs-set') || 'null'); } catch (e) { /* no storage */ }

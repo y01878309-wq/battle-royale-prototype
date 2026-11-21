@@ -9,12 +9,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="style.css?v=20261121b">
-<link rel="stylesheet" href="hub.css?v=20261121b">
+<link rel="stylesheet" href="style.css?v=20261121c">
+<link rel="stylesheet" href="hub.css?v=20261121c">
 <script>
 /* Self-update: if the server has a newer build than this page, clear every cache and reload once. */
 (function () { try {
-  var V = '20261121b';
+  var V = '20261121c';
   fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
     if (j && j.v && j.v !== V && !/[?&]r=/.test(location.search)) {
       var go = function () { location.replace(location.pathname + '?r=' + j.v); };
@@ -197,42 +197,47 @@
   <button id="pAtc" class="pbtn" type="button"></button>
 </div></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="document.write('<script src=&quot;vendor/three.min.js&quot;><\/script>')"></script>
+<script src="vendor/three.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="config.js?v=20261121b"></script>
-<script src="fb.js?v=20261121b"></script>
-<script src="util.js?v=20261121b"></script>
-<script src="settings.js?v=20261121b"></script>
-<script src="textures.js?v=20261121b"></script>
-<script src="data.js?v=20261121b"></script>
-<script src="route.js?v=20261121b"></script>
-<script src="track.js?v=20261121b"></script>
-<script src="sky.js?v=20261121b"></script>
-<script src="world.js?v=20261121b"></script>
-<script src="scenery.js?v=20261121b"></script>
-<script src="ge2595.js?v=20261121b"></script>
-<script src="cablux.js?v=20261121b"></script>
-<script src="train.js?v=20261121b"></script>
-<script src="models.js?v=20261121b"></script>
-<script src="stations.js?v=20261121b"></script>
-<script src="net.js?v=20261121b"></script>
-<script src="traffic.js?v=20261121b"></script>
-<script src="crowd.js?v=20261121b"></script>
-<script src="game.js?v=20261121b"></script>
-<script src="commentary.js?v=20261121b"></script>
-<script src="account.js?v=20261121b"></script>
-<script src="menu.js?v=20261121b"></script>
-<script src="weather.js?v=20261121b"></script>
-<script src="hub.js?v=20261121b"></script>
-<script src="audio.js?v=20261121b"></script>
-<script src="ui.js?v=20261121b"></script>
-<script src="main.js?v=20261121b"></script>
+<script src="config.js?v=20261121c"></script>
+<script src="fb.js?v=20261121c"></script>
+<script src="util.js?v=20261121c"></script>
+<script src="settings.js?v=20261121c"></script>
+<script src="textures.js?v=20261121c"></script>
+<script src="data.js?v=20261121c"></script>
+<script src="route.js?v=20261121c"></script>
+<script src="track.js?v=20261121c"></script>
+<script src="sky.js?v=20261121c"></script>
+<script src="world.js?v=20261121c"></script>
+<script src="scenery.js?v=20261121c"></script>
+<script src="ge2595.js?v=20261121c"></script>
+<script src="cablux.js?v=20261121c"></script>
+<script src="train.js?v=20261121c"></script>
+<script src="models.js?v=20261121c"></script>
+<script src="stations.js?v=20261121c"></script>
+<script src="net.js?v=20261121c"></script>
+<script src="traffic.js?v=20261121c"></script>
+<script src="crowd.js?v=20261121c"></script>
+<script src="game.js?v=20261121c"></script>
+<script src="commentary.js?v=20261121c"></script>
+<script src="account.js?v=20261121c"></script>
+<script src="menu.js?v=20261121c"></script>
+<script src="weather.js?v=20261121c"></script>
+<script src="hub.js?v=20261121c"></script>
+<script src="audio.js?v=20261121c"></script>
+<script src="ui.js?v=20261121c"></script>
+<script src="main.js?v=20261121c"></script>
 <script>
 /* Offline play: the service worker keeps the game on the device. */
-try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) { /* ignore */ }
+try { if ('serviceWorker' in navigator) {
+  var hadSW = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').catch(function () {});
+  // a newer version took over while the player is still on the first screens: reload once so they see it right away (never in the middle of a run)
+  navigator.serviceWorker.addEventListener('controllerchange', function () { if (hadSW && !window.__game && !window.__swReload) { window.__swReload = 1; location.reload(); } });
+} } catch (e) { /* ignore */ }
 </script>
 </body>
 </html>

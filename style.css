@@ -218,7 +218,7 @@ button.primary:hover{filter:brightness(1.08)}
 
 /* ---- colourful start screen ---- */
 #splash{position:fixed;inset:0;z-index:300;overflow:hidden;display:grid;place-items:center;text-align:center;color:#fff;cursor:pointer;
-  background:linear-gradient(180deg,#0008 0,#0000 38%,#0000 70%,#0007 100%),#2a2030 url(splash.jpg) center 60%/cover no-repeat;align-items:start}
+  background:linear-gradient(180deg,#0008 0,#0000 38%,#0000 70%,#0007 100%),#2a2030 url(splash.jpg?v=2) center 60%/cover no-repeat;align-items:start}
 #splash .sp-sh,#splash .sp-bl,#splash .sp-rail,#splash .sp-train{display:none}
 #splash .sp-c{margin-top:5vh}
 #splash[hidden]{display:none}

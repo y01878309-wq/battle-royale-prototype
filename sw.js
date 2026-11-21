@@ -1,5 +1,6 @@
 /* Offline play: the game files are kept on the device. Only the online race needs the internet. */
-const BUILD = '20261121b', CORE = 'qs-core-' + BUILD, ASSETS = 'qs-assets';
+const BUILD = '20261121c', CORE = 'qs-core-' + BUILD, ASSETS = 'qs-assets';
+const off = () => self.navigator && self.navigator.onLine === false;   // no connection: never wait for the network, use the saved copy at once
 const fresh = (url) => /(^|\/)(index\.html|version\.json)?$/.test(new URL(url).pathname) || /version\.json$/.test(url);
 self.addEventListener('install', (e) => e.waitUntil((async () => {
   self.skipWaiting();
@@ -20,19 +21,28 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
 })()));
 self.addEventListener('fetch', (e) => {
   const r = e.request; if (r.method !== 'GET') return; const u = new URL(r.url);
-  if (u.origin !== location.origin && !/(fonts\.(googleapis|gstatic)\.com|cdnjs\.cloudflare\.com)$/.test(u.hostname)) return;   // Firebase etc. go straight to the network
+  const ext = u.origin !== location.origin;
+  if (ext && !/(fonts\.(googleapis|gstatic)\.com|www\.gstatic\.com)$/.test(u.hostname)) return;   // Firebase data etc. go straight to the network
+  if (ext) {   // fonts and the Firebase scripts: the saved copy at once (also with no signal, where waiting would leave the first screen blank), refreshed quietly; with no saved copy give up after 2.5 s
+    e.respondWith((async () => {
+      const c = await caches.open(ASSETS), hit = await c.match(r); if (!hit && off()) return Response.error(); const net = fetch(r).then((n) => { if (n.ok || n.type === 'opaque') c.put(r, n.clone()); return n; });
+      if (hit) { net.catch(() => {}); return hit; }
+      try { return await Promise.race([net, new Promise((_, j) => setTimeout(() => j(new Error('slow')), 2500))]); } catch (err) { return Response.error(); }
+    })()); return;
+  }
   if (u.origin === location.origin && u.pathname === '/api/tts') {   // speech pieces: kept for good, so the voice also works with no internet
     e.respondWith((async () => { const c = await caches.open('qs-voice'), hit = await c.match(r); if (hit) return hit; try { const n = await fetch(r); if (n.ok) c.put(r, n.clone()); return n; } catch (err) { return Response.error(); } })()); return;
   }
-  if (u.origin === location.origin && (r.mode === 'navigate' || fresh(r.url))) {   // page and version file: newest when online, saved copy when not
+  if (u.origin === location.origin && (r.mode === 'navigate' || fresh(r.url) || /\/splash\.jpg$/.test(u.pathname))) {   // page and version file: newest when online, saved copy when not
     e.respondWith((async () => {
-      try { const n = await Promise.race([fetch(r), new Promise((_, j) => setTimeout(() => j(new Error('slow')), 4000))]); if (n.ok) { (await caches.open(CORE)).put(r.mode === 'navigate' ? './' : r, n.clone()); } return n; }
+      try { if (off()) throw new Error('offline'); const n = await Promise.race([fetch(r), new Promise((_, j) => setTimeout(() => j(new Error('slow')), 3000))]); if (n.ok) { (await caches.open(CORE)).put(r.mode === 'navigate' ? './' : r, n.clone()); } return n; }
       catch (err) { return (await caches.match(r, { ignoreSearch: true })) || (await caches.match('./')) || (await caches.match('index.html')) || (await caches.match('/')) || Response.error(); }
     })()); return;
   }
   e.respondWith((async () => {
     const hit = await caches.match(r) || (u.origin === location.origin && await caches.match(r, { ignoreSearch: true }));
     if (hit) { if (/^\/(models|thumbs|audio)\//.test(u.pathname)) fetch(r).then(async (n) => { if (n.ok) (await caches.open(ASSETS)).put(r, n); }).catch(() => {}); return hit; }   // pictures, models and sounds: show the saved copy, refresh it quietly for next time
+    if (off()) return Response.error();
     try { const n = await fetch(r); if (n.ok || n.type === 'opaque') (await caches.open(/^\/(models|thumbs|audio)\//.test(u.pathname) ? ASSETS : CORE)).put(r, n.clone()); return n; }
     catch (err) { return Response.error(); }
   })());

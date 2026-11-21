@@ -109,6 +109,12 @@ section[hidden]{display:none}textarea{width:100%;padding:11px 12px;border-radius
     <div class="row"><input id="newsNew" placeholder="اكتب رسالة جديدة…" style="flex:1"><button class="alt" id="newsAdd" type="button">➕ أضف</button></div>
     <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="newsOnly" style="width:auto"> أخفي أخبار اللعبة الأساسية وأظهر رسايلي بس</label>
     <small style="opacity:.7">بعد ما تضيف أو تمسح أو ترتّب، دوس «حفظ إعدادات اللعبة» تحت عشان تظهر للاعبين.</small>
+    <h3>الصيانة وموعد التحديث</h3>
+    <label>حالة اللعبة</label><select id="gx_maint"><option value="0">مفتوحة للكل</option><option value="1">مقفولة للصيانة (بتظهر لكل اللاعبين اللي على النت)</option></select>
+    <label>رسالة الصيانة</label><textarea id="gx_maintMsg" rows="2" placeholder="مثلاً: بنركّب تحديث جديد، ثواني ونرجع."></textarea>
+    <label>اللعبة هتفتح امتا</label><input id="gx_reopen" type="datetime-local" dir="ltr">
+    <label>موعد نزول التحديث الجاي (نص حر)</label><input id="gx_updateNote" placeholder="مثلاً: الخميس الساعة 8 مساءً">
+    <small style="opacity:.7">اللاعب اللي من غير نت بيلعب عادي. الصيانة بتظهر بس لمن يكون متصل. دوس «حفظ إعدادات اللعبة» عشان تتفعّل.</small>
     <h3>الأداء (عشان اللعبة متهنجش)</h3>
     <label>أعلى جودة رسوميات مسموحة</label><select id="gx_gfx"><option value="">بدون حد</option><option value="0">منخفضة</option><option value="1">متوسطة</option><option value="2">عالية</option></select>
     <label>أقصى عدد ناس حقيقيين في المحطة</label><input id="gx_crowd" inputmode="numeric" dir="ltr" placeholder="مثلاً 12">
@@ -259,12 +265,13 @@ drawNews();
 $('btnLoadGame').onclick = async () => {
   try { const s = await db.collection('config').doc('game').get(), g = s.exists ? s.data() : {}, t = g.texts || {};
     for (const k of ['name', 'made', 'rightsHead', 'rights']) $('gx_' + k).value = t[k] || '';
+    $('gx_maint').value = g.maintenance ? '1' : '0'; $('gx_maintMsg').value = g.maintMsg || ''; $('gx_updateNote').value = g.updateNote || ''; { const d = g.reopenAt ? new Date(+g.reopenAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''; $('gx_reopen').value = d; }
     newsList = Array.isArray(g.newsList) ? g.newsList.slice() : (g.news ? [g.news] : []); $('newsOnly').checked = !!g.newsOnly; drawNews(); $('gx_gfx').value = g.maxDetail == null ? '' : String(g.maxDetail); $('gx_crowd').value = g.crowdMax == null ? '' : g.crowdMax; $('gx_comm').value = g.commentary === false ? '0' : '1'; $('gx_race').value = g.race === false ? '0' : '1'; log('اتحمّلت إعدادات اللعبة', 'ok'); }
   catch (e) { log('مقدرتش أحمّل: ' + why(e), 'bad'); }
 };
 $('btnSaveGame').onclick = async () => {
   const t = {}; for (const k of ['name', 'made', 'rightsHead', 'rights']) { const v = $('gx_' + k).value.trim(); if (v) t[k] = v; }
-  const g = { texts: t, news: newsList[0] || '', newsList: newsList.slice(), newsOnly: $('newsOnly').checked, commentary: $('gx_comm').value === '1', race: $('gx_race').value === '1' };
+  const g = { texts: t, news: newsList[0] || '', newsList: newsList.slice(), newsOnly: $('newsOnly').checked, maintenance: $('gx_maint').value === '1', maintMsg: $('gx_maintMsg').value.trim(), updateNote: $('gx_updateNote').value.trim(), reopenAt: $('gx_reopen').value ? new Date($('gx_reopen').value).getTime() : 0, commentary: $('gx_comm').value === '1', race: $('gx_race').value === '1' };
   if ($('gx_gfx').value !== '') g.maxDetail = parseInt($('gx_gfx').value, 10); const c = parseInt($('gx_crowd').value, 10); if (c >= 0) g.crowdMax = c;
   try { await db.collection('config').doc('game').set(g); log('اتحفظت إعدادات اللعبة ✔', 'ok'); } catch (e) { log('فشل الحفظ: ' + why(e), 'bad'); }
 };

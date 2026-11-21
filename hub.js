@@ -78,7 +78,7 @@ const Hub = {
     this.wire(this.ui, (act) => this.act(act));
     let k = 0; const tick = this.$('hbTick');
     this.every(() => {   // the game's own news, then every message the admin wrote (or only those when he hid the built-in ones)
-      const R = Settings.remote || {}, mine = Array.isArray(R.newsList) ? R.newsList.filter(Boolean) : (R.news ? [R.news] : []), items = (R.newsOnly && mine.length ? [] : nw.map((n) => n.tag + ': ' + n.title + ' — ' + n.text)).concat(mine);
+      const R = Settings.remote || {}, mine = Array.isArray(R.newsList) ? R.newsList.filter(Boolean) : (R.news ? [R.news] : []), items = (R.newsOnly && mine.length ? [] : nw.map((n) => n.tag + ': ' + n.title + ' — ' + n.text)).concat(mine).concat(R.updateNote ? ['🔧 التحديث الجاي: ' + R.updateNote] : []);
       if (items.length) tick.textContent = items[k++ % items.length];
     }, 6000);
     this.every(() => { const T = this.$('hbTimer'); if (!T) return; const left = Math.max(0, Math.floor((Date.now() + this.TZ) / 86400000 + 1) * 86400000 - this.TZ - Date.now()), p = (n) => String(n).padStart(2, '0'); T.textContent = p(Math.floor(left / 3600000)) + ':' + p(Math.floor(left % 3600000 / 60000)) + ':' + p(Math.floor(left % 60000 / 1000)); }, 1000);
@@ -377,10 +377,11 @@ const SetUI = {
   },
   /* Download the whole game onto the phone (needs internet once) so it opens and plays with no connection; also checks for a newer version and installs it. */
   t_update(m) {
+    const Offline_EXT = ['https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js', 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js', 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js', 'https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700&display=swap'];
     const L = (a, e) => this.L(a, e), c = this.card(m, L('تحميل اللعبة على الجهاز', 'Download the game'), '⬇'), BUILD = window.QS_BUILD || '1';
     const st = Menu.el('p', 'set-note', ''), bar = Menu.el('div', 'xpbar', '<i style="width:0"></i>'), fill = bar.firstChild; c.appendChild(st); c.appendChild(bar);
     const key = (f) => (/\.(js|css)$/.test(f) && !/^vendor\//.test(f) ? f + '?v=' + BUILD : f), mb = (n) => (n / 1048576).toFixed(1);
-    const plan = async () => { const l = await (await fetch('precache.json', { cache: 'no-store' })).json(); return l.core.map((f) => ['qs-core-' + BUILD, key(f)]).concat(l.assets.map((f) => ['qs-assets', f])); };
+    const plan = async () => { const l = await (await fetch('precache.json', { cache: 'no-store' })).json(); return l.core.map((f) => ['qs-core-' + BUILD, key(f)]).concat(l.assets.map((f) => ['qs-assets', f])).concat(Offline_EXT.map((u) => ['qs-assets', u])); };
     const have = async (items) => { let n = 0; for (const [cn, u] of items) { try { if (await (await caches.open(cn)).match(u)) n++; } catch (e) { /* */ } } return n; };
     const show = async () => {
       try { const it = await plan(), n = await have(it); st.textContent = n >= it.length ? L('✔ كل ملفات اللعبة على جهازك (' + n + ' ملف). تلعب من غير نت.', '✔ All game files are on your device.') : L('على جهازك ' + n + ' من ' + it.length + ' ملف. دوس «حمّل» وانت على النت عشان تلعب من غير نت.', n + ' of ' + it.length + ' files are on the device.'); fill.style.width = Math.round(100 * n / it.length) + '%'; }
@@ -392,7 +393,7 @@ const SetUI = {
       try {
         const it = await plan();
         for (const [cn, u] of it) {
-          try { const cache = await caches.open(cn); if (!(await cache.match(u))) { const r = await fetch(u, { cache: 'reload' }); if (!r.ok) throw new Error(r.status); bytes += +(r.headers.get('content-length') || 0) || (await r.clone().blob()).size; await cache.put(u, r); } } catch (e) { fail++; }
+          try { const cache = await caches.open(cn); if (!(await cache.match(u))) { const r = await fetch(u, /^https:/.test(u) ? { mode: 'no-cors' } : { cache: 'reload' }); if (!r.ok && r.type !== 'opaque') throw new Error(r.status); bytes += r.type === 'opaque' ? 0 : (+(r.headers.get('content-length') || 0) || (await r.clone().blob()).size); await cache.put(u, r); } } catch (e) { fail++; }
           done++; fill.style.width = Math.round(100 * done / it.length) + '%'; st.textContent = L('بنحمّل… ' + done + ' / ' + it.length + ' · ' + mb(bytes) + ' ميجا', 'Downloading… ' + done + ' / ' + it.length);
         }
         st.textContent = fail ? L('خلص، بس ' + fail + ' ملف ماتحملش (النت ضعيف). دوس تاني.', fail + ' files failed, try again.') : L('✔ تم التحميل (' + mb(bytes) + ' ميجا). اللعبة دلوقتي تفتح وتلعب من غير نت.', '✔ Done.');
