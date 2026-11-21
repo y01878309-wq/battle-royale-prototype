@@ -342,7 +342,7 @@ class Train {
     this.inside = v; v.body.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(v.body.matrixWorld).invert(), bb = new THREE.Box3(), tb = new THREE.Box3();
     v.body.traverse((o) => { if (o.isMesh && o.geometry) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); tb.copy(o.geometry.boundingBox).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld)); bb.union(tb); } });
     const len = Math.min(v.len, Math.max(10, bb.max.z - bb.min.z)), zc = (bb.max.z + bb.min.z) / 2, g = new THREE.Group(), L = (c, e) => new THREE.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: e == null ? 0.32 : e });
-    const cream = L(0xe9e0c8), floorM = L(0x4a3a2c, 0.2), wood = L(0x9a6630, 0.2), dark = L(0x5a3c1c, 0.18);
+    const glass = new THREE.MeshBasicMaterial({ color: 0xa8d0e6, transparent: true, opacity: 0.16, depthWrite: false }), cream = L(0xe9e0c8), floorM = L(0x4a3a2c, 0.2), wood = L(0x9a6630, 0.2), dark = L(0x5a3c1c, 0.18);
     const bx = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = false; o.receiveShadow = false; g.add(o); return o; };
     const FL = 1.05, hw = 1.42, hl = len / 2 - 0.35;
     bx(hw * 2, 0.06, hl * 2, floorM, 0, FL, 0);
@@ -350,7 +350,14 @@ class Train {
     for (const sx of [-1, 1]) {
       bx(0.06, 0.75, hl * 2, cream, sx * hw, FL + 0.4, 0);        // wall under the windows
       bx(0.06, 0.85, hl * 2, cream, sx * hw, 3.12, 0);            // wall above the windows
-      for (let k = -Math.floor(hl / 1.95); k <= Math.floor(hl / 1.95); k++) bx(0.1, 1.0, 0.16, cream, sx * hw, 2.2, k * 1.95 + 0.95);   // pillars between the windows
+      for (let k = -Math.floor(hl / 1.95); k <= Math.floor(hl / 1.95); k++) {
+        const zc = k * 1.95, pz = zc + 0.975;
+        bx(0.1, 1.0, 0.62, cream, sx * hw, 2.3, pz);   // wide pillar between two windows
+        if (Math.abs(zc) < hl - 1) {   // window: dark frame + pale glass
+          const gl = bx(0.02, 0.9, 1.3, glass, sx * (hw - 0.01), 2.3, zc); gl.renderOrder = 3;
+          bx(0.05, 0.05, 1.34, dark, sx * (hw - 0.02), 2.77, zc); bx(0.05, 0.05, 1.34, dark, sx * (hw - 0.02), 1.83, zc);
+        }
+      }
       bx(0.07, 0.04, hl * 2, dark, sx * (hw - 0.04), 1.86, 0);    // window sill
     }
     for (const sz of [-1, 1]) bx(hw * 2, 2.5, 0.06, cream, 0, 2.3, sz * hl);
