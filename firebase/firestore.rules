@@ -96,6 +96,14 @@ service cloud.firestore {
         && request.resource.data.by[request.resource.data.last] <= resource.data.get('per', 1));
     }
 
+    // phones that asked for notifications outside the game: anyone signed in can register one, only the admin can read or clear them
+    match /pushSubs/{id} {
+      allow create, update: if signed() && request.resource.data.keys().hasOnly(['endpoint', 'p256dh', 'auth', 't'])
+        && request.resource.data.endpoint is string && request.resource.data.endpoint.size() < 600
+        && request.resource.data.p256dh is string && request.resource.data.auth is string;
+      allow read, delete: if isAdmin();
+    }
+
     match /config/{doc} {
       allow read: if signed();
       allow write: if isAdmin();

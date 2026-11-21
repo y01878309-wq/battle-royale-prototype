@@ -1,5 +1,5 @@
 /* Offline play: the game files are kept on the device. Only the online race needs the internet. */
-const BUILD = '20261121h', CORE = 'qs-core-' + BUILD, ASSETS = 'qs-assets';
+const BUILD = '20261121i', CORE = 'qs-core-' + BUILD, ASSETS = 'qs-assets';
 const off = () => self.navigator && self.navigator.onLine === false;   // no connection: never wait for the network, use the saved copy at once
 const fresh = (url) => /(^|\/)(index\.html|version\.json)?$/.test(new URL(url).pathname) || /version\.json$/.test(url);
 self.addEventListener('install', (e) => e.waitUntil((async () => {
@@ -46,4 +46,14 @@ self.addEventListener('fetch', (e) => {
     try { const n = await fetch(r); if (n.ok || n.type === 'opaque') (await caches.open(/^\/(models|thumbs|audio)\//.test(u.pathname) ? ASSETS : CORE)).put(r, n.clone()); return n; }
     catch (err) { return Response.error(); }
   })());
+});
+
+/* Notifications that arrive from outside the game (sent from the admin page through /api/push). */
+self.addEventListener('push', (e) => {
+  let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'قطارات مصر', { body: d.body || '', dir: 'rtl', lang: 'ar', data: { url: d.url || './' } }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil((async () => { const l = await self.clients.matchAll({ type: 'window', includeUncontrolled: true }); for (const c of l) { if ('focus' in c) return c.focus(); } return self.clients.openWindow((e.notification.data && e.notification.data.url) || './'); })());
 });

@@ -213,7 +213,7 @@
     applyCamera(S.cam || 0); ui.setMuteLabel(Sound.muted); bindTilt();
     if (netNote) setTimeout(() => ui.toast(netNote, net ? 'good' : 'bad', 4500), 6200);
     ui.toast('اضغط W علشان تزود القوة، وابدأ الفرملة قبل علامة «قف» بـ 300 م', '', 5600);
-    window.__game = { game, track, train, stations, world, sky, renderer, scene, camera, route, cam, cams: () => camIdx }; Object.defineProperty(window.__game, 'crowd', { get: () => crowd });
+    window.__game = { game, ui, track, train, stations, world, sky, renderer, scene, camera, route, cam, cams: () => camIdx }; Object.defineProperty(window.__game, 'crowd', { get: () => crowd });
     last = performance.now(); requestAnimationFrame(frame);
   }
 

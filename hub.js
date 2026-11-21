@@ -16,6 +16,22 @@ const Offline = {
   }
 };
 
+/* Phone notifications from outside the game (Web Push). The phone's subscription is saved in Firestore so the admin page can send to it. */
+const PushN = {
+  ok() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!window.QS_VAPID; },
+  async on() { try { const r = await navigator.serviceWorker.ready; return Notification.permission === 'granted' && !!(await r.pushManager.getSubscription()); } catch (e) { return false; } },
+  async enable() {
+    if (!this.ok()) throw new Error('unsupported');
+    if ((await Notification.requestPermission()) !== 'granted') throw new Error('denied');
+    const r = await navigator.serviceWorker.ready, key = Uint8Array.from(atob(QS_VAPID.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+    const s = (await r.pushManager.getSubscription()) || await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }), j = s.toJSON();
+    const id = btoa(j.endpoint).replace(/[^A-Za-z0-9]/g, '').slice(-60);
+    await Account.col('pushSubs').doc(id).set({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, t: Date.now() });
+    try { localStorage.setItem('qs-pushid', id); } catch (e) { /* */ }
+  },
+  async disable() { try { const r = await navigator.serviceWorker.ready, s = await r.pushManager.getSubscription(); if (s) await s.unsubscribe(); const id = localStorage.getItem('qs-pushid'); if (id) await Account.col('pushSubs').doc(id).delete().catch(() => {}); } catch (e) { /* */ } }
+};
+
 const Hub = {
   NEWS: [
     { tag: 'قطارات جديدة', title: 'ضواحي أزرق وكهربائي أصفر', text: 'قطارين جداد في المتجر. العربيات المرتفعة والكابينة بأزرارها الشغالة.' },
@@ -405,6 +421,9 @@ const SetUI = {
     this.seg(c, CAMERAS.map((x, i) => [i, x[1], ['🚂', '🎥', '🛰', '👁', '🚉', '🪑', '🪑'][i]]), Settings.d.cam, (v) => { Settings.set('cam', v); this.render(); });
     this.slider(c, 'fov', L('زاوية الرؤية', 'Field of view'), 0.8, 1.25, 0.05, (v) => Math.round(v * 100) + '%');
     this.toggle(c, 'shake', L('اهتزاز الكابينة', 'Cab shake'), L('اهتزاز خفيف مع السرعة', ''));
+    if (PushN.ok()) { const pr = this.toggle(c, '_push', L('إشعارات على التليفون (حتى والعبة مقفولة)', 'Phone notifications'), L('تفضل توصلك أخبار اللعبة والتحديثات', ''), async (v) => {
+      const cb = pr.querySelector('input'); try { if (v) { await PushN.enable(); this.api.toast('✔ الإشعارات اشتغلت'); } else await PushN.disable(); } catch (e) { cb.checked = false; this.api.toast(e.message === 'denied' ? 'سمح بالإشعارات من إعدادات المتصفح الأول' : 'الإشعارات مش مدعومة هنا أو محتاجة نت'); } });
+      PushN.on().then((x) => { pr.querySelector('input').checked = x; }); }
     this.toggle(c, 'lockres', L('ثبّت أعلى جودة للصورة', 'Lock sharp image'), L('الصورة تفضل حادة حتى لو الجهاز تقيل', ''));
   },
   t_ui(m) {

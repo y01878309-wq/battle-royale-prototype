@@ -112,6 +112,7 @@ section[hidden]{display:none}textarea{width:100%;padding:11px 12px;border-radius
     <h3>الصيانة وموعد التحديث</h3>
     <label>حالة اللعبة</label><select id="gx_maint"><option value="0">مفتوحة للكل</option><option value="1">مقفولة للصيانة (بتظهر لكل اللاعبين اللي على النت)</option></select>
     <label>دخولك انت وقت الصيانة</label><div class="row"><button type="button" id="gx_pass" class="btn">ادخل اللعبة وهي مقفولة (للأدمن بس)</button> <button type="button" id="gx_passOff" class="btn">ارجع زي أي لاعب</button></div><small id="gx_passSt"></small>
+    <label>إشعار على تليفونات اللاعبين (خارج اللعبة)</label><input id="pn_t" placeholder="عنوان الإشعار"><textarea id="pn_b" rows="2" placeholder="نص الإشعار"></textarea><input id="pn_k" type="password" placeholder="كلمة سر الإرسال (PUSH_KEY من Vercel)"><div class="row"><button type="button" id="pn_send" class="btn">ابعت الإشعار</button></div><small id="pn_st"></small>
     <label>رسالة الصيانة</label><textarea id="gx_maintMsg" rows="2" placeholder="مثلاً: بنركّب تحديث جديد، ثواني ونرجع."></textarea>
     <label>اللعبة هتفتح امتا</label><input id="gx_reopen" type="datetime-local" dir="ltr">
     <label>موعد نزول التحديث الجاي (نص حر)</label><input id="gx_updateNote" placeholder="مثلاً: الخميس الساعة 8 مساءً">
@@ -294,6 +295,22 @@ $('btnSettle').onclick = async () => {
     log('اتصرفت الجوايز ✔ (إجمالي ' + paid + ')\n' + lines.join('\n'), 'ok');
   } catch (e) { log(why(e), 'bad'); } finally { $('btnSettle').disabled = false; }
 };
+  { const K = 'qs-pushkey'; try { $('pn_k').value = localStorage.getItem(K) || ''; } catch (e) { /* */ }
+    $('pn_send').onclick = async () => {
+      const st = $('pn_st'), title = $('pn_t').value.trim(), body = $('pn_b').value.trim(), key = $('pn_k').value; if (!body) { st.textContent = 'اكتب نص الإشعار'; return; }
+      try { localStorage.setItem(K, key); } catch (e) { /* */ }
+      try {
+        st.textContent = 'بقرا التليفونات…'; const q = await db.collection('pushSubs').get(), all = q.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+        if (!all.length) { st.textContent = 'لسه مفيش حد فعّل الإشعارات (من الإعدادات جوه اللعبة)'; return; }
+        let ok = 0, failed = 0, gone = 0;
+        for (let i = 0; i < all.length; i += 100) {
+          const part = all.slice(i, i + 100), r = await fetch('/api/push', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ key, title, body, subs: part }) }), j = await r.json();
+          if (!r.ok) { st.textContent = 'فشل: ' + (j.error || r.status); return; }
+          ok += j.ok; failed += j.failed; for (const ep of j.dead || []) { const d = part.find((x) => x.endpoint === ep); if (d) { await db.collection('pushSubs').doc(d.id).delete().catch(() => {}); gone++; } }
+        }
+        st.textContent = '✔ وصل لـ ' + ok + ' من ' + all.length + (failed ? ' · فشل ' + failed : '') + (gone ? ' · اتمسح ' + gone + ' قديم' : '');
+      } catch (e) { st.textContent = 'خطأ: ' + (e.message || e); }
+    }; }
   { const st = () => { try { $('gx_passSt').textContent = localStorage.getItem('qs-adminpass') === '1' ? '✔ الجهاز ده بيدخل اللعبة حتى وهي مقفولة' : 'الجهاز ده بيشوف الصيانة زي أي لاعب'; } catch (e) { /* */ } };
     $('gx_pass').onclick = () => { try { localStorage.setItem('qs-adminpass', '1'); } catch (e) { /* */ } st(); window.open('./', '_blank'); };
     $('gx_passOff').onclick = () => { try { localStorage.removeItem('qs-adminpass'); } catch (e) { /* */ } st(); }; st(); }
