@@ -354,13 +354,19 @@ class Train {
       bx(0.07, 0.04, hl * 2, dark, sx * (hw - 0.04), 1.86, 0);    // window sill
     }
     for (const sz of [-1, 1]) bx(hw * 2, 2.5, 0.06, cream, 0, 2.3, sz * hl);
+    // overhead luggage racks along both walls, loaded with bags and bundles (very Egyptian)
+    { const bagCols = [0x2f4f7a, 0x8a2f2f, 0x3a6a3a, 0x555555, 0xc08a3a, 0x6a3a7a, 0x1f1f1f, 0xb0a080, 0x9a9a9a], bagM = bagCols.map((c) => L(c, 0.25));
+      for (const sx of [-1, 1]) {
+        bx(0.5, 0.04, hl * 2 - 0.4, dark, sx * (hw - 0.27), 2.95, 0); bx(0.03, 0.14, hl * 2 - 0.4, dark, sx * (hw - 0.03), 3.0, 0);   // shelf + back rail
+        for (let z = -hl + 0.9; z < hl - 0.7;) { const w = 0.45 + Math.random() * 0.5; if (Math.random() < 0.78) { const h2 = 0.22 + Math.random() * 0.28, bag = bx(0.34 + Math.random() * 0.1, h2, w, bagM[(Math.random() * bagM.length) | 0], sx * (hw - 0.27), 2.97 + h2 / 2, z); bag.rotation.y = (Math.random() - 0.5) * 0.2; if (Math.random() < 0.4) bx(0.26, 0.16, w * 0.6, bagM[(Math.random() * bagM.length) | 0], sx * (hw - 0.27), 2.97 + h2 + 0.08, z); } z += w + 0.15; }
+      } }
     const rows = Math.floor((hl * 2 - 1.2) / 1.05), z0 = -((rows - 1) * 1.05) / 2, ppl = [];
     const names = ['father', 'police'].filter((n) => typeof People !== 'undefined' && People.ready[n]);
     for (let r = 0; r < rows; r++) for (const sx of [-1, 1]) {
       const z = z0 + r * 1.05, cx = sx * 0.9;
       bx(1.0, 0.07, 0.46, wood, cx, FL + 0.46, z); bx(1.0, 0.62, 0.07, wood, cx, FL + 0.82, z - 0.26); bx(0.06, 0.45, 0.4, dark, sx * 0.4, FL + 0.23, z); bx(0.06, 0.45, 0.4, dark, sx * 1.4, FL + 0.23, z);
       for (const o of [-0.25, 0.25]) if (names.length && Math.random() < 0.7) {
-        const nm = names.length > 1 && Math.random() < 0.8 ? names[0] : names[names.length - 1], f = People.makeSeated(nm); if (!f) continue;
+        const nm = names.length > 1 && Math.random() < 0.6 ? names[0] : names[names.length - 1], f = People.makeSeated(nm); if (!f) continue;
         f.position.set(cx + o + (Math.random() - 0.5) * 0.06, FL - 0.02, z + 0.02); f.rotation.y = (Math.random() - 0.5) * 0.35; f.scale.setScalar(0.92 + Math.random() * 0.14); g.add(f); ppl.push(f);
       }
     }
@@ -845,6 +851,23 @@ class Train {
   }
 
   /* info: { notch, brake, doors (0..1), emerg, lights, horn, kmh, limit, dist, name } */
+  /* Cab mood lighting: mode 'off' | 'rainbow' (cycles through every colour) | '#rrggbb' (one fixed colour the player chose). LED strips along the cab roof plus a soft light. */
+  setCabLight(mode) {
+    if (!this.cab) return; this.cabLightMode = mode || 'off';
+    if (!this.cabLamp) {
+      const L = new THREE.PointLight(0xffffff, 0, 6, 1.6); L.position.set(0, 3.3, 4.7); this.cab.add(L); this.cabLamp = L;
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff }); this.cabStrips = [];
+      for (const [x, y, z, w, d] of []) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, d), mat); m.position.set(x, y, z); m.visible = false; this.cab.add(m); this.cabStrips.push(m); }
+      this.cabStripMat = mat;
+    }
+    this.tickCabLight(0);
+  }
+  tickCabLight(t) {
+    if (!this.cabLamp) return; const m = this.cabLightMode, on = m && m !== 'off';
+    this.cabLamp.intensity = on ? 3.2 : 0; this.cabStrips.forEach((x) => { x.visible = !!on; });
+    if (!on) return; const c = this.cabStripMat.color; if (m === 'rainbow') c.setHSL((t * 0.12) % 1, 1, 0.55); else c.set(m);
+    this.cabLamp.color.copy(c);
+  }
   setCabState(i) {
     const C = this.cabCtl; if (!C || !this.cab || !this.cab.visible) return;
     if (this.lux) return this.lux.update(i, this.dialMax);

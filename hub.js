@@ -1,5 +1,21 @@
 'use strict';
 /* The main menu ("hub"): a 3D background with the player's train, the home screen, garage, map, contests and the settings screen. */
+/* Offline download: saves every game file into the phone's cache so the game opens with no internet. Used by the home-screen banner and the settings tab. */
+const Offline = {
+  EXT: ['https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js', 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js', 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js', 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js', 'https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700&display=swap'],
+  async plan() { const B = window.QS_BUILD || '1', key = (f) => (/\.(js|css)$/.test(f) && !/^vendor\//.test(f) ? f + '?v=' + B : f), l = await (await fetch('precache.json', { cache: 'no-store' })).json(); return l.core.map((f) => ['qs-core-' + B, key(f)]).concat(l.assets.map((f) => ['qs-assets', f])).concat(this.EXT.map((u) => ['qs-assets', u])); },
+  async have(items) { let n = 0; for (const [cn, u] of items) { try { if (await (await caches.open(cn)).match(u)) n++; } catch (e) { /* */ } } return n; },
+  /* returns {fail, bytes}; cb(done, total, bytes) after every file */
+  async run(items, cb) {
+    let done = 0, bytes = 0, fail = 0;
+    for (const [cn, u] of items) {
+      try { const cache = await caches.open(cn); if (!(await cache.match(u))) { const r = await fetch(u, /^https:/.test(u) ? { mode: 'no-cors' } : { cache: 'reload' }); if (!r.ok && r.type !== 'opaque') throw new Error(r.status); bytes += r.type === 'opaque' ? 0 : (+(r.headers.get('content-length') || 0) || (await r.clone().blob()).size); await cache.put(u, r); } } catch (e) { fail++; }
+      done++; if (cb) cb(done, items.length, bytes);
+    }
+    return { fail, bytes };
+  }
+};
+
 const Hub = {
   NEWS: [
     { tag: 'قطارات جديدة', title: 'ضواحي أزرق وكهربائي أصفر', text: 'قطارين جداد في المتجر. العربيات المرتفعة والكابينة بأزرارها الشغالة.' },
@@ -64,6 +80,7 @@ const Hub = {
       <div class="hb-event${m > 1 ? ' on' : ''}">${ev}</div>
       <button class="hb-contest" data-a="compete"><span>🏆</span><b>${L('مسابقة شغالة', 'Contest live')}</b><span>${L('باقي', 'ends in')}</span><b id="hbTimer" dir="ltr">--:--:--</b></button>
       <div class="hb-logo"><b>${L('قطارات مصر', 'Egypt Trains')}</b><small>QITARAT MISR</small></div>
+      <div class="hb-dl" id="hbDl" hidden><div class="hb-dl-t"><b id="hbDlT"></b><button id="hbDlB" type="button"></button></div><div class="hb-dl-bar"><i id="hbDlF"></i></div></div>
       <div class="hb-cards">${nw.slice(0, 2).map((n, i) => `<button class="hb-card" data-a="bell"><em>${this.esc(n.tag)}</em><b>${this.esc(n.title)}</b><small>${this.esc(n.text)}</small></button>`).join('')}</div>
       ${last ? `<div class="hb-cont"><button class="hb-play" data-a="continue" aria-label="play">▶</button><div><b>${L('كمّل من آخر مكان', 'Continue where you left off')}</b><span>${this.esc(last.trainName)}: ${this.esc(last.lineName)}</span><small>${L(last.score + ' نقطة · من ' + this.ago(last.t), last.score + ' pts · ' + this.ago(last.t) + ' ago')}</small></div><button class="hb-x" data-a="hideLast" aria-label="x">✕</button></div>` : ''}
       <div class="hb-menu">
@@ -76,12 +93,32 @@ const Hub = {
         <button class="hb-btn" data-a="settings"><i>⚙</i><b>${L('الإعدادات', 'Settings')}</b></button>
       </div></div>`;
     this.wire(this.ui, (act) => this.act(act));
+    this.dlBanner();
     let k = 0; const tick = this.$('hbTick');
     this.every(() => {   // the game's own news, then every message the admin wrote (or only those when he hid the built-in ones)
       const R = Settings.remote || {}, mine = Array.isArray(R.newsList) ? R.newsList.filter(Boolean) : (R.news ? [R.news] : []), items = (R.newsOnly && mine.length ? [] : nw.map((n) => n.tag + ': ' + n.title + ' — ' + n.text)).concat(mine).concat(R.updateNote ? ['🔧 التحديث الجاي: ' + R.updateNote] : []);
       if (items.length) tick.textContent = items[k++ % items.length];
     }, 6000);
     this.every(() => { const T = this.$('hbTimer'); if (!T) return; const left = Math.max(0, Math.floor((Date.now() + this.TZ) / 86400000 + 1) * 86400000 - this.TZ - Date.now()), p = (n) => String(n).padStart(2, '0'); T.textContent = p(Math.floor(left / 3600000)) + ':' + p(Math.floor(left % 3600000 / 60000)) + ':' + p(Math.floor(left % 60000 / 1000)); }, 1000);
+  },
+
+  /* Home-screen download card: shows only while the game is not fully on the device. */
+  async dlBanner() {
+    const box = this.$('hbDl'); if (!box || !window.caches || navigator.onLine === false && !this._dlRun) return;
+    const T = this.$('hbDlT'), B = this.$('hbDlB'), F = this.$('hbDlF'), L = (a, e) => Settings.L(a, e);
+    try {
+      const it = await Offline.plan(), n = await Offline.have(it); if (n >= it.length) return;
+      box.hidden = false; F.style.width = Math.round(100 * n / it.length) + '%';
+      T.textContent = L('حمّل اللعبة على جهازك عشان تلعب من غير نت', 'Download the game to play offline'); B.textContent = L('تحميل', 'Download');
+      B.onclick = async () => {
+        if (navigator.onLine === false) { T.textContent = L('محتاج نت عشان التحميل', 'Internet needed'); return; }
+        B.disabled = true; box.classList.add('go'); this._dlRun = true;
+        const r = await Offline.run(it, (d, t, by) => { F.style.width = Math.round(100 * d / t) + '%'; T.textContent = L('بنحمّل… ' + Math.round(100 * d / t) + '٪ (' + (by / 1048576).toFixed(1) + ' ميجا)', 'Downloading… ' + Math.round(100 * d / t) + '%'); });
+        this._dlRun = false; box.classList.remove('go'); B.disabled = false;
+        if (r.fail) { T.textContent = L('خلص بس ' + r.fail + ' ملف ماتحملش. دوس تاني', r.fail + ' failed, retry'); B.textContent = L('كمّل', 'Retry'); }
+        else { T.textContent = L('✔ تمام! اللعبة دلوقتي بتشتغل من غير نت', '✔ Done! Works offline now'); B.hidden = true; setTimeout(() => { box.hidden = true; }, 3500); }
+      };
+    } catch (e) { /* offline and nothing to show */ }
   },
 
   act(a) {
@@ -365,7 +402,7 @@ const SetUI = {
   },
   t_cam(m) {
     const L = (a, e) => this.L(a, e), c = this.card(m, L('الكاميرا', 'Camera'), '📷');
-    this.seg(c, CAMERAS.map((x, i) => [i, x[1], ['🚂', '🎥', '🛰', '👁', '🚉'][i]]), Settings.d.cam, (v) => { Settings.set('cam', v); this.render(); });
+    this.seg(c, CAMERAS.map((x, i) => [i, x[1], ['🚂', '🎥', '🛰', '👁', '🚉', '🪑', '🪑'][i]]), Settings.d.cam, (v) => { Settings.set('cam', v); this.render(); });
     this.slider(c, 'fov', L('زاوية الرؤية', 'Field of view'), 0.8, 1.25, 0.05, (v) => Math.round(v * 100) + '%');
     this.toggle(c, 'shake', L('اهتزاز الكابينة', 'Cab shake'), L('اهتزاز خفيف مع السرعة', ''));
     this.toggle(c, 'lockres', L('ثبّت أعلى جودة للصورة', 'Lock sharp image'), L('الصورة تفضل حادة حتى لو الجهاز تقيل', ''));
@@ -425,8 +462,11 @@ const SetUI = {
         const w = Menu.el('div', 'set-row', `<span><b>${lab}</b></span>`), inp = document.createElement('textarea'); inp.rows = 2; inp.value = (Settings.d.texts || {})[k] || ''; inp.placeholder = def; inp.style.cssText = 'width:100%;margin-top:6px;border-radius:10px;border:1px solid #556;background:#10151c;color:#fff;padding:8px;font:inherit';
         inp.addEventListener('change', () => { const t = Object.assign({}, Settings.d.texts || {}); t[k] = inp.value.trim(); Settings.set('texts', t); this.render(); });
         w.appendChild(inp); e.appendChild(w); } }
-    c = this.card(m, L('أصوات', 'Sounds'), '🔊'); row(c, 'Freight Train Passing By by Alex_Jauk · Loud Train Horn by u_c0ee1mc2q3 (Pixabay)', '');
-    if (typeof Models !== 'undefined') { c = this.card(m, L('موديلات ثلاثية الأبعاد', '3D models credits'), '🚆'); for (const t of Models.CREDITS().concat(typeof People !== 'undefined' ? People.CREDITS() : [])) row(c, t, ''); }
+    c = this.card(m, L('أعمال أصحاب اللعبة', 'Made by the owners'), '★');
+    row(c, 'قطر جنرال 2595 والكابينة الفاخرة', 'تصميم وكود أصحاب اللعبة، ومدمجين في اللعبة بإذنهم.'); row(c, 'صوت الأذان وصوت مرور القطر وصور السائق', 'مقدّمة من صاحب اللعبة للاستخدام داخلها.');
+    c = this.card(m, L('أصوات', 'Sounds'), '🔊'); row(c, 'Freight Train Passing By — Alex_Jauk (Pixabay)', ''); row(c, 'Loud Train Horn — u_c0ee1mc2q3 (Pixabay)', 'مرخّصة للاستخدام حسب رخصة Pixabay.');
+    c = this.card(m, L('المكتبات المستخدمة', 'Libraries'), '🧩'); row(c, 'three.js (MIT License)', 'مكتبة الرسوم ثلاثية الأبعاد.'); row(c, 'Firebase (Google)', 'الحسابات والتصنيف واللعب الأونلاين.');
+    if (typeof Models !== 'undefined') { c = this.card(m, L('موديلات ثلاثية الأبعاد (CC BY 4.0)', '3D models credits (CC BY 4.0)'), '🚆'); this.note(c, L('الموديلات دي مرخّصة CC BY 4.0، وأسماء أصحابها محفوظة هنا. بعضها اتعدّل ودهن بألوان مصرية.', 'Models under CC BY 4.0; some repainted.')); for (const t of Models.CREDITS().concat(typeof People !== 'undefined' ? People.CREDITS() : [])) row(c, t, ''); }
     c = this.card(m, L('ممنوع', 'Not allowed'), '⛔');
     for (const t of ['نسخ اللعبة أو أي جزء منها (الكود أو الرسومات أو الأصوات أو النصوص).', 'إعادة نشرها أو رفعها على أي موقع أو متجر تطبيقات باسم غير اسم أصحابها.', 'تعديلها أو فك تغليفها أو استخراج ملفاتها وبيعها أو إعادة استخدامها.', 'بيع حسابات اللاعبين أو العملات أو التلاعب بالرصيد أو الغش بأي طريقة.', 'الطباعة أو التصوير لأغراض تجارية من غير إذن مكتوب.']) row(c, '✖ ' + t, '');
     row(c, 'المخالفة', 'أي نسخ أو استغلال من غير إذن بيعرّض صاحبه للمساءلة القانونية، وبنحتفظ بحقنا في إيقاف أي حساب مخالف.');

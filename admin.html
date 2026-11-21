@@ -111,6 +111,7 @@ section[hidden]{display:none}textarea{width:100%;padding:11px 12px;border-radius
     <small style="opacity:.7">بعد ما تضيف أو تمسح أو ترتّب، دوس «حفظ إعدادات اللعبة» تحت عشان تظهر للاعبين.</small>
     <h3>الصيانة وموعد التحديث</h3>
     <label>حالة اللعبة</label><select id="gx_maint"><option value="0">مفتوحة للكل</option><option value="1">مقفولة للصيانة (بتظهر لكل اللاعبين اللي على النت)</option></select>
+    <label>دخولك انت وقت الصيانة</label><div class="row"><button type="button" id="gx_pass" class="btn">ادخل اللعبة وهي مقفولة (للأدمن بس)</button> <button type="button" id="gx_passOff" class="btn">ارجع زي أي لاعب</button></div><small id="gx_passSt"></small>
     <label>رسالة الصيانة</label><textarea id="gx_maintMsg" rows="2" placeholder="مثلاً: بنركّب تحديث جديد، ثواني ونرجع."></textarea>
     <label>اللعبة هتفتح امتا</label><input id="gx_reopen" type="datetime-local" dir="ltr">
     <label>موعد نزول التحديث الجاي (نص حر)</label><input id="gx_updateNote" placeholder="مثلاً: الخميس الساعة 8 مساءً">
@@ -293,6 +294,9 @@ $('btnSettle').onclick = async () => {
     log('اتصرفت الجوايز ✔ (إجمالي ' + paid + ')\n' + lines.join('\n'), 'ok');
   } catch (e) { log(why(e), 'bad'); } finally { $('btnSettle').disabled = false; }
 };
+  { const st = () => { try { $('gx_passSt').textContent = localStorage.getItem('qs-adminpass') === '1' ? '✔ الجهاز ده بيدخل اللعبة حتى وهي مقفولة' : 'الجهاز ده بيشوف الصيانة زي أي لاعب'; } catch (e) { /* */ } };
+    $('gx_pass').onclick = () => { try { localStorage.setItem('qs-adminpass', '1'); } catch (e) { /* */ } st(); window.open('./', '_blank'); };
+    $('gx_passOff').onclick = () => { try { localStorage.removeItem('qs-adminpass'); } catch (e) { /* */ } st(); }; st(); }
 </script>
 </body>
 </html>

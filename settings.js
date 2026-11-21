@@ -10,8 +10,9 @@ const Settings = {
   d: null, remote: {},
   fresh: false,   // true once the live config was read this session (so an old saved "maintenance" flag can never lock someone out while offline)
   /* Maintenance: when the admin closes the game, every player who is online sees this blocking screen with the message and the re-opening time; it checks again every minute and opens by itself. */
+  adminPass() { try { return localStorage.getItem('qs-adminpass') === '1'; } catch (e) { return false; } },
   maint() {
-    const R = this.remote || {}, on = this.fresh && R.maintenance && !/nomaint/.test(location.search), esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const R = this.remote || {}, on = this.fresh && R.maintenance && !/nomaint/.test(location.search) && !this.adminPass(), esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     let el = document.getElementById('maintBox'); clearTimeout(this._mt);
     if (!on) { if (el) el.remove(); return; }
     if (!el) { el = document.createElement('div'); el.id = 'maintBox'; el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:linear-gradient(180deg,#0b1220,#1b2a44);display:grid;place-items:center;text-align:center;color:#fff;padding:24px;direction:rtl;font-family:inherit'; document.body.appendChild(el); }

@@ -147,6 +147,7 @@
     ui.on({
       start: startGame, restart: restart, camera: (i) => cycleCamera(i), resetCam: () => resetCam(), pause: togglePause, autoPause: () => { if (started && !paused) togglePause(); },
       mute: () => { Sound.setMuted(!Sound.muted); ui.setMuteLabel(Sound.muted); },
+      cabLight: (v) => { Settings.d.cabLight = v; if (Settings.save) Settings.save(); train.setCabLight(v); },
       doors: () => { if (game && game.toggleDoors()) ui.toast(game.doorWant ? 'فتح الأبواب' : 'قفل الأبواب', '', 1200); else ui.toast('الأبواب بتتفتح وانت واقف في المحطة بس', '', 1800); },
       comm: () => { ui.toast(Commentary.toggle() ? 'التعليق شغال' : 'التعليق مقفول', '', 1200); },
       horn: (on) => { Sound.horn(on); if (on && net && net.on) net.horn(); }
@@ -189,7 +190,7 @@
     planJunctions();
     if (typeof Models !== 'undefined') { const names = type.real ? [type.real.head].concat(type.real.mid) : [Models.pickFor(type)].filter(Boolean).concat((type.consist.indexOf('coach') >= 0 || type.consist.indexOf('old') >= 0 || type.consist.indexOf('talgo') >= 0) ? ['coach1'] : []).concat(type.consist.some((k) => ['tank','box','flat','cont'].includes(k)) ? ['wbox'] : []).concat(type.consist.some((k) => ['hopper','gond','tank'].includes(k)) ? ['whop'] : []); if (names.length) await Models.preload(names); }
     if (typeof People !== 'undefined') await Promise.all([People.load('father'), People.load('police')]).catch(() => null);
-    train = new Train(scene, track, quality, type);
+    train = new Train(scene, track, quality, type); train.setCabLight(Settings.d.cabLight || 'off');
     try { const sid = localStorage.getItem('qs-cabsticker'), sk = sid && STICKERS.find((x) => x.id === sid); if (sk && Account.d && Account.owns(sk)) train.setCabSticker(sk.emoji); } catch (e) { /* */ }
     crowd = new Crowd(scene, track, quality, stations, train.length); crowd.prepare(0);
     traffic = new Traffic(scene, track, quality);
@@ -293,19 +294,19 @@
         if (pinch) cam.zoom = 1; pinch = d; return;
       }
       // locked cameras: only the cab view can be glanced around (a little, and it springs back when the finger lifts); every other view stays put
-      if (CAMERAS[camIdx][0] === 'inside') { cam.yaw = U.clamp(cam.yaw - dx * 0.004, -2.6, 2.6); cam.pitch = U.clamp(cam.pitch - dy * 0.003, -0.6, 0.5); } else if (CAMERAS[camIdx][0] === 'cab') { cam.yaw = U.clamp(cam.yaw - dx * 0.004, -0.9, 0.9); cam.pitch = U.clamp(cam.pitch - dy * 0.003, -0.4, 0.4); }
+      if (CAMERAS[camIdx][0] === 'inside' || CAMERAS[camIdx][0] === 'inside2') { cam.yaw = U.clamp(cam.yaw - dx * 0.004, -2.6, 2.6); cam.pitch = U.clamp(cam.pitch - dy * 0.003, -0.6, 0.5); } else if (CAMERAS[camIdx][0] === 'cab') { cam.yaw = U.clamp(cam.yaw - dx * 0.004, -0.9, 0.9); cam.pitch = U.clamp(cam.pitch - dy * 0.003, -0.4, 0.4); }
     });
     for (const t of ['pointerup', 'pointercancel']) el.addEventListener(t, (ev) => { ptr.delete(ev.pointerId); pinch = 0; if (!ptr.size) cam.held = false; cabPress(ev, false); });
     el.addEventListener('wheel', (ev) => { ev.preventDefault(); cam.zoom = 1; }, { passive: false });
     el.addEventListener('dblclick', resetCam);
   }
 
-  const DEFAULT = { cab: [0, 0], inside: [0, -0.05], chase: [0, 0.24], top: [0, 1.15], front: [0.15, 0.12], side: [0, 0] };
+  const DEFAULT = { cab: [0, 0], inside: [0, -0.05], inside2: [0, -0.05], chase: [0, 0.24], top: [0, 1.15], front: [0.15, 0.12], side: [0, 0] };
   function resetCam() { const d = DEFAULT[CAMERAS[camIdx][0]]; cam.yaw = d[0]; cam.pitch = d[1]; cam.zoom = 1; }
   function cycleCamera(i) { applyCamera(typeof i === 'number' ? i : (camIdx + 1) % CAMERAS.length); }
   function applyCamera(i) {
     camIdx = U.clamp(i, 0, CAMERAS.length - 1); const k = CAMERAS[camIdx][0];
-    train.setCabView(k === 'cab'); train.setInside(k === 'inside'); ui.setCamLabel(CAMERAS[camIdx][1]); baseFov = k === 'cab' ? 70 : 60; resetCam(); sideS = -1e9;
+    train.setCabView(k === 'cab'); train.setInside(k === 'inside' || k === 'inside2'); ui.setCamLabel(CAMERAS[camIdx][1]); baseFov = k === 'cab' ? 70 : 60; resetCam(); sideS = -1e9;
   }
 
   function orbit(dist, headingOffset, dt, height) {
@@ -331,15 +332,15 @@
   function updateCamera(dt) {
     const k = CAMERAS[camIdx][0], body = train.loco.body; body.updateMatrixWorld(true);
     { const d = DEFAULT[k], q = 1 - Math.exp(-7 * dt); if (!cam.held) { cam.yaw += (d[0] - cam.yaw) * q; cam.pitch += (d[1] - cam.pitch) * q; } }   // the view always eases back to its fixed angle
-    baseFov = (k === 'cab' ? 70 : 48) * Settings.d.fov; camera.fov = baseFov; camera.near = k === 'cab' || k === 'inside' ? 0.12 : 0.8; const f = Math.min(1, game.v / 25) * (Settings.d.shake ? 1 : 0);
+    baseFov = (k === 'cab' ? 70 : 48) * Settings.d.fov; camera.fov = baseFov; camera.near = k === 'cab' || k === 'inside' || k === 'inside2' ? 0.12 : 0.8; const f = Math.min(1, game.v / 25) * (Settings.d.shake ? 1 : 0);
     if (k === 'cab') {
       train.eye.getWorldPosition(camera.position); train.eye.getWorldQuaternion(camera.quaternion);
       camera.position.y += Math.sin(game.t * 17) * 0.0012 * f + Math.sin(game.t * 5.3) * 0.0025 * f; camera.position.x += Math.sin(game.t * 3.1) * 0.0015 * f;
       if (game.derailed) { const q = Math.min(1, game.derailT) * 0.12 * Math.max(0, 1 - game.derailT / 4); camera.position.x += (Math.random() - 0.5) * q; camera.position.y += (Math.random() - 0.5) * q; camera.rotateZ(Math.min(1, game.derailT / 1.5) * 0.5); }
       eq.setFromEuler(eu.set(cam.pitch, cam.yaw + Math.PI * 0, 0, 'YXZ')); camera.quaternion.multiply(eq); camera.fov = U.clamp(baseFov / cam.zoom, 28, 100);
-    } else if (k === 'inside' && train.inside) {
-      const b = train.inside.body; b.updateMatrixWorld(true); camera.position.copy(b.localToWorld(v3.set(0.02, 2.5, train.insideZ - (train.insideLen / 2 - 1.5)))); b.getWorldQuaternion(camera.quaternion);
-      camera.position.y += Math.sin(game.t * 17) * 0.002 * f; eq.setFromEuler(eu.set(cam.pitch, cam.yaw + Math.PI, 0, 'YXZ')); camera.quaternion.multiply(eq); camera.fov = U.clamp(baseFov / cam.zoom, 40, 100);
+    } else if ((k === 'inside' || k === 'inside2') && train.inside) {
+      const fr = k === 'inside2', b = train.inside.body; b.updateMatrixWorld(true); camera.position.copy(b.localToWorld(v3.set(0.02, 2.5, train.insideZ + (fr ? 1 : -1) * (train.insideLen / 2 - 1.5)))); b.getWorldQuaternion(camera.quaternion);
+      camera.position.y += Math.sin(game.t * 17) * 0.002 * f; eq.setFromEuler(eu.set(cam.pitch, cam.yaw + (fr ? 0 : Math.PI), 0, 'YXZ')); camera.quaternion.multiply(eq); camera.fov = U.clamp(baseFov / cam.zoom, 40, 100);
     } else if (k === 'front') { orbit(10.5, 0, dt, 2.2); }
     else if (k === 'chase') { orbit(23, Math.PI, dt, 3.0); }
     else if (k === 'top') { orbit(60, Math.PI, dt, 1.0); }
@@ -425,7 +426,7 @@
     if (ev.length) handle(ev);
     updateJunction(); train.place(game.s, game.t, game.v, game.derailT); train.spin(game.d || 0); train.setDoors(game.doors);
     train.setDials(game.kmh, game.brake, game.power);
-    train.setCabState({ notch: inp.notch, brake: game.brake, doors: game.doors, emerg: inp.emergency, lights: lightsOn, horn: inp.horn, kmh: game.kmh, limit: game.limit, dist: game.phase === 'dwell' ? 'واقف' : Math.round(Math.max(0, game.distToStop())) + ' م', name: (stations.list[Math.min(game.nextIdx, stations.list.length - 1)] || {}).name });
+    train.tickCabLight(game.t); train.setCabState({ notch: inp.notch, brake: game.brake, doors: game.doors, emerg: inp.emergency, lights: lightsOn, horn: inp.horn, kmh: game.kmh, limit: game.limit, dist: game.phase === 'dwell' ? 'واقف' : Math.round(Math.max(0, game.distToStop())) + ' م', name: (stations.list[Math.min(game.nextIdx, stations.list.length - 1)] || {}).name });
     if (weather) weather.update(dt, camera, world.scenery.sandAt(game.s));
     world.update(dt, game.t); world.scenery.trainS = game.s; world.scenery.trainLen = train.length; if (world.scenery.ridge) world.scenery.ridge.position.set(camera.position.x, 0, camera.position.z);
     if (net) { net.setState(game, train.length); const hit = net.update(dt, game.t, train.length); if (hit && !game.derailed) handle(game.derail([], 'collision')); updateNetBox(); }

@@ -249,3 +249,10 @@ a.mbtn{display:block;text-align:center;text-decoration:none}
 #jbtn.on{background:#e8a317;color:#1a1208;box-shadow:0 .6vh 0 #7a5208,0 1vh 3vh #0007}
 #jbtn[hidden]{display:none}
 .tsvg{width:100%;height:auto;display:block;border-radius:8px;margin-bottom:4px}
+
+.rh-lamp.lux i{background:conic-gradient(#f33,#fc3,#3d5,#3cf,#a4f,#f33)}
+.lux-panel{position:absolute;top:196px;right:10px;display:flex;flex-wrap:wrap;gap:5px;max-width:min(300px,56vw);background:rgba(14,18,24,.9);border-radius:12px;padding:8px;pointer-events:auto;z-index:6}
+.lux-panel[hidden]{display:none}
+.lx{border:0;border-radius:14px;padding:6px 10px;font:600 12px inherit;font-family:inherit;color:#fff;background:#2a323c;cursor:pointer}
+.lx[style]{background:var(--c);color:#111;text-shadow:0 0 2px #fff6}.lx.rb{background:linear-gradient(90deg,#f33,#fc3,#3d5,#3cf,#a4f);color:#111}.lx.off{background:#555}.lx.sel{outline:2px solid #fff}
+.lx.pick{display:flex;gap:4px;align-items:center}.lx.pick input{width:26px;height:20px;border:0;padding:0;background:none}

@@ -1,12 +1,12 @@
 'use strict';
 /* Input (keyboard, mouse, touch) and the HUD. */
-const CAMERAS = [['cab', 'داخل الكابينة'], ['chase', 'من ورا'], ['top', 'من فوق'], ['front', 'من قدام'], ['side', 'من جنب السكة'], ['inside', 'ركاب']];
+const CAMERAS = [['cab', 'داخل الكابينة'], ['chase', 'من ورا'], ['top', 'من فوق'], ['front', 'من قدام'], ['side', 'من جنب السكة'], ['inside', 'ركاب'], ['inside2', 'ركاب من قدام']];
 
 class UI {
   constructor() {
     const $ = (id) => document.getElementById(id);
     this.$ = $;
-    this.rh = {}; for (const k of ['rhNext','rhDist','rhName','rhTimes','rhNow','rhPause','rhBack','rhSalary','rhFines','rhPax','rhRoute','rhTitle','rhLine','rhHorn','rhDoor','rhDial','rhLimit','rhNextLim','rhSigD','rhBrakeDial','rhBrakeBtn','rhEmerg','rhLever','rhKnob','rhPow','rhToggle','rhUp','rhDn']) this.rh[k] = $(k);
+    this.rh = {}; for (const k of ['rhNext','rhDist','rhName','rhTimes','rhNow','rhPause','rhBack','rhSalary','rhFines','rhPax','rhRoute','rhTitle','rhLine','rhHorn','rhDoor','rhLux','rhDial','rhLimit','rhNextLim','rhSigD','rhBrakeDial','rhBrakeBtn','rhEmerg','rhLever','rhKnob','rhPow','rhToggle','rhUp','rhDn']) this.rh[k] = $(k);
     this.el = {
       menu: $('menu'), hud: $('hud'), result: $('result'), pause: $('pause'), loading: $('loading'), toast: $('toast'), help: $('help'),
       speedNum: $('speedNum'), speedBar: $('speedBar'), limitMark: $('limitMark'), limitNum: $('limitNum'), limitSign: $('limitSign'),
@@ -65,6 +65,10 @@ class UI {
     hold(r.rhHorn, () => horn(true), () => horn(false));
     r.rhEmerg.addEventListener('click', () => emerg(!I.emergency));
     r.rhDoor.addEventListener('click', () => H.doors && H.doors());
+    { const pan = document.getElementById('luxPanel'), set = (v) => { H.cabLight && H.cabLight(v); r.rhLux.classList.toggle('on', v !== 'off'); pan.querySelectorAll('.lx[data-c]').forEach((b) => b.classList.toggle('sel', b.dataset.c === v)); };
+      r.rhLux.addEventListener('click', () => { pan.hidden = !pan.hidden; });
+      pan.querySelectorAll('.lx[data-c]').forEach((b) => b.addEventListener('click', () => set(b.dataset.c)));
+      pan.querySelector('#luxPick').addEventListener('input', (ev) => set(ev.target.value)); }
     r.rhPause.addEventListener('click', () => H.pause && H.pause());
     r.rhBack.addEventListener('click', () => H.camera && H.camera());
     r.rhToggle.addEventListener('click', () => this.cycleHud());
