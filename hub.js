@@ -109,7 +109,7 @@ const Hub = {
         <button class="hb-btn" data-a="settings"><i>⚙</i><b>${L('الإعدادات', 'Settings')}</b></button>
       </div></div>`;
     this.wire(this.ui, (act) => this.act(act));
-    this.dlBanner();
+    this.dlBanner(); this.pushAsk();
     let k = 0; const tick = this.$('hbTick');
     this.every(() => {   // the game's own news, then every message the admin wrote (or only those when he hid the built-in ones)
       const R = Settings.remote || {}, mine = Array.isArray(R.newsList) ? R.newsList.filter(Boolean) : (R.news ? [R.news] : []), items = (R.newsOnly && mine.length ? [] : nw.map((n) => n.tag + ': ' + n.title + ' — ' + n.text)).concat(mine).concat(R.updateNote ? ['🔧 التحديث الجاي: ' + R.updateNote] : []);
@@ -137,6 +137,21 @@ const Hub = {
       if (r.fail) { T.textContent = L('التحديث ماكملش (النت ضعيف). هيكمل لوحده المرة الجاية', 'Will finish next time'); setTimeout(() => { box.hidden = true; }, 4000); }
       else { try { localStorage.setItem('qs-dl', B0); } catch (e) { /* */ } T.textContent = L('✔ اللعبة اتحدّثت وبتشتغل من غير نت', '✔ Updated, works offline'); setTimeout(() => { box.hidden = true; }, 3000); }
     } catch (e) { this._dlRun = false; box.hidden = true; }
+  },
+
+  /* One-time question when the player enters the game: allow phone notifications or not. Asked once; the answer is remembered. */
+  pushAsk() {
+    try { if (!PushN.ok() || Notification.permission !== 'default' || localStorage.getItem('qs-pushask') || document.getElementById('pushAsk')) return; } catch (e) { return; }
+    setTimeout(() => {
+      if (document.getElementById('pushAsk') || !this.$('hbDl') && this.scr !== 'home') return;
+      const el = document.createElement('div'); el.id = 'pushAsk';
+      el.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);display:grid;place-items:center;direction:rtl;font-family:inherit';
+      el.innerHTML = '<div style="background:#161b22;color:#fff;border:1px solid #e8b04a;border-radius:16px;padding:20px 22px;max-width:min(88vw,420px);text-align:center"><div style="font-size:40px">🔔</div><h3 style="margin:6px 0">تحب توصلك إشعارات؟</h3><p style="margin:0 0 14px;line-height:1.7;color:#ccd">هنبعتلك أخبار اللعبة والتحديثات والمسابقات على تليفونك حتى لو اللعبة مقفولة. وتقدر توقفها في أي وقت من الإعدادات.</p><div style="display:flex;gap:10px;justify-content:center"><button id="paYes" style="border:0;border-radius:20px;background:#e8b04a;color:#1b1406;font:700 16px inherit;padding:9px 26px">موافق</button><button id="paNo" style="border:0;border-radius:20px;background:#333b46;color:#fff;font:600 16px inherit;padding:9px 26px">لأ</button></div></div>';
+      document.body.appendChild(el);
+      const done = (v) => { try { localStorage.setItem('qs-pushask', v); } catch (e) { /* */ } el.remove(); };
+      el.querySelector('#paNo').onclick = () => done('no');
+      el.querySelector('#paYes').onclick = async () => { done('yes'); try { await PushN.enable(); this.api.toast('✔ الإشعارات اشتغلت'); } catch (e) { this.api.toast(e.message === 'denied' ? 'اتمنعت الإشعارات. تقدر تفعلها من إعدادات المتصفح' : 'الإشعارات مش متاحة دلوقتي'); } };
+    }, 2500);
   },
 
   act(a) {
