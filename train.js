@@ -258,7 +258,8 @@ class Train {
     this.finish(hull, spec.len, W, 1.0, 3.9);
     const rn = this.type.real ? (kind === 'velaro' || kind === 'dmu' ? this.type.real.head : null) : (typeof Models !== 'undefined' ? Models.pickFor(this.type) : null), real = rn && typeof Models !== 'undefined' ? Models.get(rn, spec.len, { top: spec.top, low: spec.low, trim: spec.trim }) : null;   // a real 3D model replaces the procedural shell once it is loaded
     if (real) { hull.children.forEach((c) => { c.visible = false; }); hull.add(real); }
-    const ge = !real && diesel && !boxy && !dmu && !vel && typeof Ge2595 !== 'undefined' ? Ge2595.build(spec.len) : null;   // the author's own Egyptian GE model
+    const ge = !real && diesel && !boxy && !dmu && !vel && typeof Ge2595 !== 'undefined' ? Ge2595.build(spec.len) : null;
+    if (ge) ge.root.traverse((o) => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { if (m && m.color && !m._dim) { m._dim = 1; m.color.multiplyScalar(0.82); if (m.emissive) m.emissive.multiplyScalar(0.6); } }); });   // bright daylight was washing the red/orange paint out to pink   // the author's own Egyptian GE model
     if (ge) { hull.children.forEach((c) => { c.visible = false; }); hull.add(ge); }
     this.scene.add(body);
     const ax = dmu || vel ? 2 : 3, sp = dmu || vel ? 2.5 : 1.9, bg = [this.makeBogie(ax, sp), this.makeBogie(ax, sp)];

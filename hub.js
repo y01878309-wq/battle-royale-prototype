@@ -118,23 +118,25 @@ const Hub = {
     this.every(() => { const T = this.$('hbTimer'); if (!T) return; const left = Math.max(0, Math.floor((Date.now() + this.TZ) / 86400000 + 1) * 86400000 - this.TZ - Date.now()), p = (n) => String(n).padStart(2, '0'); T.textContent = p(Math.floor(left / 3600000)) + ':' + p(Math.floor(left % 3600000 / 60000)) + ':' + p(Math.floor(left % 60000 / 1000)); }, 1000);
   },
 
-  /* Home-screen download card: shows only while the game is not fully on the device. */
+  /* Home-screen download card: appears only when this build is not fully on the phone yet (a new update), downloads by itself, and never asks twice. */
   async dlBanner() {
-    const box = this.$('hbDl'); if (!box || !window.caches || navigator.onLine === false && !this._dlRun) return;
+    const box = this.$('hbDl'); if (!box || !window.caches || this._dlRun) return;
+    const B0 = window.QS_BUILD || '1'; try { if (localStorage.getItem('qs-dl') === B0) return; } catch (e) { /* */ }
+    if (navigator.onLine === false) return;
     const T = this.$('hbDlT'), B = this.$('hbDlB'), F = this.$('hbDlF'), L = (a, e) => Settings.L(a, e);
     try {
-      const it = await Offline.plan(), n = await Offline.have(it); if (n >= it.length) return;
-      box.hidden = false; F.style.width = Math.round(100 * n / it.length) + '%';
-      T.textContent = L('حمّل اللعبة على جهازك عشان تلعب من غير نت', 'Download the game to play offline'); B.textContent = L('تحميل', 'Download');
-      B.onclick = async () => {
-        if (navigator.onLine === false) { T.textContent = L('محتاج نت عشان التحميل', 'Internet needed'); return; }
-        B.disabled = true; box.classList.add('go'); this._dlRun = true;
-        const r = await Offline.run(it, (d, t, by) => { F.style.width = Math.round(100 * d / t) + '%'; T.textContent = L('بنحمّل… ' + Math.round(100 * d / t) + '٪ (' + (by / 1048576).toFixed(1) + ' ميجا)', 'Downloading… ' + Math.round(100 * d / t) + '%'); });
-        this._dlRun = false; box.classList.remove('go'); B.disabled = false;
-        if (r.fail) { T.textContent = L('خلص بس ' + r.fail + ' ملف ماتحملش. دوس تاني', r.fail + ' failed, retry'); B.textContent = L('كمّل', 'Retry'); }
-        else { T.textContent = L('✔ تمام! اللعبة دلوقتي بتشتغل من غير نت', '✔ Done! Works offline now'); B.hidden = true; setTimeout(() => { box.hidden = true; }, 3500); }
-      };
-    } catch (e) { /* offline and nothing to show */ }
+      const all = await Offline.plan(), mine = all.filter((x) => !/^https?:/.test(x[1])), n0 = await Offline.have(mine);
+      if (n0 >= mine.length) { try { localStorage.setItem('qs-dl', B0); } catch (e) { /* */ } return; }
+      box.hidden = false; box.classList.add('go'); B.hidden = true; this._dlRun = true;
+      let tries = 0, r;
+      do {
+        r = await Offline.run(all, (d, t, by) => { F.style.width = Math.round(100 * d / t) + '%'; T.textContent = L('بنحدّث اللعبة… ' + Math.round(100 * d / t) + '٪', 'Updating… ' + Math.round(100 * d / t) + '%'); });
+        const left = mine.length - await Offline.have(mine); r.fail = left;
+      } while (r.fail && ++tries < 3);
+      this._dlRun = false; box.classList.remove('go');
+      if (r.fail) { T.textContent = L('التحديث ماكملش (النت ضعيف). هيكمل لوحده المرة الجاية', 'Will finish next time'); setTimeout(() => { box.hidden = true; }, 4000); }
+      else { try { localStorage.setItem('qs-dl', B0); } catch (e) { /* */ } T.textContent = L('✔ اللعبة اتحدّثت وبتشتغل من غير نت', '✔ Updated, works offline'); setTimeout(() => { box.hidden = true; }, 3000); }
+    } catch (e) { this._dlRun = false; box.hidden = true; }
   },
 
   act(a) {

@@ -5,7 +5,7 @@ const Settings = {
   def: {
     lang: 'ar', gfx: 'high', detail: 2, shadows: 2, reflect: 2, view: 2, autoDN: true, weather: false,
     route: true, limits: true, notif: true, ctl: 'lever', sens: 1, invert: false,
-    vMaster: 1, vEngine: 1, vVoice: 1, cam: 0, fov: 1, shake: true, lockres: false, uiScale: 1, uiAlpha: 1, atc: false, cine: false, tracks: 3, paint: {}, texts: {}
+    vMaster: 1, vEngine: 1, vVoice: 1, cam: 0, fov: 1, shake: true, lockres: true, uiScale: 1, uiAlpha: 1, atc: false, cine: false, tracks: 3, paint: {}, texts: {}
   },
   d: null, remote: {},
   fresh: false,   // true once the live config was read this session (so an old saved "maintenance" flag can never lock someone out while offline)
@@ -40,7 +40,7 @@ const Settings = {
 
   /* Quality values the 3D code understands. */
   quality() { const n = this.d.detail; return n <= 0 ? 'low' : n === 1 ? 'medium' : 'high'; },
-  pixelRatio() { const dt = this.remote.maxDetail != null ? Math.min(this.d.detail, this.remote.maxDetail) : this.d.detail; return Math.min(window.devicePixelRatio || 1, [1, 1.5, 2, 2.5][dt] || 2); },
+  pixelRatio() { const dt = this.remote.maxDetail != null ? Math.min(this.d.detail, this.remote.maxDetail) : this.d.detail; return Math.min(window.devicePixelRatio || 1, [1, 1.5, 2.25, 3][dt] || 2); },
   shadowQ() { const n = this.d.shadows; return n <= 0 ? 'low' : n >= 3 ? 'high' : 'medium'; },
   fogMul() { return [2.2, 1.5, 1, 0.7][this.d.view] || 1; },
 
