@@ -10,7 +10,7 @@ window.QS_FIREBASE = {
   appId: '1:982828683181:web:ff32dbaee087ea3db55b24'
 };
 window.QS_VAPID = 'BGJX4qrYDfhWxNPjAw-75xaGP3GOM_Z4LqkHQYjV11qAb45r9vUFX4bunjlPY_OCFvFS8ByMHzM58fwm2Hy8PsA';
-window.QS_BUILD = '20261122b';
+window.QS_BUILD = '20261122c';
 /* Where players send money to top up their game coins. They contact the owner with their player ID and he credits it from admin.html. */
 window.QS_PAY = { vodafone: '01093706503',
   /* Top-up packages shown in the store (the prices are samples: change them here). The owner credits them from admin.html after the transfer. */

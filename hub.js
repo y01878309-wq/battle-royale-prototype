@@ -25,10 +25,15 @@ const PushN = {
     try { localStorage.removeItem('qs-pushoff'); } catch (e) { /* */ }
     if ((await Notification.requestPermission()) !== 'granted') throw new Error('denied');
     const r = await navigator.serviceWorker.ready, key = Uint8Array.from(atob(QS_VAPID.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
-    const s = (await r.pushManager.getSubscription()) || await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }), j = s.toJSON();
-    const id = btoa(j.endpoint).replace(/[^A-Za-z0-9]/g, '').slice(-60);
+    const s = (await r.pushManager.getSubscription()) || await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    await this.save(s);
+  },
+  /* writes this phone's subscription to Firestore (also re-run at every launch, so a missed save is repaired) */
+  async save(s) {
+    if (!(await FB.init()) || !FB.ok) throw new Error('offline');
+    const j = s.toJSON(), id = btoa(j.endpoint).replace(/[^A-Za-z0-9]/g, '').slice(-60);
     await Account.col('pushSubs').doc(id).set({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, t: Date.now() });
-    try { localStorage.setItem('qs-pushid', id); } catch (e) { /* */ }
+    try { localStorage.setItem('qs-pushid', id); localStorage.removeItem('qs-pusherr'); } catch (e) { /* */ }
   },
   async disable() { try { localStorage.setItem('qs-pushoff', '1'); } catch (e) { /* */ } try { const r = await navigator.serviceWorker.ready, s = await r.pushManager.getSubscription(); if (s) await s.unsubscribe(); const id = localStorage.getItem('qs-pushid'); if (id) await Account.col('pushSubs').doc(id).delete().catch(() => {}); } catch (e) { /* */ } }
 };
@@ -144,7 +149,7 @@ const Hub = {
      A player who switched them off in Settings is never subscribed again. */
   pushAsk() {
     try { if (localStorage.getItem('qs-pushoff') === '1' || !PushN.ok() || (window.Notification && Notification.permission === 'denied')) return; } catch (e) { return; }
-    setTimeout(async () => { try { if (await PushN.on()) return; await PushN.enable(); } catch (e) { /* the player said no, or this app can't do push: stay quiet */ } }, 1500);
+    setTimeout(async () => { try { if (await PushN.on()) { const r = await navigator.serviceWorker.ready; await PushN.save(await r.pushManager.getSubscription()); return; } await PushN.enable(); } catch (e) { try { localStorage.setItem('qs-pusherr', String((e && e.message) || e).slice(0, 120)); } catch (x) { /* */ } } }, 1500);
   },
 
   act(a) {
@@ -432,7 +437,7 @@ const SetUI = {
     this.slider(c, 'fov', L('زاوية الرؤية', 'Field of view'), 0.8, 1.25, 0.05, (v) => Math.round(v * 100) + '%');
     this.toggle(c, 'shake', L('اهتزاز الكابينة', 'Cab shake'), L('اهتزاز خفيف مع السرعة', ''));
     if (PushN.ok()) { const pr = this.toggle(c, '_push', L('إشعارات على التليفون (حتى والعبة مقفولة)', 'Phone notifications'), L('تفضل توصلك أخبار اللعبة والتحديثات', ''), async (v) => {
-      const cb = pr.querySelector('input'); try { if (v) { await PushN.enable(); this.api.toast('✔ الإشعارات اشتغلت'); } else await PushN.disable(); } catch (e) { cb.checked = false; this.api.toast(e.message === 'denied' ? 'سمح بالإشعارات من إعدادات المتصفح الأول' : 'الإشعارات مش مدعومة هنا أو محتاجة نت'); } });
+      const cb = pr.querySelector('input'); try { if (v) { await PushN.enable(); this.api.toast('✔ الإشعارات اشتغلت'); } else await PushN.disable(); } catch (e) { cb.checked = false; this.api.toast(e.message === 'denied' ? 'سمح بالإشعارات من إعدادات المتصفح الأول' : 'فشل التسجيل: ' + String(e.message || e).slice(0, 80)); } });
       PushN.on().then((x) => { pr.querySelector('input').checked = x; }); }
     this.toggle(c, 'lockres', L('ثبّت أعلى جودة للصورة', 'Lock sharp image'), L('الصورة تفضل حادة حتى لو الجهاز تقيل', ''));
   },
