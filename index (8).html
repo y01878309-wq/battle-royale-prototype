@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#14110d">
+<link rel="manifest" href="manifest.json">
+<title>قطارات مصر</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Tajawal:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="style.css?v=20261126a">
+<link rel="stylesheet" href="hub.css?v=20261126a">
+<script>
+/* Self-update: if the server has a newer build than this page, clear every cache and reload once. */
+(function () { try {
+  var V = '20261126a';
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+    if (j && j.v && j.v !== V && !/[?&]r=/.test(location.search)) {
+      var go = function () { location.replace(location.pathname + '?r=' + j.v); };
+      if (window.caches) caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return !/^qs-(assets|voice)/.test(k); }).map(function (k) { return caches.delete(k); })); }).then(go, go); else go();
+    }
+  }).catch(function () {});
+} catch (e) { /* ignore */ } })();
+</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<div id="loading">
+  <div class="load-title">قطارات مصر</div>
+  <div class="load-bar"><i id="loadFill"></i></div>
+  <div id="loadMsg">جاري تجهيز السكة…</div>
+</div>
+
+<div id="hub" hidden><canvas id="hubGl"></canvas><div id="hubUi"></div></div>
+
+<div id="menu" hidden>
+  <div class="menu-card">
+    <button id="setupBack" class="mbtn back" type="button">→ رجوع</button>
+    <div class="eyebrow">محاكي القطار المصري</div>
+    <h1>قطارات مصر</h1>
+    <div class="opts">
+      <label for="optLine">الخط</label>
+      <select id="optLine"></select>
+      <label for="optTrain">القطر</label>
+      <select id="optTrain"></select>
+      <div></div><p id="trainDesc" class="desc"></p>
+      <label for="optTime">الوقت</label>
+      <select id="optTime">
+        <option value="auto" selected>حسب ساعة الجهاز</option>
+        <option value="morning">الصبح</option>
+        <option value="noon">الضهر</option>
+        <option value="overcast">غيم</option>
+        <option value="sunset">الغروب</option>
+        <option value="night">الليل</option>
+      </select>
+      <label for="optQuality">الجودة</label>
+      <select id="optQuality">
+        <option value="high">عالية</option>
+        <option value="medium" selected>متوسطة</option>
+        <option value="low">منخفضة</option>
+      </select>
+      <label for="optOnline">أونلاين</label>
+      <select id="optOnline">
+        <option value="0" selected>لا، العب لوحدي</option>
+        <option value="1">أيوه، مع لاعبين تانيين</option>
+      </select>
+      <label for="optName" class="net-only">اسمك</label>
+      <input id="optName" class="net-only" maxlength="16" placeholder="سواق" autocomplete="off">
+      <input id="optServer" type="hidden">
+    </div>
+    <p class="note">المسافات بين المحطات مضغوطة عشان الرحلة تبقى ممكنة في اللعب. أسماء المحطات والمسافات تقريبية.</p>
+    <button id="startBtn" class="primary">ابدأ الرحلة</button>
+  </div>
+</div>
+
+<div id="hud" hidden>
+  <div id="rh">
+    <div id="rhNext" class="rh-green">
+      <div class="rh-sm">المحطة الجاية</div>
+      <div class="rh-row"><span id="rhDist" class="rh-pill">0 م</span><b id="rhName">—</b><i class="rh-arrow">↑</i></div>
+      <div class="rh-sm" id="rhTimes">الوصول 00:00 · القيام 00:00</div>
+      <hr><div class="rh-sm" id="rhNow">الساعة 00:00 · في ميعادك</div>
+    </div>
+    <div class="rh-mid">
+      <button id="rhPause" class="rh-btn" aria-label="إيقاف">⏸</button>
+      <button id="rhBack" class="rh-btn" aria-label="كاميرا">كاميرا</button>
+      <div class="rh-money"><b id="rhSalary">المرتب 0 ج</b><span id="rhFines">غرامات 0 ج</span><small id="rhPax">0 راكب</small></div>
+    </div>
+    <div id="rhRoute" class="rh-blue">
+      <div class="rh-title" id="rhTitle">—</div>
+      <div class="rh-line" id="rhLine"></div>
+    </div>
+    <div class="rh-lamps">
+      <button id="rhHorn" class="rh-lamp horn"><i></i><small>كلاكس</small></button>
+      <button id="rhDoor" class="rh-lamp door"><i></i><small>الأبواب</small></button>
+      <button id="rhLux" class="rh-lamp lux"><i></i><small>إضاءة</small></button>
+    </div>
+    <div class="rh-speed">
+      <canvas id="rhDial" width="320" height="320"></canvas>
+      <div class="rh-limit" id="rhLimit"><b>110</b></div>
+      <div class="rh-next" id="rhNextLim">—</div>
+      <div class="rh-sig"><i></i><i></i><i></i><small id="rhSigD">0 م</small></div>
+    </div>
+    <div class="rh-brake">
+      <canvas id="rhBrakeDial" width="260" height="170"></canvas>
+      <button id="rhBrakeBtn" class="rh-btn wide">فرامل</button>
+      <button id="rhEmerg" class="rh-btn wide red">طوارئ</button>
+    </div>
+    <div class="rh-power"><button id="rhUp" class="rh-btn rh-step" type="button" aria-label="زيادة القوة">+</button><div id="rhLever" class="rh-track"><div id="rhKnob"></div></div><button id="rhDn" class="rh-btn rh-step" type="button" aria-label="تقليل القوة">−</button><small id="rhPow">الباور 0</small></div>
+    <div id="luxPanel" class="lux-panel" hidden>
+      <button data-c="rainbow" class="lx rb">كل الألوان</button><button data-c="#ff2020" class="lx" style="--c:#ff2020">أحمر</button><button data-c="#20d040" class="lx" style="--c:#20d040">أخضر</button><button data-c="#2060ff" class="lx" style="--c:#2060ff">أزرق</button><button data-c="#a040ff" class="lx" style="--c:#a040ff">بنفسجي</button><button data-c="#ffb040" class="lx" style="--c:#ffb040">دافئ</button><button data-c="#ffffff" class="lx" style="--c:#fff">أبيض</button>
+      <label class="lx pick">لون تاني <input id="luxPick" type="color" value="#ff2020"></label><button data-c="off" class="lx off">إيقاف</button>
+    </div>
+    <button id="rhToggle" class="rh-btn rh-tg" aria-label="إخفاء الواجهة">واجهة</button>
+  </div>
+  <div class="top">
+    <div class="next">
+      <div class="next-label" id="nextLabel">المحطة الجاية</div>
+      <div class="next-name" id="nextName">—</div>
+      <div class="next-dist" id="nextDist">0 م</div>
+    </div>
+    <div class="toolbar">
+      <div class="stat"><small>النقاط</small><b id="score">0</b></div>
+      <div class="stat"><small>الوقت</small><b id="clock">00:00</b></div>
+      <button id="camBtn" class="chip" aria-label="تغيير الكاميرا">كاميرا</button>
+      <button id="muteBtn" class="chip" aria-label="كتم الصوت">صوت</button>
+      <button id="helpBtn" class="chip" aria-label="المفاتيح">؟</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <div id="rotate"><i>📱</i><div>لف الموبايل بالعرض عشان تلعب</div></div>
+<div id="caption" class="caption" hidden></div>
+<div id="netBox" class="netbox" hidden></div>
+
+  <div class="bottom">
+    <section class="gauge" aria-label="السرعة">
+      <div class="speed"><b id="speedNum">0</b><small>كم/س</small></div>
+      <div class="limit" id="limitSign"><b id="limitNum">110</b></div>
+      <div class="bar"><i id="speedBar"></i><u id="limitMark"></u></div>
+      <div class="doors" id="doorState">الأبواب مقفولة</div>
+    </section>
+
+    <section class="controls" aria-label="التحكم">
+      <div class="lever">
+        <div class="lever-head"><small>القوة</small>
+          <span class="step"><button id="btnDown" aria-label="تقليل القوة">−</button><button id="btnUp" aria-label="زيادة القوة">+</button></span>
+        </div>
+        <div class="notches" id="notches"></div>
+      </div>
+      <div class="lever">
+        <div class="lever-head"><small>الفرامل</small></div>
+        <div class="brakebar"><i id="brakeFill"></i></div>
+      </div>
+      <div class="actions">
+        <button id="btnBrake" class="act brake">فرامل</button>
+        <button id="btnHorn" class="act horn">زمارة</button>
+        <button id="btnDoor" class="act">الأبواب</button>
+        <button id="btnEmerg" class="act emerg">طوارئ</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="help" hidden>
+  <div class="menu-card">
+    <h1>التحكم</h1>
+    <table class="keytable">
+      <tr><td><b>W / S</b> أو الأسهم</td><td>زيادة / تقليل القوة</td></tr>
+      <tr><td><b>مسافة</b></td><td>فرامل (اضغط واستمر)</td></tr>
+      <tr><td><b>E</b></td><td>فرملة طوارئ</td></tr>
+      <tr><td><b>H</b></td><td>الزمارة</td></tr>
+      <tr><td><b>C</b> أو <b>1 – 5</b></td><td>تغيير الكاميرا</td></tr>
+      <tr><td>اسحب بالماوس أو الإصبع</td><td>لف الكاميرا</td></tr>
+      <tr><td>عجلة الماوس أو قرصة</td><td>تقريب وتبعيد</td></tr>
+      <tr><td><b>V</b></td><td>رجّع الكاميرا</td></tr>
+      <tr><td><b>P</b> / <b>M</b></td><td>إيقاف مؤقت / كتم الصوت</td></tr>
+    </table>
+    <button id="helpClose" class="primary">تمام</button>
+  </div>
+</div>
+
+<div id="result" hidden>
+  <div class="menu-card">
+    <div class="eyebrow" id="resEyebrow">وصلنا</div>
+    <h1 id="resTitle">الرحلة خلصت</h1>
+    <table id="resTable"></table>
+    <div class="grade" id="resGrade"></div>
+    <button id="againBtn" class="primary">رحلة جديدة</button>
+    <button id="homeBtn" class="mbtn" type="button">القايمة الرئيسية</button>
+  </div>
+</div>
+
+<div id="pause" hidden><div class="pause-card">
+  <h2>واقف</h2>
+  <button id="pResume" class="pbtn gold" type="button">▶ كمّل</button>
+  <button id="pSettings" class="pbtn" type="button">⚙ الإعدادات</button>
+  <button id="pLeave" class="pbtn" type="button">انزل من القطر (من غير مرتب)</button>
+  <button id="pCine" class="pbtn" type="button"></button>
+  <button id="pAtc" class="pbtn" type="button"></button>
+</div></div>
+
+<script src="vendor/three.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="config.js?v=20261126a"></script>
+<script src="fb.js?v=20261126a"></script>
+<script src="util.js?v=20261126a"></script>
+<script src="settings.js?v=20261126a"></script>
+<script src="textures.js?v=20261126a"></script>
+<script src="data.js?v=20261126a"></script>
+<script src="route.js?v=20261126a"></script>
+<script src="track.js?v=20261126a"></script>
+<script src="sky.js?v=20261126a"></script>
+<script src="world.js?v=20261126a"></script>
+<script src="scenery.js?v=20261126a"></script>
+<script src="ge2595.js?v=20261126a"></script>
+<script src="cablux.js?v=20261126a"></script>
+<script src="train.js?v=20261126a"></script>
+<script src="models.js?v=20261126a"></script>
+<script src="stations.js?v=20261126a"></script>
+<script src="net.js?v=20261126a"></script>
+<script src="traffic.js?v=20261126a"></script>
+<script src="crowd.js?v=20261126a"></script>
+<script src="game.js?v=20261126a"></script>
+<script src="commentary.js?v=20261126a"></script>
+<script src="account.js?v=20261126a"></script>
+<script src="menu.js?v=20261126a"></script>
+<script src="weather.js?v=20261126a"></script>
+<script src="hub.js?v=20261126a"></script>
+<script src="audio.js?v=20261126a"></script>
+<script src="ui.js?v=20261126a"></script>
+<script src="main.js?v=20261126a"></script>
+<script>
+/* Offline play: the service worker keeps the game on the device. */
+try { if ('serviceWorker' in navigator) {
+  var hadSW = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').catch(function () {});
+  // a newer version took over while the player is still on the first screens: reload once so they see it right away (never in the middle of a run)
+  navigator.serviceWorker.addEventListener('controllerchange', function () { if (hadSW && !window.__game && !window.__swReload) { window.__swReload = 1; location.reload(); } });
+} } catch (e) { /* ignore */ }
+</script>
+</body>
+</html>
