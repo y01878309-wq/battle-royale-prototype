@@ -3,7 +3,7 @@
 const GFX_PRESETS = { low: { detail: 0, shadows: 0, reflect: 0, view: 0 }, medium: { detail: 1, shadows: 1, reflect: 1, view: 1 }, high: { detail: 2, shadows: 2, reflect: 2, view: 2 }, ultra: { detail: 3, shadows: 3, reflect: 3, view: 3 } };
 const Settings = {
   def: {
-    lang: 'ar', gfx: 'high', detail: 2, shadows: 2, reflect: 2, view: 2, autoDN: true, weather: false,
+    lang: 'ar', gfx: 'medium', detail: 1, shadows: 1, reflect: 1, view: 1, autoDN: true, weather: false,
     route: true, limits: true, notif: true, ctl: 'lever', sens: 1, invert: false,
     vMaster: 1, vEngine: 1, vVoice: 1, cam: 0, fov: 1, shake: true, lockres: true, uiScale: 1, uiAlpha: 1, atc: false, cine: false, tracks: 3, paint: {}, texts: {}
   },

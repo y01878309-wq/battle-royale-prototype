@@ -124,25 +124,24 @@ const Hub = {
     this.every(() => { const T = this.$('hbTimer'); if (!T) return; const left = Math.max(0, Math.floor((Date.now() + this.TZ) / 86400000 + 1) * 86400000 - this.TZ - Date.now()), p = (n) => String(n).padStart(2, '0'); T.textContent = p(Math.floor(left / 3600000)) + ':' + p(Math.floor(left % 3600000 / 60000)) + ':' + p(Math.floor(left % 60000 / 1000)); }, 1000);
   },
 
-  /* Home-screen download card: appears only when this build is not fully on the phone yet (a new update), downloads by itself, and never asks twice. */
+  /* Caches the game files for offline play in the background. No visible bar or "no internet" message anymore
+     (per the admin's request) - it just quietly finishes when it finishes, and retries next time if it can't. */
   async dlBanner() {
-    const box = this.$('hbDl'); if (!box || !window.caches || this._dlRun) return;
+    if (!window.caches || this._dlRun) return;
     const B0 = window.QS_BUILD || '1'; try { if (localStorage.getItem('qs-dl') === B0) return; } catch (e) { /* */ }
     if (navigator.onLine === false) return;
-    const T = this.$('hbDlT'), B = this.$('hbDlB'), F = this.$('hbDlF'), L = (a, e) => Settings.L(a, e);
     try {
       const all = await Offline.plan(), mine = all.filter((x) => !/^https?:/.test(x[1])), n0 = await Offline.have(mine);
       if (n0 >= mine.length) { try { localStorage.setItem('qs-dl', B0); } catch (e) { /* */ } return; }
-      box.hidden = false; box.classList.add('go'); B.hidden = true; this._dlRun = true;
+      this._dlRun = true;
       let tries = 0, r;
       do {
-        r = await Offline.run(all, (d, t, by) => { F.style.width = Math.round(100 * d / t) + '%'; T.textContent = L('بنحدّث اللعبة… ' + Math.round(100 * d / t) + '٪', 'Updating… ' + Math.round(100 * d / t) + '%'); });
+        r = await Offline.run(all, () => {});
         const left = mine.length - await Offline.have(mine); r.fail = left;
       } while (r.fail && ++tries < 3);
-      this._dlRun = false; box.classList.remove('go');
-      if (r.fail) { T.textContent = L('التحديث ماكملش (النت ضعيف). هيكمل لوحده المرة الجاية', 'Will finish next time'); setTimeout(() => { box.hidden = true; }, 4000); }
-      else { try { localStorage.setItem('qs-dl', B0); } catch (e) { /* */ } T.textContent = L('✔ اللعبة اتحدّثت وبتشتغل من غير نت', '✔ Updated, works offline'); setTimeout(() => { box.hidden = true; }, 3000); }
-    } catch (e) { this._dlRun = false; box.hidden = true; }
+      this._dlRun = false;
+      if (!r.fail) { try { localStorage.setItem('qs-dl', B0); } catch (e) { /* */ } }
+    } catch (e) { this._dlRun = false; }
   },
 
   /* Notifications are on by default: the first time (and whenever the phone allows it) we subscribe automatically. The browser shows its own allow/deny box once.
