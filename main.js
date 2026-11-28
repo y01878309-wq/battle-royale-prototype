@@ -138,10 +138,12 @@
     const hasAcct = await Account.init();
     await Account.applyCatalog();
     refreshMenu(); Hub.show('home');
+    try { Account.compBox(); } catch (e) { /* */ }
     splash(() => {
       let pn = ''; try { pn = localStorage.getItem('qs-pname') || ''; } catch (e) { /* */ }
       if (!pn && !(Account.d && !Account.d.guest && Account.d.name)) Menu.firstName(!hasAcct);
       else if (!hasAcct) Menu.askName();
+      try { Account.compBox(); } catch (e) { /* */ }
     });
     e.optTrain.addEventListener('change', () => { try { const s = JSON.parse(localStorage.getItem('qs-opts') || '{}'); s.train = e.optTrain.value; localStorage.setItem('qs-opts', JSON.stringify(s)); } catch (err) { /* */ } });
     ui.on({

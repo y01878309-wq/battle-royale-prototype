@@ -219,7 +219,14 @@
     "a_perfect50": 150,
     "a_ontime50": 150,
     "a_clean10": 150,
-    "a_freight10": 150
+    "a_freight10": 150,
+    "comp_d1": 100,
+    "comp_d2": 100,
+    "comp_d3": 100,
+    "comp_d4": 100,
+    "comp_d5": 100,
+    "comp_d6": 100,
+    "comp_d7": 100
   },
   "gems": {
     "train:velaro": 50,

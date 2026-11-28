@@ -5,7 +5,8 @@
 #hubUi{position:absolute;inset:0;overflow:hidden;
   padding:max(1.2vh,env(safe-area-inset-top,0px)) max(1.5vw,env(safe-area-inset-right,0px)) max(1.2vh,env(safe-area-inset-bottom,0px)) max(1.5vw,env(safe-area-inset-left,0px))}
 #hubUi button{font-family:inherit;color:inherit;cursor:pointer}
-.coin{display:inline-block;width:3.6vh;height:3.6vh;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a6,#d9a336 60%,#9a6b14);border:.3vh solid #f3cf6a;vertical-align:middle}
+.coin{display:inline-flex;align-items:center;justify-content:center;width:3.6vh;height:3.6vh;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a6,#d9a336 60%,#9a6b14);border:.3vh solid #f3cf6a;vertical-align:middle;color:#6b4306;font:700 1.9vh var(--display,inherit);line-height:1}
+.coin::after{content:"ج"}
 
 /* ---- home (physical left/right so the layout is the same in both languages) ---- */
 .hb{position:absolute;inset:0;background:linear-gradient(270deg,rgba(8,10,16,.6) 0%,rgba(8,10,16,0) 38%),linear-gradient(0deg,rgba(8,10,16,.55),rgba(8,10,16,0) 38%)}

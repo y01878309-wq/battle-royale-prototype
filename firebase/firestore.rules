@@ -23,7 +23,7 @@ service cloud.firestore {
 
       allow update: if isAdmin()
         || (signed() && resource.data.owner == request.auth.uid
-            && (nameOk() || contactOk() || buyOk() || tripOk() || claimOk() || giftOk()))
+            && (nameOk() || contactOk() || buyOk() || tripOk() || claimOk() || giftOk() || compOk()))
         || xferOk();
 
       function d() { return request.resource.data; }
@@ -61,6 +61,19 @@ service cloud.firestore {
           && d().claimed.size() == o().claimed.size() + 1 && d().claimed.hasAll(o().claimed)
           && catalog().rewards.get(d().claimed[o().claimed.size()].split('@')[0], -1) >= 0
           && d().coins == o().coins + catalog().rewards[d().claimed[o().claimed.size()].split('@')[0]];
+      }
+      // حملة تعويض: يوم واحد بالترتيب (1 لـ 7)، مرة واحدة بس في اليوم الحقيقي (بتوقيت القاهرة)
+      function compOk() {
+        return only(['coins', 'claimed', 'compDay', 'compLast'])
+          && d().get('gems', 0) == o().get('gems', 0)
+          && d().compDay == o().get('compDay', 0) + 1 && d().compDay <= 7
+          && d().claimed.size() == o().claimed.size() + 1 && d().claimed.hasAll(o().claimed)
+          && d().claimed[o().claimed.size()] == 'comp_d' + d().compDay
+          && catalog().rewards.get('comp_d' + d().compDay, -1) >= 0
+          && d().coins == o().coins + catalog().rewards['comp_d' + d().compDay]
+          && d().compLast > o().get('compLast', -1)
+          && d().compLast * 86400000 <= request.time.toMillis() + 7200000
+          && request.time.toMillis() + 7200000 < (d().compLast + 1) * 86400000;
       }
       // كود هدية: لازم يتسجل في نفس العملية على وثيقة الكود (مرة لكل شخص أو حسب per اللي حدده الأدمن)
       function giftOk() {

@@ -123,6 +123,10 @@ section[hidden]{display:none}textarea{width:100%;padding:11px 12px;border-radius
     <h3>الصوت</h3>
     <label>التعليق الصوتي</label><select id="gx_comm"><option value="1">شغال</option><option value="0">مقفول</option></select>
     <label>سباق الأونلاين</label><select id="gx_race"><option value="1">مفتوح</option><option value="0">مقفول (صيانة)</option></select>
+    <h3>حملة تعويض (7 أيام)</h3>
+    <label>حالة الحملة</label><select id="gx_compOn"><option value="0">مقفولة</option><option value="1">شغالة - هتظهر لكل لاعب أول ما يفتح اللعبة ولحد ما يستلم كل الـ7 أيام</option></select>
+    <label>اسم الحملة (بيظهر للاعب)</label><input id="gx_compTitle" placeholder="مثلاً: حملة تعويض عن الصيانة">
+    <small style="opacity:.7">مبلغ كل يوم بيتظبط من «مكافآت المهام والإنجازات» تحت (حملة تعويض - اليوم 1 لـ 7)، وشكل العملة من تصميم اللعبة نفسه.</small>
     <button id="btnSaveGame">احفظ إعدادات اللعبة</button>
   </div>
   </section>
@@ -228,7 +232,7 @@ $('btnLoadPrices').onclick = async () => {
     for (let i = 0; i < 6; i++) { const x = ut[i] || {}, id = x.id || ('u' + (i + 1)), k = 'train:' + id, g = curCat.gems[k] > 0 ? curCat.gems[k] : 0, p = k in curCat.prices ? curCat.prices[k] : 0;
       h += `<div class="putr" data-id="${id}"><select class="ubase">${TRAIN_TYPES.filter((t) => !/^u\d$/.test(t.id)).map((t) => `<option value="${t.id}"${x.base === t.id ? ' selected' : ''}>${esc(t.name.replace('💎 ', ''))}</option>`).join('')}</select><input placeholder="اسم القطر" value="${esc(x.name || '')}"><label>أعلى <input type="color" class="utop" value="${x.top || '#c4161c'}"></label><label>أسفل <input type="color" class="ulow" value="${x.low || '#bfc4c8'}"></label><select class="ucur"><option value="c"${g ? '' : ' selected'}>🪙 جنيه</option><option value="g"${g ? ' selected' : ''}>💎 ماسة</option></select><input class="uprice" inputmode="numeric" dir="ltr" value="${g || p}" style="width:80px"></div>`; }
     h += '<h3>مكافآت المهام والإنجازات (جنيه لعبة)</h3>';
-    for (const m of [...MISSIONS, ...ACHIEVEMENTS]) h += `<div class="prow" data-r="${esc(m.id)}"><span>${esc(m.name || m.title || m.id)}</span><span></span><input inputmode="numeric" dir="ltr" value="${m.id in curCat.rewards ? curCat.rewards[m.id] : m.reward}"></div>`;
+    for (const m of [...MISSIONS, ...ACHIEVEMENTS, ...COMP_DAYS]) h += `<div class="prow" data-r="${esc(m.id)}"><span>${esc(m.name || m.title || m.id)}</span><span></span><input inputmode="numeric" dir="ltr" value="${m.id in curCat.rewards ? curCat.rewards[m.id] : m.reward}"></div>`;
     h += '<h3>باكدجات الشحن (تظهر في المتجر)</h3><p class="dim">الاسم · ماسات · جنيهات لعبة · السعر بالجنيه المصري. امسح الاسم عشان تشيل الباكدج.</p>';
     const packs = curShop.packs || []; for (let i = 0; i < 8; i++) { const k = packs[i] || {}; h += `<div class="prack" data-i="${i}"><input placeholder="الاسم" value="${esc(k.name || '')}"><input inputmode="numeric" dir="ltr" placeholder="ماسات" value="${k.gems || ''}"><input inputmode="numeric" dir="ltr" placeholder="جنيهات" value="${k.coins || ''}"><input inputmode="numeric" dir="ltr" placeholder="ج.م" value="${k.egp || ''}"></div>`; }
     $('priceBox').innerHTML = h; $('btnSavePrices').style.display = 'block'; log('اتحمّلت الأسعار. عدّل واحفظ', 'ok');
@@ -268,12 +272,12 @@ $('btnLoadGame').onclick = async () => {
   try { const s = await db.collection('config').doc('game').get(), g = s.exists ? s.data() : {}, t = g.texts || {};
     for (const k of ['name', 'made', 'rightsHead', 'rights']) $('gx_' + k).value = t[k] || '';
     $('gx_maint').value = g.maintenance ? '1' : '0'; $('gx_maintMsg').value = g.maintMsg || ''; $('gx_updateNote').value = g.updateNote || ''; { const d = g.reopenAt ? new Date(+g.reopenAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''; $('gx_reopen').value = d; }
-    newsList = Array.isArray(g.newsList) ? g.newsList.slice() : (g.news ? [g.news] : []); $('newsOnly').checked = !!g.newsOnly; drawNews(); $('gx_gfx').value = g.maxDetail == null ? '' : String(g.maxDetail); $('gx_crowd').value = g.crowdMax == null ? '' : g.crowdMax; $('gx_comm').value = g.commentary === false ? '0' : '1'; $('gx_race').value = g.race === false ? '0' : '1'; log('اتحمّلت إعدادات اللعبة', 'ok'); }
+    newsList = Array.isArray(g.newsList) ? g.newsList.slice() : (g.news ? [g.news] : []); $('newsOnly').checked = !!g.newsOnly; drawNews(); $('gx_gfx').value = g.maxDetail == null ? '' : String(g.maxDetail); $('gx_crowd').value = g.crowdMax == null ? '' : g.crowdMax; $('gx_comm').value = g.commentary === false ? '0' : '1'; $('gx_race').value = g.race === false ? '0' : '1'; $('gx_compOn').value = g.compOn ? '1' : '0'; $('gx_compTitle').value = g.compTitle || ''; log('اتحمّلت إعدادات اللعبة', 'ok'); }
   catch (e) { log('مقدرتش أحمّل: ' + why(e), 'bad'); }
 };
 $('btnSaveGame').onclick = async () => {
   const t = {}; for (const k of ['name', 'made', 'rightsHead', 'rights']) { const v = $('gx_' + k).value.trim(); if (v) t[k] = v; }
-  const g = { texts: t, news: newsList[0] || '', newsList: newsList.slice(), newsOnly: $('newsOnly').checked, maintenance: $('gx_maint').value === '1', maintMsg: $('gx_maintMsg').value.trim(), updateNote: $('gx_updateNote').value.trim(), reopenAt: $('gx_reopen').value ? new Date($('gx_reopen').value).getTime() : 0, commentary: $('gx_comm').value === '1', race: $('gx_race').value === '1' };
+  const g = { texts: t, news: newsList[0] || '', newsList: newsList.slice(), newsOnly: $('newsOnly').checked, maintenance: $('gx_maint').value === '1', maintMsg: $('gx_maintMsg').value.trim(), updateNote: $('gx_updateNote').value.trim(), reopenAt: $('gx_reopen').value ? new Date($('gx_reopen').value).getTime() : 0, commentary: $('gx_comm').value === '1', race: $('gx_race').value === '1', compOn: $('gx_compOn').value === '1', compTitle: $('gx_compTitle').value.trim() };
   if ($('gx_gfx').value !== '') g.maxDetail = parseInt($('gx_gfx').value, 10); const c = parseInt($('gx_crowd').value, 10); if (c >= 0) g.crowdMax = c;
   try { await db.collection('config').doc('game').set(g); log('اتحفظت إعدادات اللعبة ✔', 'ok'); } catch (e) { log('فشل الحفظ: ' + why(e), 'bad'); }
 };

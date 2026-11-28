@@ -307,6 +307,18 @@ const ACHIEVEMENTS = [
   { id: 'a_clean10', name: '10 رحلات نضيفة', desc: 'من غير غرامات ولا انقلاب', stat: 'clean', goal: 10, reward: 150 },
   { id: 'a_freight10', name: 'سواق شحن', desc: '10 رحلات شحن', stat: 'freight', goal: 10, reward: 150 }
 ];
+/* COMPENSATION CAMPAIGN: 7 one-time rewards claimed in order, at most one per real (Cairo) calendar day.
+ * Turned on/off and named from admin.html (config/game: compOn, compTitle); each day's amount comes from
+ * catalog().rewards just like missions/achievements, so the admin price editor can change it per day. */
+const COMP_DAYS = [
+  { id: 'comp_d1', name: 'حملة تعويض - اليوم 1', reward: 100 },
+  { id: 'comp_d2', name: 'حملة تعويض - اليوم 2', reward: 100 },
+  { id: 'comp_d3', name: 'حملة تعويض - اليوم 3', reward: 100 },
+  { id: 'comp_d4', name: 'حملة تعويض - اليوم 4', reward: 100 },
+  { id: 'comp_d5', name: 'حملة تعويض - اليوم 5', reward: 100 },
+  { id: 'comp_d6', name: 'حملة تعويض - اليوم 6', reward: 100 },
+  { id: 'comp_d7', name: 'حملة تعويض - اليوم 7', reward: 100 }
+];
 const LEVEL_TITLES = [[1, 'سواق جديد'], [3, 'سواق'], [6, 'سواق محترف'], [10, 'سواق خبير'], [15, 'أسطى القطر']];
 /* Level from experience: level n needs 50 * n experience points to reach n + 1. Returns { level, into, need, title }. */
 function levelOf(xp) {

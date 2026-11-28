@@ -12,16 +12,9 @@
 <link rel="stylesheet" href="style.css?v=20261126a">
 <link rel="stylesheet" href="hub.css?v=20261126a">
 <script>
-/* Self-update: if the server has a newer build than this page, clear every cache and reload once. */
-(function () { try {
-  var V = '20261126a';
-  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
-    if (j && j.v && j.v !== V && !/[?&]r=/.test(location.search)) {
-      var go = function () { location.replace(location.pathname + '?r=' + j.v); };
-      if (window.caches) caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return !/^qs-(assets|voice)/.test(k); }).map(function (k) { return caches.delete(k); })); }).then(go, go); else go();
-    }
-  }).catch(function () {});
-} catch (e) { /* ignore */ } })();
+/* 🛑 الفحص التلقائي للإصدار معطّل مؤقتاً: كان بيعمل location.replace (تنقل كامل للصفحة) كل ما في فرق،
+   وده اللي كان بيظهر كصفحة بيضا للحظة عند دخول اللعبة (شاشة بيضا افتراضية من المتصفح أثناء أي تنقل/reload).
+   اللعبة لسه بتحدث نفسها عادي لما اللاعب يقفلها ويفتحها تاني (الـ Service Worker بياخد النسخة الجديدة ساعتها). */
 </script>
 </head>
 <body>

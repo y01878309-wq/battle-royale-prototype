@@ -36,7 +36,7 @@ const Account = {
           const k = kind + ':' + t.id;
           if (gm[k] > 0) { t.gems = gm[k]; t.price = 0; } else if (k in pr) { t.price = pr[k]; t.gems = 0; }
         }
-        if (d.rewards) for (const m of [...MISSIONS, ...ACHIEVEMENTS]) if (m.id in d.rewards) m.reward = d.rewards[m.id];
+        if (d.rewards) for (const m of [...MISSIONS, ...ACHIEVEMENTS, ...COMP_DAYS]) if (m.id in d.rewards) m.reward = d.rewards[m.id];
       }
     } catch (e) { /* the default prices stay */ }
   },
@@ -44,7 +44,7 @@ const Account = {
   code10(rec) { return String(rec || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); },
   take(j) {
     const d = this.d;
-    Object.assign(d, { name: j.name, coins: j.coins || 0, gems: j.gems || 0, owned: j.owned || [], xp: j.xp || 0, claimed: j.claimed || [], rec: j.rec || d.rec || '', contact: j.contact || '', earnedDay: j.earnedDay || 0, earnedSum: j.earnedSum || 0 });
+    Object.assign(d, { name: j.name, coins: j.coins || 0, gems: j.gems || 0, owned: j.owned || [], xp: j.xp || 0, claimed: j.claimed || [], rec: j.rec || d.rec || '', contact: j.contact || '', earnedDay: j.earnedDay || 0, earnedSum: j.earnedSum || 0, compDay: j.compDay || 0, compLast: j.compLast != null ? j.compLast : -1 });
     this.save();
   },
   /* Reload the player's document from Firestore. */
@@ -57,7 +57,7 @@ const Account = {
     if (this.d && this.d.local && !this.d.guest) { this.d = null; try { localStorage.removeItem('qs-acct'); } catch (e) { /* */ } }   // old offline-only accounts are gone
     if (!FB.ok) {   // no connection: play offline with the last saved profile (or as a guest); buying, top-ups and the online race wait for the internet
       this.error = 'offline';
-      if (!this.d || !this.d.name) this.d = { id: '', name: 'ضيف', coins: 0, gems: 0, xp: 0, owned: [], claimed: [], local: true, guest: true, rec: '' };
+      if (!this.d || !this.d.name) this.d = { id: '', name: 'ضيف', coins: 0, gems: 0, xp: 0, owned: [], claimed: [], local: true, guest: true, rec: '', compDay: 0, compLast: -1 };
       try { const pn = localStorage.getItem('qs-pname'); if (pn && this.d.guest) this.d.name = pn; } catch (e) { /* */ }
       return true;
     }
@@ -78,7 +78,7 @@ const Account = {
     if (await FB.init()) {
       for (let i = 0; i < 8; i++) {
         const id = String(Math.floor(100000 + Math.random() * 900000)), rec = this.makeRec(), pref = this.pref(id), rrf = this.col('recov').doc(this.code10(rec));
-        const doc = { owner: FB.uid, name, coins: 50, gems: 0, xp: 0, owned: [], claimed: [], rec, contact: '', earnedDay: 0, earnedSum: 0, lastEarn: FB.now() };
+        const doc = { owner: FB.uid, name, coins: 50, gems: 0, xp: 0, owned: [], claimed: [], rec, contact: '', earnedDay: 0, earnedSum: 0, lastEarn: FB.now(), compDay: 0, compLast: -1 };
         try {
           await FB.db.runTransaction(async (tx) => { const s = await tx.get(pref); if (s.exists) throw new Error('taken'); tx.set(pref, doc); tx.set(rrf, { pid: id }); });
           this.d = { id, local: false }; this.take({ name, coins: 50, gems: 0, xp: 0, owned: [], claimed: [], rec, contact: '', earnedDay: 0, earnedSum: 0 }); this.error = ''; return true;
@@ -215,5 +215,54 @@ const Account = {
       } catch (e) { return false; }
     }
     this.d.claimed.push(key); this.d.coins += reward; this.save(); return true;
+  },
+
+  /* ===== حملة تعويض: 7 أيام، مكافأة واحدة في اليوم بالترتيب (من admin.html: تشغيل/إيقاف + اسم الحملة + مبلغ كل يوم) ===== */
+  compAvailable() {
+    const g = (Settings && Settings.remote) || {};
+    if (!g.compOn || !this.d) return false;
+    const day = this.d.compDay || 0, last = this.d.compLast != null ? this.d.compLast : -1;
+    return day < 7 && last < FB.dayIdx();
+  },
+  compNextDay() { return (this.d && this.d.compDay || 0) + 1; },
+  async claimComp() {
+    if (!this.compAvailable()) return false;
+    const day = this.compNextDay(), key = 'comp_d' + day, today = FB.dayIdx();
+    const reward = (COMP_DAYS[day - 1] && COMP_DAYS[day - 1].reward) || 0;
+    if (this.server) {
+      const pref = this.pref();
+      try {
+        const ok = await FB.db.runTransaction(async (tx) => {
+          const p = (await tx.get(pref)).data();
+          const curDay = p.compDay || 0, curLast = p.compLast != null ? p.compLast : -1;
+          if (curDay >= 7 || curLast >= today || p.claimed.includes(key)) return false;
+          tx.update(pref, { claimed: [...p.claimed, key], coins: p.coins + reward, compDay: curDay + 1, compLast: today });
+          return true;
+        });
+        await this.refresh().catch(() => {}); return ok;
+      } catch (e) { return false; }
+    }
+    this.d.claimed.push(key); this.d.coins += reward; this.d.compDay = day; this.d.compLast = today; this.save(); return true;
+  },
+  /* يعرض/يخفي كارت الحملة؛ بيتنادى بعد ما يجهز الحساب والكتالوج، وبعد أي استلام */
+  compBox() {
+    let el = document.getElementById('compBox');
+    if (!this.compAvailable()) { if (el) el.remove(); return; }
+    const g = (Settings && Settings.remote) || {}, day = this.compNextDay();
+    const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    if (!el) {
+      el = document.createElement('div'); el.id = 'compBox';
+      el.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(10,8,6,.78);display:grid;place-items:center;text-align:center;color:#fff;padding:24px;direction:rtl;font-family:inherit';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = '<div style="max-width:420px;width:100%;background:#201a12;border:.3vh solid #ffd35c;border-radius:18px;padding:28px 22px">'
+      + '<div style="font-size:52px">🎁</div><h2 style="margin:10px 0;color:#ffd35c">' + esc(g.compTitle || 'حملة تعويض') + '</h2>'
+      + '<p style="font-size:20px;margin:6px 0">اليوم ' + day + ' من 7</p>'
+      + '<button id="compClaimBtn" style="margin-top:14px;padding:14px 30px;border:0;border-radius:14px;background:#ffd35c;color:#1a1208;font:700 19px inherit;cursor:pointer">استلم المكافأة</button></div>';
+    document.getElementById('compClaimBtn').onclick = async (ev) => {
+      ev.target.disabled = true; ev.target.textContent = 'جاري...';
+      const ok = await this.claimComp();
+      if (ok) { el.remove(); } else { ev.target.disabled = false; ev.target.textContent = 'استلم المكافأة'; }
+    };
   }
 };
